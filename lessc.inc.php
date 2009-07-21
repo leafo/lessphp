@@ -63,6 +63,8 @@ class lessc
 		'/' => '1',
 	);
 
+	public $importDisabled = false;
+
 	public function __construct($fname = null)
 	{
 		if ($fname) $this->load($fname);
@@ -137,6 +139,7 @@ class lessc
 		// also traditional import must be at the top of the document (ignore?)
 		try {
 			$this->literal('@import')->string($s, $delim)->end()->advance();
+			if ($this->importDisabled) return "/* import is disabled */\n";
 
 			if (file_exists($s)) {
 				$this->buffer = file_get_contents($s).";\n".$this->buffer;
@@ -145,6 +148,13 @@ class lessc
 			} else {
 				return '@import '.$delim.$s.$delim."\n";
 			}
+
+			// todo: this is dumb don't do this
+			// make sure there are no comments in the imported file
+			$this->buffer = preg_replace(
+				array('/\/\*(.*?)\*\//s', '/\/\/.*$/m'),
+				array('', ''),
+				$this->buffer);
 
 			return true;
 		} catch (exception $ex) { $this->undo(); }
