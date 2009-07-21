@@ -632,7 +632,7 @@ class lessc
 
 		$out = '#';
 		foreach (range(1,3) as $i)
-			$out .= ($c[$i] < 15 ? '0' : '').dechex($c[$i]);
+			$out .= ($c[$i] < 16 ? '0' : '').dechex($c[$i]);
 		return $out;
 	}
 
