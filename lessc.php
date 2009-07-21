@@ -22,7 +22,7 @@ $l = new lessc();
 try {
 	echo $l->parse($c);
 } catch (exception $ex) {
-	echo "Critical Error:\n".str_repeat('=', 20)."\n".$ex->getMessage()."\n";
+	echo "Fatal Error:\n".str_repeat('=', 20)."\n".$ex->getMessage()."\n";
 }
 
 ?>
