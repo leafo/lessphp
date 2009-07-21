@@ -26,15 +26,11 @@
 //
 //
 
-// todo: define type names as constants 
-// so it is easy to change them on design change!! so much for hsl
-// or maybe convert hsl to rgb, that way the math can work on it
-// that sounds like a good idea
+// future todo: define type names as constants 
 
-// todo: I think there are some inherent problems with the design, 
-// for example I shouldn't be bound to a specific order for searching for paths
+// todo: potential problem with parse tree search order: 
 //
-// in the value, #default['color'] is an accessor, but if color is searched
+// #default['color'] is an accessor, but if color is searched
 // first then #def is matched as a color and it returns true and the head is
 // moved to ault['color']; That is then seen as a second value in the list
 //
@@ -42,11 +38,6 @@
 // i can consume the spaces but not the symbols
 // need more time to think about this, maybe leaving order requirement is good
 //
-
-function println($str)
-{
-	echo $str."\n";
-}
 
 class lessc 
 {
@@ -109,34 +100,18 @@ class lessc
 		return $this->out;
 	}
 
-	// advance the buffer n places
-	private function advance()
-	{
-		// this is probably slow
-		$tmp = substr($this->buffer, 0, $this->count);
-		$this->line += substr_count($tmp, "\n");
-
-		$this->buffer = substr($this->buffer, $this->count); 
-		$this->count = 0;
-	}
-
-	//  reset the temporary advance
-	private function undo()
-	{
-		$this->count = 0;
-	}
-
 	// read a chunk off the head of the buffer
 	// chunks are separated by ; (in most cases)
-	// todo; put them in order of most common to make it faster
 	private function readChunk()
 	{
 		if ($this->buffer == '') return false;	
 
 		// import statement
 		// todo: css spec says we can use url() for import
-		// css spec also specfies media that gets the import ugh
+		// add support for media keyword
 		// also traditional import must be at the top of the document (ignore?)
+		//
+		// also need to add support for @media directive
 		try {
 			$this->literal('@import')->string($s, $delim)->end()->advance();
 			if ($this->importDisabled) return "/* import is disabled */\n";
@@ -243,34 +218,6 @@ class lessc
 			return ob_get_clean();
 		} catch (exception $ex) { $this->undo(); }
 		
-		/* don't use this anymore
-		// something to expand
-		try {
-			$this->tag($t)->end()->advance();
-			$props = $this->get($t);
-
-			if (!is_array($props)) return true; // ignore unknown
-
-			// set all properties 
-			ob_start();
-			foreach ($props as $name => $value) {
-
-				// if it is a block then render it
-				if (!isset($value[0])) {
-					$rtags = $this->multiplyTags(array($name));
-					echo $this->compileBlock($rtags, $value);
-				}
-
-				$this->set($name, $value);
-			}
-
-			return ob_get_clean();
-
-		} catch (exception $ex) {
-			$this->undo();
-			}
-		 */
-
 		// ignore spare ; 
 		try { 
 			$this->literal(';')->advance();
@@ -278,24 +225,9 @@ class lessc
 		} catch (exception $ex) { $this->undo(); }
 
 		// something failed
-		// dump everything!
 		// print_r($this->env);
 		$this->match("(.*?)(\n|$)", $m);
 		throw new exception('Failed to parse line '.$this->line."\nOffending line: ".$m[1]);
-	}
-
-	private function dumpHead()
-	{
-		$this->to("\n", $out);
-		println('head of buffer: '.$out);
-	}
-
-	// match text from the head
-	private function match($regex, &$out) 
-	{
-		$r = '/^.{'.$this->count.'}'.$regex.'\s*/is';
-		// trace($r);
-		return preg_match($r, $this->buffer, $out);
 	}
 
 
@@ -605,14 +537,7 @@ class lessc
 		return $this;
 	}
 
-
-
 	// read a keyword off the head of the buffer
-	// todo: this does a really half assed solution for a list of
-	// comma separated values, it just allows the comma to be part 
-	// of the keyword. I don't think this matters because there is no case
-	// that I can think of where I need to do individual operations
-	// on the list items
 	private function keyword(&$word)
 	{
 		if (!$this->match('([\w_"][\w-_"]*)', $m)) {
@@ -813,11 +738,11 @@ class lessc
 
 
 	/**
-	 * functions for controlling the env stack
+	 * functions for controlling the environment
 	 */
 
 	// get something out of the env
-	// this has to search the stack
+	// search from the head of the stack down
 	private function get($name)
 	{
 		for ($i = count($this->env) - 1; $i >= 0; $i--)
@@ -830,18 +755,6 @@ class lessc
 	private function set($name, $value)
 	{
 		$this->env[count($this->env) - 1][$name] = $value;
-	}
-
-	// set a list of values into a single type
-	// todo: not needed anymore
-	private function setValue($name, $values) {
-		if (count($values) == 1) {
-			$this->set($name, $values[0]);
-		} else {
-			$this->set($name, 
-				array('keyword', implode(' ', 
-				array_map(array($this, 'compileValue'), $values))));
-		}
 	}
 
 	// compress a list of values into a single type
@@ -865,9 +778,66 @@ class lessc
 	// pop environment off the stack
 	private function pop()
 	{
-		if ($this->level == 1) throw new exception('parse error: unexpected end of block');
+		if ($this->level == 1) 
+			throw new exception('parse error: unexpected end of block');
+
 		$this->level--;
 		return array_pop($this->env);
+	}
+
+
+	/**
+	 * misc functions
+	 */
+
+	// match text from the head while skipping $count characters
+	private function match($regex, &$out) 
+	{
+		$r = '/^.{'.$this->count.'}'.$regex.'\s*/is';
+		return preg_match($r, $this->buffer, $out);
+	}
+
+	// make sure a color's components don't go out of bounds
+	private function fixColor($c)
+	{
+		for ($i = 1; $i < 4; $i++) {
+			if ($c[$i] < 0) $c[$i] = 0;
+			if ($c[$i] > 255) $c[$i] = 255;
+			$c[$i] = floor($c[$i]);
+		}
+		return $c;
+	}
+
+	private function preg_quote($what)
+	{
+		// I don't know why it doesn't include it by default
+		return preg_quote($what, '/');
+	}
+
+	// reset all internal state to default
+	private function reset()
+	{
+		$this->out = '';
+		$this->env = array();
+		$this->line = 1;
+		$this->count = 0;
+	}
+
+	// advance the buffer n places
+	private function advance()
+	{
+		// this is probably slow
+		$tmp = substr($this->buffer, 0, $this->count);
+		$this->line += substr_count($tmp, "\n");
+
+		$this->buffer = substr($this->buffer, $this->count); 
+		$this->count = 0;
+	}
+
+	//  reset the temporary advance
+	private function undo()
+	{
+		$this->count = 0;
 	}
 
 	// find the cartesian product of all tags in stack
@@ -887,43 +857,6 @@ class lessc
 		}
 
 		return $rtags;
-	}
-
-
-	/**
-	 * misc functions
-	 */
-	// make sure a color's components don't go out of bounds
-	private function fixColor($c)
-	{
-		for ($i = 1; $i < 4; $i++) {
-			if ($c[$i] < 0) $c[$i] = 0;
-			if ($c[$i] > 255) $c[$i] = 255;
-			$c[$i] = floor($c[$i]);
-		}
-		return $c;
-	}
-
-	private function preg_quote($what)
-	{
-		// I don't know why it doesn't include it by default
-		return preg_quote($what, '/');
-	}
-
-	// get the current line number
-	private function line()
-	{
-		$tmp = substr($this->buffer, 0, $this->count);
-		return $this->line + substr_count($tmp, "\n");
-	}
-
-	// reset all internal state to default
-	private function reset()
-	{
-		$this->out = '';
-		$this->env = array();
-		$this->line = 1;
-		$this->count = 0;
 	}
 }
 
