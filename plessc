@@ -1,0 +1,70 @@
+#!/usr/bin/php -q
+<?php
+//
+// command line utility to compile less to stdout
+// leaf corcoran <leafo.net>
+
+require './lessc.inc.php';
+
+array_shift($argv);
+
+// read less code from argument or from std in if there is no argument
+if (false !== ($loc = array_search("-r", $argv))) {
+	unset($argv[$loc]);
+	$c = array_shift($argv);
+	if (!$c) {
+		while (!feof(STDIN)) {
+		  $c .= fread(STDIN, 8192);
+		}
+	}
+
+}  else if (false !== ($loc = array_search("-watch", $argv))) {
+	unset($argv[$loc]);
+
+	// see if we are sending notifications
+	$notif = array_search("-n", $argv);
+	if ($notif) unset($argv[$notif]);
+
+	if (!is_file($in = array_shift($argv)) || 
+		null == $out = array_shift($argv))
+	{
+		exit("Fatal Error: plessc -watch infile outfile\n");
+	}
+
+	$fail_time = 0;
+	echo "Watching ".$in.($notif ? ' with notifications' : '').", press Ctrl + c to exit.\n";
+	while (1) {
+		if (!is_file($out) || (filemtime($in) > filemtime($out) && $fail_time != filemtime($in))) {
+			// try to compile it
+			try {
+				$l = new lessc($in);
+				$c = $l->parse();
+				echo "Writing updated file: ".$out."\n";	
+				if (!file_put_contents($out, $c))
+					exit('Fatal Error: Failed to write file '.$out."\n");
+			} catch (exception $ex) {
+				echo "\nFatal Error:\n".str_repeat('=', 20)."\n".$ex->getMessage()."\n\n";
+				$fail_time = filemtime($in);
+
+				if ($notif) { 
+					`notify-send -u critical "compile failed" "{$ex->getMessage()}"`;
+				}
+			}
+		}
+		sleep(1);
+	}
+
+} else {
+	if (!is_file($fname = array_shift($argv)))
+		exit('Fatal Error: failed to find file: '.$fname."\n");
+	$c = file_get_contents($fname);
+}
+
+$l = new lessc();
+try {
+	echo $l->parse($c);
+} catch (exception $ex) {
+	echo "Fatal Error:\n".str_repeat('=', 20)."\n".$ex->getMessage()."\n";
+}
+
+?>
