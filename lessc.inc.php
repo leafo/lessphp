@@ -630,7 +630,10 @@ class lessc
 			return 'rgba('.$c[1].','.$c[2].','.$c[3].','.$c[4].')';
 		}
 
-		return '#'.dechex($c[1]).dechex($c[2]).dechex($c[3]);
+		$out = '#';
+		foreach (range(1,3) as $i)
+			$out .= ($c[$i] < 15 ? '0' : '').dechex($c[$i]);
+		return $out;
 	}
 
 
