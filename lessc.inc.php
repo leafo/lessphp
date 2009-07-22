@@ -201,6 +201,8 @@ class lessc
 		try {
 			$this->tags($t, true, '>')->end()->advance();
 
+			print_r($t);
+
 			$env = $this->get(array_shift($t));
 
 			while ($sub = array_shift($t)) {
@@ -551,7 +553,7 @@ class lessc
 	// read a keyword off the head of the buffer
 	private function keyword(&$word)
 	{
-		if (!$this->match('([\w_"][\w-_"]*)', $m)) {
+		if (!$this->match('([\w_\-!"][\w\-_"]*)', $m)) {
 			throw new Exception('parse error: failed to find keyword');
 		}
 
