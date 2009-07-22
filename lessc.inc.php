@@ -87,11 +87,7 @@ class lessc
 		$this->push(); // set up global scope
 		$this->set('__tags', array('')); // equivalent to 1 in tag multiplication
 
-		// get rid of all the comments
-		$this->buffer = preg_replace(
-			array('/\/\*(.*?)\*\//s', '/\/\/.*$/m'),
-			array('', ''),
-			$this->buffer);
+		$this->buffer = $this->removeComments($this->buffer);
 
 		while (false !== ($dat = $this->readChunk())) {
 			if (is_string($dat)) $this->out .= $dat;
@@ -99,6 +95,27 @@ class lessc
 
 		// print_r($this->env);
 		return $this->out;
+	}
+
+	// remove all comments that are not inside strings
+	private function removeComments($text, $delims = array('"', "'"))
+	{
+		$d = array_shift($delims);
+		if (!$d) return preg_replace(
+			array('/\/\*(.*?)\*\//s', '/\/\/.*$/m'),
+			array('', ''),
+			$text);
+
+		$text = explode($d, $text);
+		$inString = false;
+		foreach ($text as &$b) {
+			if (!$inString) {
+				$b = $this->removeComments($b, $delims);
+			}
+			$inString = !$inString;
+		}
+
+		return implode($d, $text);
 	}
 
 	// read a chunk off the head of the buffer
@@ -118,19 +135,12 @@ class lessc
 			if ($this->importDisabled) return "/* import is disabled */\n";
 
 			if (file_exists($s)) {
-				$this->buffer = file_get_contents($s).";\n".$this->buffer;
+				$this->buffer = $this->removeComments(file_get_contents($s)).";\n".$this->buffer;
 			} else if (file_exists($s.'.less')) {
-				$this->buffer = file_get_contents($s.'less').";\n".$this->buffer;
+				$this->buffer = $this->removeComments(file_get_contents($s.'.less')).";\n".$this->buffer;
 			} else {
 				return '@import '.$delim.$s.$delim."\n";
 			}
-
-			// todo: this is dumb don't do this
-			// make sure there are no comments in the imported file
-			$this->buffer = preg_replace(
-				array('/\/\*(.*?)\*\//s', '/\/\/.*$/m'),
-				array('', ''),
-				$this->buffer);
 
 			return true;
 		} catch (exception $ex) { $this->undo(); }
