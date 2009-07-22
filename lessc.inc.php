@@ -323,7 +323,7 @@ class lessc
 			$chars = '^,;{}';
 
 		// can't start with a number
-		if (!$this->match('(['.$chars.'0-9]['.$chars.']+)', $m))
+		if (!$this->match('(['.$chars.'0-9]['.$chars.']*)', $m))
 			throw new exception('parse error: failed to parse tag');
 
 		$tag = trim($m[1]);
