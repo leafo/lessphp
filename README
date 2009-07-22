@@ -32,7 +32,7 @@ If you need more control you can make your own instance of lessc.
 		file_put_contents('mystyle.css', $lc->parse());
 	} catch (exception $ex) { ... }
 
-In addition to loading from file, you can also parse from a string lke so:
+In addition to loading from file, you can also parse from a string like so:
 
 	$lc = new lessc();
 	$lesscode = 'body { ... }';
