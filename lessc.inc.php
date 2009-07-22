@@ -87,17 +87,25 @@ class lessc
 		$this->push(); // set up global scope
 		$this->set('__tags', array('')); // equivalent to 1 in tag multiplication
 
-		$this->buffer = $this->removeComments($this->buffer);
+		// $this->buffer = $this->removeComments($this->buffer);
+		// remove comments from the head
+		try {	
+			while (1) $this->comment();
+		} catch (exception $ex) {
+			$this->advance();
+		}
 
 		while (false !== ($dat = $this->readChunk())) {
 			if (is_string($dat)) $this->out .= $dat;
 		}
 
-		// print_r($this->env);
 		return $this->out;
 	}
 
 	// remove all comments that are not inside strings
+	// todo: I don't use this anymore in favor of looking for comments on 
+	// every match between keywords because this has a problem with splitting strings 
+	// inside comments. I am leaving this here because I might go back to using it
 	private function removeComments($text, $delims = array('"', "'"))
 	{
 		$d = array_shift($delims);
@@ -118,6 +126,7 @@ class lessc
 		return implode($d, $text);
 	}
 
+
 	// read a chunk off the head of the buffer
 	// chunks are separated by ; (in most cases)
 	private function readChunk()
@@ -128,7 +137,7 @@ class lessc
 		// media screen {
 		// 	blocks
 		// }
-		
+
 		// look for import
 		try {
 			$this->import($url, $media)->advance();
@@ -165,7 +174,7 @@ class lessc
 			if ($this->level > 1)
 				return true;
 			else
-				return $this->compileProperty($name, $this->compileValue($this->get($name)))."\n";
+				return $this->compileProperty($name, $this->get($name))."\n";
 		} catch (exception $ex) {
 			$this->undo();
 		}
@@ -200,10 +209,13 @@ class lessc
 		}	
 
 		// look for a namespace to expand
+		// todo: this catches a lot of invalid syntax tag consumer is 
+		// so liberal. This causes errors to be hidden
 		try {
 			$this->tags($t, true, '>')->end()->advance();
 
 			$env = $this->get(array_shift($t));
+
 
 			while ($sub = array_shift($t)) {
 				if (is_array($env[$sub])) $env = $env[$sub];
@@ -251,6 +263,29 @@ class lessc
 	 * any return vals are put into referenced arguments
 	 */
 
+	// consume a comment from head of the buffer
+	private function comment(&$msg = null)
+	{
+		$save = $this->count;
+		if ($this->match('\/\*(.*?)\*\/', $m)) {
+			$msg = $m[1];
+			echo "eating: ".$msg."\n";
+			return $this;
+		} else {
+			$this->count = $save;
+		}
+
+		if ($this->match("\/\/(.*?)(\n|$)", $m, false)) {
+			$msg = $m[1];
+			echo "eating: ".$msg."\n";
+
+			return $this;
+		} else 
+			$this->count = $save;	
+
+		throw new exception('parse error: failed to find comment');
+	}
+
 	// look for an import statement on the head of the buffer
 	private function import(&$url, &$media)
 	{
@@ -272,15 +307,15 @@ class lessc
 	private function string(&$string, &$d = null)
 	{
 		try { 
-			$this->literal('"');
+			$this->literal('"', true);
 			$delim = '"';
 		} catch (exception $ex) {
-			$this->literal("'");
+			$this->literal("'", true);
 			$delim = "'";
 		}
 
 		$this->to($delim, $string);
-		if ($d) $d = $delim;
+		if (!isset($d)) $d = $delim;
 
 		return $this;
 	}
@@ -291,7 +326,7 @@ class lessc
 			$this->literal(';');
 		} catch (exception $ex) { 
 			// there is an end of block next, then no problem
-			if (!$this->match('}', $m))
+			if ($this->buffer{$this->count} != '}')
 				throw new exception('parse error: failed to find end');
 		}
 
@@ -315,10 +350,11 @@ class lessc
 
 	// match a single tag, aka the block identifier
 	// $simple only match simple tags, no funny selectors allowed
+	// this accepts spaces so it can mis comments...
 	private function tag(&$tag, $simple = false)
 	{
 		if ($simple)
-			$chars = '^,;{}\][>';
+			$chars = '^,:;{}\][>';
 		else 
 			$chars = '^,;{}';
 
@@ -328,19 +364,17 @@ class lessc
 
 		$tag = trim($m[1]);
 
-		$this->count = strlen($m[0]);
 		return $this;
 	}
 
 	// consume $what and following whitespace from the head of buffer
-	private function literal($what)
+	// $ignoreComments causes commenst after the literal to be left alone
+	private function literal($what, $ignoreComments = false)
 	{
-		if (!$this->match(preg_quote($what), $m)) {
+		if (!$this->match($this->preg_quote($what), $m, !$ignoreComments)) {
 			throw new 
 				Exception('parse error: failed to prase literal '.$what);
 		}
-
-		$this->count = strlen($m[0]);
 		return $this;
 	}
 
@@ -399,12 +433,10 @@ class lessc
 	{
 		// while there is an operator and the precedence is greater or equal to min
 		while ($this->match($this->matchString, $m) && $this->precedence[$m[1]] >= $minP) {
-			$this->count = strlen($m[0]);
 			$this->value($rhs);
 
 			// peek next op
-			if ($this->match($this->matchString, $mi) & $this->precedence[$mi[1]] > $minP)
-			{
+			if ($this->match($this->matchString, $mi) & $this->precedence[$mi[1]] > $minP) {
 				$rhs = $this->expHelper($rhs, $this->precedence[$mi[1]]);
 			}
 
@@ -418,6 +450,7 @@ class lessc
 	// a variable (includes accessor);
 	// a color
 	// a unit (em, px, pt, %, mm), can also have no unit 4px + 3;
+	// a string 
 	private function value(&$val) 
 	{
 		// look for accessor 
@@ -429,6 +462,13 @@ class lessc
 			$val = end($tmp[$a[1]]);
 			return $this;
 		} catch (exception $ex) { $this->count = $save; /* $this->undo(); */ }
+
+		try { 
+			$save = $this->count;
+			$this->string($tmp, $d);
+			$val = array('keyword', $d.$tmp.$d);
+			return $this;
+		} catch (exception $ex) { $this->count = $save; }
 
 		try { return $this->unit($val);} catch (exception $ex) { /* $this->undo(); */ }
 
@@ -466,8 +506,6 @@ class lessc
 		// throw on a default unit
 		if (!$m[3]) $m[3] = 'number'; 
 
-		$this->count = strlen($m[0]);
-
 		$unit = array($m[3], $m[1]);
 		return $this;
 	}
@@ -494,8 +532,6 @@ class lessc
 					// todo: this is retarded
 					$color[$i] = $t * (256/$width) + $t * floor(16/$width);
 				} 
-				
-				$this->count = strlen($m[0]);
 
 		} else {
 			$save = $this->count;
@@ -573,25 +609,24 @@ class lessc
 			throw new Exception('parse error: failed to find keyword');
 		}
 
-		$this->count = strlen($m[0]);
 		$word = $m[1];
 
 		// if this is a url, then consume the rest of it
 		if ($word == 'url') {
-			$this->literal('(')->to(')', $url);
+			$this->literal('(', true)->to(')', $url);
 			$word.= '('.$url.')';
 		}
 
 		return $this;
 	}
 
+	// this ignores comments because it doesn't grab by token
 	private function to($what, &$out)
 	{
-		if (!$this->match('(.*?)'.preg_quote($what), $m))
+		if (!$this->match('(.*?)'.$this->preg_quote($what), $m))
 			throw new exception('parse error: failed to consume to '.$what);
 
 		$out = $m[1];
-		$this->count = strlen($m[0]);
 
 		return $this;
 	}
@@ -798,17 +833,6 @@ class lessc
 		$this->env[count($this->env) - 1][$name][] = $value;
 	}
 
-	// compress a list of values into a single type
-	// if the list contains one thing, then return that thing
-	// if list is full of things, implode whem with delim and return as keyword
-	private function compressValues($values, $delim = ' ')
-	{
-		if (count($values) == 1) return $values[0];
-		
-		return array('keyword', implode($delim, 
-				array_map(array($this, 'compileValue'), $values)));
-	}
-
 	// push a new environment stack
 	private function push()
 	{
@@ -832,10 +856,32 @@ class lessc
 	 */
 
 	// match text from the head while skipping $count characters
-	private function match($regex, &$out) 
+	// advances the temp counter if it succeeds
+	private function match($regex, &$out, $eatComments = true) 
 	{
 		$r = '/^.{'.$this->count.'}'.$regex.'\s*/is';
-		return preg_match($r, $this->buffer, $out);
+		if (preg_match($r, $this->buffer, $out)) {
+			$this->count = strlen($out[0]);
+			if ($eatComments) {
+				try {	
+					while (1) $this->comment();
+				} catch (exception $ex) { }
+			}
+			return true;
+		} 
+
+		return false;
+	}
+
+	// compress a list of values into a single type
+	// if the list contains one thing, then return that thing
+	// if list is full of things, implode whem with delim and return as keyword
+	private function compressValues($values, $delim = ' ')
+	{
+		if (count($values) == 1) return $values[0];
+		
+		return array('keyword', implode($delim, 
+				array_map(array($this, 'compileValue'), $values)));
 	}
 
 	// make sure a color's components don't go out of bounds
@@ -882,7 +928,6 @@ class lessc
 	}
 
 	// find the cartesian product of all tags in stack
-	// todo; don't use recursion
 	private function multiplyTags($tags, $d = null)
 	{
 		if ($d === null) $d = count($this->env) - 1;
