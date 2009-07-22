@@ -18,7 +18,7 @@ if (false !== ($loc = array_search("-r", $argv))) {
 		}
 	}
 
-}  else if (false !== ($loc = array_search("-watch", $argv))) {
+}  else if (false !== ($loc = array_search("-w", $argv))) {
 	unset($argv[$loc]);
 
 	// see if we are sending notifications
@@ -28,7 +28,7 @@ if (false !== ($loc = array_search("-r", $argv))) {
 	if (!is_file($in = array_shift($argv)) || 
 		null == $out = array_shift($argv))
 	{
-		exit("Fatal Error: plessc -watch infile outfile\n");
+		exit("Fatal Error: plessc -w infile outfile\n");
 	}
 
 	$fail_time = 0;
