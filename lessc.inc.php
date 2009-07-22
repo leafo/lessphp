@@ -352,13 +352,11 @@ class lessc
 	{
 		$out = array();
 
-		// there must be at least one
-		$this->expressionList($out[]);
-
 		while (1) {
-			try {
-				$this->literal(',')->expressionList($out[]);
-			} catch (exception $ex) { break; }
+			$this->expressionList($out[]);
+
+			try { $this->literal(','); } 
+			catch (exception $ex) { break; }
 		}
 
 		$out = array_map(array($this, 'compressValues'), $out);
