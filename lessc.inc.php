@@ -124,26 +124,28 @@ class lessc
 	{
 		if ($this->buffer == '') return false;	
 
-		// import statement
-		// todo: css spec says we can use url() for import
-		// add support for media keyword
-		// also traditional import must be at the top of the document (ignore?)
-		//
-		// also need to add support for @media directive
+		// todo: media directive
+		// media screen {
+		// 	blocks
+		// }
+		
+		// look for import
 		try {
-			$this->literal('@import')->string($s, $delim)->end()->advance();
+			$this->import($url, $media)->advance();
 			if ($this->importDisabled) return "/* import is disabled */\n";
 
-			if (file_exists($s)) {
-				$this->buffer = $this->removeComments(file_get_contents($s)).";\n".$this->buffer;
-			} else if (file_exists($s.'.less')) {
-				$this->buffer = $this->removeComments(file_get_contents($s.'.less')).";\n".$this->buffer;
+			if (file_exists($url)) {
+				$this->buffer = $this->removeComments(file_get_contents($url)).";\n".$this->buffer;
+			} else if (file_exists($url.'.less')) {
+				$this->buffer = $this->removeComments(file_get_contents($url.'.less')).";\n".$this->buffer;
 			} else {
-				return '@import '.$delim.$s.$delim."\n";
+				return '@import url("'.$url.'")'.($media ? ' '.$media : '').";\n";
 			}
 
 			return true;
-		} catch (exception $ex) { $this->undo(); }
+		} catch (exception $ex) {
+			$this->undo();
+		}
 
 		// a variable
 		try {
@@ -248,6 +250,24 @@ class lessc
 	 * they return instance of class so they can be chained
 	 * any return vals are put into referenced arguments
 	 */
+
+	// look for an import statement on the head of the buffer
+	private function import(&$url, &$media)
+	{
+		$this->literal('@import');
+		$save = $this->count;
+		try {
+			// todo: merge this with the keyword url('')
+			$this->literal('url(')->string($url)->literal(')');
+		} catch (exception $ex) {
+			$this->count = $save;
+			$this->string($url);
+		}
+
+		$this->to(';', $media);
+
+		return $this;
+	}
 
 	private function string(&$string, &$d = null)
 	{
