@@ -441,7 +441,7 @@ class lessc
 	{
 		if (!$units) $units = $this->units;
 
-		if (!$this->match('([0-9]+(\.[0-9]+)?)('.implode('|', $units).')?', $m)) {
+		if (!$this->match('(-?[0-9]+(\.[0-9]+)?)('.implode('|', $units).')?', $m)) {
 			throw new exception('parse error: failed to consume unit');
 		}
 
