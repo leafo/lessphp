@@ -157,7 +157,7 @@ class lessc
 		// a property
 		try {
 			$this->keyword($name)->literal(':')->propertyValue($value)->end()->advance();
-			$this->set($name, $value);
+			$this->append($name, $value);
 
 			// we can print it right away if we are in global scope (makes no sense, but w/e)
 			if ($this->level > 1)
@@ -200,8 +200,6 @@ class lessc
 		// look for a namespace to expand
 		try {
 			$this->tags($t, true, '>')->end()->advance();
-
-			print_r($t);
 
 			$env = $this->get(array_shift($t));
 
@@ -410,7 +408,7 @@ class lessc
 			$save = $this->count; // todo: replace with counter stack
 			$this->accessor($a);
 			$tmp = $this->get($a[0]);
-			$val = $tmp[$a[1]];
+			$val = end($tmp[$a[1]]);
 			return $this;
 		} catch (exception $ex) { $this->count = $save; /* $this->undo(); */ }
 
@@ -588,8 +586,11 @@ class lessc
 	private function compileProperty($name, $value, $level = 0)
 	{
 		// find out how deep we are for indentation
-		return str_repeat('  ', $level).
-			$name.':'.$value.';';
+		foreach ($value as $v)
+			$props[] = str_repeat('  ', $level).
+				$name.':'.$this->compileValue($v).';';
+
+		return implode("\n", $props);
 	}
 
 
@@ -603,7 +604,7 @@ class lessc
 			// todo: change this, poor hack
 			// make a better name storage system!!! (value types are fine)
 			if ($value[0] && $name{0} != '@') { // isn't a block because it has a type and isn't a var
-				echo $this->compileProperty($name, $this->compileValue($value), 1)."\n";
+				echo $this->compileProperty($name, $value, 1)."\n";
 				$props++;
 			}
 		}
@@ -771,6 +772,12 @@ class lessc
 	private function set($name, $value)
 	{
 		$this->env[count($this->env) - 1][$name] = $value;
+	}
+
+	// append to array in the current env
+	private function append($name, $value)
+	{
+		$this->env[count($this->env) - 1][$name][] = $value;
 	}
 
 	// compress a list of values into a single type
