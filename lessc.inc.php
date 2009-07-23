@@ -87,13 +87,7 @@ class lessc
 		$this->push(); // set up global scope
 		$this->set('__tags', array('')); // equivalent to 1 in tag multiplication
 
-		// $this->buffer = $this->removeComments($this->buffer);
-		// remove comments from the head
-		try {	
-			while (1) $this->comment();
-		} catch (exception $ex) {
-			$this->advance();
-		}
+		$this->buffer = $this->removeComments();
 
 		while (false !== ($dat = $this->readChunk())) {
 			if (is_string($dat)) $this->out .= $dat;
@@ -102,30 +96,41 @@ class lessc
 		return $this->out;
 	}
 
-	// remove all comments that are not inside strings
-	// todo: I don't use this anymore in favor of looking for comments on 
-	// every match between keywords because this has a problem with splitting strings 
-	// inside comments. I am leaving this here because I might go back to using it
-	private function removeComments($text, $delims = array('"', "'"))
-	{
-		$d = array_shift($delims);
-		if (!$d) return preg_replace(
-			array('/\/\*(.*?)\*\//s', '/\/\/.*$/m'),
-			array('', ''),
-			$text);
+	// remove all the comments from the buffer
+	// note: it resets the temp counter
+	private function removeComments()
+   	{
+		$this->count = 0;
+		$out = '';
 
-		$text = explode($d, $text);
-		$inString = false;
-		foreach ($text as &$b) {
-			if (!$inString) {
-				$b = $this->removeComments($b, $delims);
+		while ($this->count < strlen($this->buffer) - 1 && 
+			$this->match('(.*?)("|\'|\/\/|\/\*|url\(|$)', $m, false)) 
+		{
+			$out .= $m[1];
+
+			switch ($m[2]) {
+			case 'url(': 
+				$this->match('(.*?)(\)|$)', $inner, false);
+				$out .= $m[2].$inner[1].$inner[2];
+				break;
+			case '//':
+				$this->match("(.*?)(\n|$)", $inner, false);
+				$this->count--; // give back the newline
+				break;
+			case '/*';
+				$this->match("(.*?)(\*\/|$)", $inner, false);
+				break;
+			case '"':
+			case "'":
+				$this->match("(.*?)(".$m[2]."|$)", $inner, false);
+				$out .= $m[2].$inner[1].$inner[2];
+				break;
 			}
-			$inString = !$inString;
 		}
 
-		return implode($d, $text);
+		$this->count = 0;
+		return $out;
 	}
-
 
 	// read a chunk off the head of the buffer
 	// chunks are separated by ; (in most cases)
@@ -156,10 +161,10 @@ class lessc
 			$this->undo();
 		}
 
-		// a variable
+		// setting a variable
 		try {
 			$this->variable($name)->literal(':')->propertyValue($value)->end()->advance();
-			$this->set('@'.$name, $value);
+			$this->append('@'.$name, $value);
 			return true;
 		} catch (exception $ex) {
 			$this->undo();
@@ -263,29 +268,6 @@ class lessc
 	 * any return vals are put into referenced arguments
 	 */
 
-	// consume a comment from head of the buffer
-	private function comment(&$msg = null)
-	{
-		$save = $this->count;
-		if ($this->match('\/\*(.*?)\*\/', $m)) {
-			$msg = $m[1];
-			echo "eating: ".$msg."\n";
-			return $this;
-		} else {
-			$this->count = $save;
-		}
-
-		if ($this->match("\/\/(.*?)(\n|$)", $m, false)) {
-			$msg = $m[1];
-			echo "eating: ".$msg."\n";
-
-			return $this;
-		} else 
-			$this->count = $save;	
-
-		throw new exception('parse error: failed to find comment');
-	}
-
 	// look for an import statement on the head of the buffer
 	private function import(&$url, &$media)
 	{
@@ -369,9 +351,9 @@ class lessc
 
 	// consume $what and following whitespace from the head of buffer
 	// $ignoreComments causes commenst after the literal to be left alone
-	private function literal($what, $ignoreComments = false)
+	private function literal($what)
 	{
-		if (!$this->match($this->preg_quote($what), $m, !$ignoreComments)) {
+		if (!$this->match($this->preg_quote($what), $m)) {
 			throw new 
 				Exception('parse error: failed to prase literal '.$what);
 		}
@@ -463,6 +445,7 @@ class lessc
 			return $this;
 		} catch (exception $ex) { $this->count = $save; /* $this->undo(); */ }
 
+		// a string
 		try { 
 			$save = $this->count;
 			$this->string($tmp, $d);
@@ -476,7 +459,7 @@ class lessc
 
 		try { 
 			$this->variable($name); 
-			$val = $this->get('@'.$name);
+			$val = end($this->get('@'.$name));
 			return $this;
 		} catch (exception $ex) { /* $this->undo(); */ }
 
@@ -613,7 +596,7 @@ class lessc
 
 		// if this is a url, then consume the rest of it
 		if ($word == 'url') {
-			$this->literal('(', true)->to(')', $url);
+			$this->literal('(')->to(')', $url);
 			$word.= '('.$url.')';
 		}
 
@@ -857,16 +840,11 @@ class lessc
 
 	// match text from the head while skipping $count characters
 	// advances the temp counter if it succeeds
-	private function match($regex, &$out, $eatComments = true) 
+	private function match($regex, &$out, $eatWhitespace = true) 
 	{
-		$r = '/^.{'.$this->count.'}'.$regex.'\s*/is';
+		$r = '/^.{'.$this->count.'}'.$regex.($eatWhitespace ? '\s*' : '').'/is';
 		if (preg_match($r, $this->buffer, $out)) {
 			$this->count = strlen($out[0]);
-			if ($eatComments) {
-				try {	
-					while (1) $this->comment();
-				} catch (exception $ex) { }
-			}
 			return true;
 		} 
 
