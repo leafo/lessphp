@@ -82,16 +82,16 @@ class lessc
 		if ($text) $this->buffer = $text;
 		$this->reset();
 
+		$this->push(); // set up global scope
+		$this->set('__tags', array('')); // equivalent to 1 in tag multiplication
+
+		$this->buffer = $this->removeComments($this->buffer);
+
 		// trim whitespace on head
 		if (preg_match('/^\s+/', $this->buffer, $m)) {
 			$this->line  += substr_count($m[0], "\n");
 			$this->buffer = ltrim($this->buffer);
 		}
-
-		$this->push(); // set up global scope
-		$this->set('__tags', array('')); // equivalent to 1 in tag multiplication
-
-		$this->buffer = ltrim($this->removeComments($this->buffer));
 
 		while (false !== ($dat = $this->readChunk())) {
 			if (is_string($dat)) $this->out .= $dat;
