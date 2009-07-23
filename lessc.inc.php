@@ -89,6 +89,8 @@ class lessc
 
 		$this->buffer = $this->removeComments();
 
+		file_put_contents('tmp.css', $this->buffer);
+
 		while (false !== ($dat = $this->readChunk())) {
 			if (is_string($dat)) $this->out .= $dat;
 		}
@@ -484,7 +486,7 @@ class lessc
 	{
 		if (!$units) $units = $this->units;
 
-		if (!$this->match('(-?[0-9]+(\.[0-9]+)?)('.implode('|', $units).')?', $m)) {
+		if (!$this->match('(-?[0-9]*(\.)?[0-9]+)('.implode('|', $units).')?', $m)) {
 			throw new exception('parse error: failed to consume unit');
 		}
 
