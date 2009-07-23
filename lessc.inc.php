@@ -61,6 +61,9 @@ class lessc
 	public function __construct($fname = null)
 	{
 		if ($fname) $this->load($fname);
+
+		$this->matchString =
+			'('.implode('|',array_map(array($this, 'preg_quote'), array_keys($this->precedence))).')';
 	}
 
 	// load a css from file
@@ -94,52 +97,10 @@ class lessc
 			if (is_string($dat)) $this->out .= $dat;
 		}
 
-		// print_r($this->env);
 		return $this->out;
 	}
 
-	// remove all the comments from the buffer
-	// note: it resets the temp counter
-	private function removeComments($text)
-   	{
-		$this->count = 0;
-		$out = '';
 
-		while (!empty($text) && 
-			preg_match('/^(.*?)("|\'|\/\/|\/\*|url\(|$)/is', $text, $m))
-		{
-			if (!trim($text)) break;
-
-			$out .= $m[1];
-			$text = substr($text, strlen($m[0]));
-
-			switch ($m[2]) {
-			case 'url(': 
-				preg_match('/^(.*?)(\)|$)/is', $text, $inner);
-				$text = substr($text, strlen($inner[0]));
-				$out .= $m[2].$inner[1].$inner[2];
-				break;
-			case '//':
-				preg_match("/^(.*?)(\n|$)/is", $text, $inner);
-				// give back the newline
-				$text = substr($text, strlen($inner[0]) - 1);
-				break;
-			case '/*';
-				preg_match("/^(.*?)(\*\/|$)/is", $text, $inner);
-				$text = substr($text, strlen($inner[0]));
-				break;
-			case '"':
-			case "'":
-				preg_match("/^(.*?)(".$m[2]."|$)/is", $text, $inner);
-				$text = substr($text, strlen($inner[0]));
-				$out .= $m[2].$inner[1].$inner[2];
-				break;
-			}
-		}
-
-		$this->count = 0;
-		return $out;
-	}
 
 	// read a chunk off the head of the buffer
 	// chunks are separated by ; (in most cases)
@@ -151,6 +112,49 @@ class lessc
 		// media screen {
 		// 	blocks
 		// }
+
+		// a property
+		try {
+			$this->keyword($name)->literal(':')->propertyValue($value)->end()->advance();
+			$this->append($name, $value);
+
+			// we can print it right away if we are in global scope (makes no sense, but w/e)
+			if ($this->level > 1)
+				return true;
+			else
+				return $this->compileProperty($name, $this->get($name))."\n";
+		} catch (exception $ex) {
+			$this->undo();
+		}
+
+		// entering a block
+		try {
+			$this->tags($tags)->literal('{')->advance();
+			$this->push();
+			$this->set('__tags', $tags);
+
+			return true;
+		} catch (exception $ex) {
+			$this->undo();
+		}
+
+		// leaving a block
+		try {
+			$this->literal('}')->advance();
+
+			$tags = $this->get('__tags');	
+			$env = $this->pop();
+			unset($env['__tags']);
+
+			$rtags = $this->multiplyTags($tags);
+
+			foreach ($tags as $t)
+				$this->set($t, $env);
+
+			return $this->compileBlock($rtags, $env);
+		} catch (exception $ex) {
+			$this->undo();
+		}	
 
 		// look for import
 		try {
@@ -181,52 +185,10 @@ class lessc
 			$this->undo();
 		}
 
-		// a property
-		try {
-			$this->keyword($name)->literal(':')->propertyValue($value)->end()->advance();
-			$this->append($name, $value);
-
-			// we can print it right away if we are in global scope (makes no sense, but w/e)
-			if ($this->level > 1)
-				return true;
-			else
-				return $this->compileProperty($name, $this->get($name))."\n";
-		} catch (exception $ex) {
-			$this->undo();
-		}
-		
-		// a block
-		try {
-			$this->tags($tags)->literal('{')->advance();
-			$this->push();
-			$this->set('__tags', $tags);
-
-			return true;
-		} catch (exception $ex) {
-			$this->undo();
-		}
-
-		// leaving a block
-		try {
-			$this->literal('}')->advance();
-
-			$tags = $this->get('__tags');	
-			$env = $this->pop();
-			unset($env['__tags']);
-
-			$rtags = $this->multiplyTags($tags);
-
-			foreach ($tags as $t)
-				$this->set($t, $env);
-
-			return $this->compileBlock($rtags, $env);
-		} catch (exception $ex) {
-			$this->undo();
-		}	
 
 		// look for a namespace to expand
-		// todo: this catches a lot of invalid syntax tag consumer is 
-		// so liberal. This causes errors to be hidden
+		// todo: this catches a lot of invalid syntax b/c tag 
+		// consumer is liberal. This causes errors to be hidden
 		try {
 			$this->tags($t, true, '>')->end()->advance();
 
@@ -361,10 +323,12 @@ class lessc
 	}
 
 	// consume $what and following whitespace from the head of buffer
-	// $ignoreComments causes commenst after the literal to be left alone
 	private function literal($what)
 	{
-		if (!$this->match($this->preg_quote($what), $m)) {
+		// if $what is one char we can speed things up
+		if ((strlen($what) == 1 && $what != $this->buffer{$this->count}) ||
+			!$this->match($this->preg_quote($what), $m)) 
+		{
 			throw new 
 				Exception('parse error: failed to prase literal '.$what);
 		}
@@ -413,23 +377,9 @@ class lessc
 	private function expression(&$result)
    	{
 		$this->value($lhs);
-		$this->matchString =
-			'('.implode('|',array_map(array($this, 'preg_quote'), array_keys($this->precedence))).')';
-
 		$result = $this->expHelper($lhs, 0);
-
 		return $this;
 	}
-	
-	// print the head of the buffer
-	private function head()
-	{
-		echo '== head:';
-		for ($c = $this->count; $this->buffer{$c} && $this->buffer{$c} != "\n"; $c++)
-			echo $this->buffer{$c};
-		echo "\n";
-	}
-
 
 	// used to recursively love infix equation with proper operator order
 	private function expHelper($lhs, $minP)
@@ -456,6 +406,16 @@ class lessc
 	// a string 
 	private function value(&$val) 
 	{
+		try { 
+			return $this->unit($val);
+		} catch (exception $ex) { /* $this->undo(); */ }
+
+		try {
+			$this->keyword($k);
+			$val = array('keyword', $k);
+			return $this;
+		} catch (exception $ex) { /* $this->undo(); */ }
+
 		// look for accessor 
 		// must be done before color
 		try {
@@ -463,8 +423,13 @@ class lessc
 			$this->accessor($a);
 			$tmp = $this->get($a[0]);
 			$val = end($tmp[$a[1]]);
+
 			return $this;
 		} catch (exception $ex) { $this->count = $save; /* $this->undo(); */ }
+
+		try { 
+			return $this->color($val); 
+		} catch (exception $ex) { /* $this->undo(); */ }
 
 		// a string
 		try { 
@@ -474,19 +439,10 @@ class lessc
 			return $this;
 		} catch (exception $ex) { $this->count = $save; }
 
-		try { return $this->unit($val);} catch (exception $ex) { /* $this->undo(); */ }
-
-		try { return $this->color($val); } catch (exception $ex) { /* $this->undo(); */ }
-
 		try { 
 			$this->variable($name); 
 			$val = end($this->get('@'.$name));
-			return $this;
-		} catch (exception $ex) { /* $this->undo(); */ }
 
-		try {
-			$this->keyword($k);
-			$val = array('keyword', $k);
 			return $this;
 		} catch (exception $ex) { /* $this->undo(); */ }
 
@@ -615,11 +571,11 @@ class lessc
 
 		$word = $m[1];
 
-		// if this is a url, then consume the rest of it
-		if ($word == 'url') {
-			$this->literal('(')->to(')', $url);
-			$word.= '('.$url.')';
-		}
+		// find out if it is a function
+		try {
+			$this->literal('(')->to(')', $args);
+			$word.= '('.$args.')';
+		} catch (exception $ex) { }
 
 		return $this;
 	}
@@ -649,8 +605,6 @@ class lessc
 
 		return implode("\n", $props);
 	}
-
-
 
 	private function compileBlock($rtags, $env)
    	{
@@ -858,6 +812,49 @@ class lessc
 	/**
 	 * misc functions
 	 */
+
+	// remove comments from $text
+	// todo: make it work for all functions, not just url
+	private function removeComments($text)
+   	{
+		$out = '';
+
+		while (!empty($text) && 
+			preg_match('/^(.*?)("|\'|\/\/|\/\*|url\(|$)/is', $text, $m))
+		{
+			if (!trim($text)) break;
+
+			$out .= $m[1];
+			$text = substr($text, strlen($m[0]));
+
+			switch ($m[2]) {
+			case 'url(': 
+				preg_match('/^(.*?)(\)|$)/is', $text, $inner);
+				$text = substr($text, strlen($inner[0]));
+				$out .= $m[2].$inner[1].$inner[2];
+				break;
+			case '//':
+				preg_match("/^(.*?)(\n|$)/is", $text, $inner);
+				// give back the newline
+				$text = substr($text, strlen($inner[0]) - 1);
+				break;
+			case '/*';
+				preg_match("/^(.*?)(\*\/|$)/is", $text, $inner);
+				$text = substr($text, strlen($inner[0]));
+				break;
+			case '"':
+			case "'":
+				preg_match("/^(.*?)(".$m[2]."|$)/is", $text, $inner);
+				$text = substr($text, strlen($inner[0]));
+				$out .= $m[2].$inner[1].$inner[2];
+				break;
+			}
+		}
+
+		$this->count = 0;
+		return $out;
+	}
+
 
 	// match text from the head while skipping $count characters
 	// advances the temp counter if it succeeds
