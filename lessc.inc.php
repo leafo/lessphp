@@ -625,7 +625,7 @@ class lessc
 
 		// do some formatting
 		if ($props == 1) $list = ' '.trim($list).' ';
-		return implode(",\n", $rtags).' {'.($props  > 1 ? "\n" : '').
+		return implode(", ", $rtags).' {'.($props  > 1 ? "\n" : '').
 			$list."}\n";
 	}
 
