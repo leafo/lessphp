@@ -22,8 +22,9 @@
 // then I could get rid of advance completely, but it might be slow using the 
 // regex to ignore X characters on every match
 //
-// ** also I can then have it so count is set on the match, and doesn't need to be 
-// done manually, is this a good idea?
+// !! SCRATCH THIS.. regex {} fails if you got over about 70000 which won't 
+// work for big files, I need to split the buffer differently (it also
+// becomes really slow)
 //
 //
 
@@ -87,7 +88,7 @@ class lessc
 		$this->push(); // set up global scope
 		$this->set('__tags', array('')); // equivalent to 1 in tag multiplication
 
-		$this->buffer = $this->removeComments();
+		$this->buffer = $this->removeComments($this->buffer);
 
 		while (false !== ($dat = $this->readChunk())) {
 			if (is_string($dat)) $this->out .= $dat;
@@ -99,31 +100,38 @@ class lessc
 
 	// remove all the comments from the buffer
 	// note: it resets the temp counter
-	private function removeComments()
+	private function removeComments($text)
    	{
 		$this->count = 0;
 		$out = '';
 
-		while ($this->count < strlen($this->buffer) - 1 && 
-			$this->match('(.*?)("|\'|\/\/|\/\*|url\(|$)', $m, false)) 
+		while (!empty($text) && 
+			preg_match('/^(.*?)("|\'|\/\/|\/\*|url\(|$)/is', $text, $m))
 		{
+			if (!trim($text)) break;
+
 			$out .= $m[1];
+			$text = substr($text, strlen($m[0]));
 
 			switch ($m[2]) {
 			case 'url(': 
-				$this->match('(.*?)(\)|$)', $inner, false);
+				preg_match('/^(.*?)(\)|$)/is', $text, $inner);
+				$text = substr($text, strlen($inner[0]));
 				$out .= $m[2].$inner[1].$inner[2];
 				break;
 			case '//':
-				$this->match("(.*?)(\n|$)", $inner, false);
-				$this->count--; // give back the newline
+				preg_match("/^(.*?)(\n|$)/is", $text, $inner);
+				// give back the newline
+				$text = substr($text, strlen($inner[0]) - 1);
 				break;
 			case '/*';
-				$this->match("(.*?)(\*\/|$)", $inner, false);
+				preg_match("/^(.*?)(\*\/|$)/is", $text, $inner);
+				$text = substr($text, strlen($inner[0]));
 				break;
 			case '"':
 			case "'":
-				$this->match("(.*?)(".$m[2]."|$)", $inner, false);
+				preg_match("/^(.*?)(".$m[2]."|$)/is", $text, $inner);
+				$text = substr($text, strlen($inner[0]));
 				$out .= $m[2].$inner[1].$inner[2];
 				break;
 			}
@@ -372,9 +380,9 @@ class lessc
 		$out = array();
 
 		while (1) {
-			$this->expressionList($out[]);
-
-			try { $this->literal(','); } 
+			try { 
+				$this->expressionList($out[]);
+				$this->literal(','); } 
 			catch (exception $ex) { break; }
 		}
 
@@ -855,12 +863,12 @@ class lessc
 	// advances the temp counter if it succeeds
 	private function match($regex, &$out, $eatWhitespace = true) 
 	{
+		// if ($this->count > 100) echo '-- '.$this->count."\n";
 		$r = '/^.{'.$this->count.'}'.$regex.($eatWhitespace ? '\s*' : '').'/is';
 		if (preg_match($r, $this->buffer, $out)) {
 			$this->count = strlen($out[0]);
 			return true;
 		} 
-
 
 		return false;
 		
