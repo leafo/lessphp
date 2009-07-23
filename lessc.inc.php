@@ -95,6 +95,7 @@ class lessc
 			if (is_string($dat)) $this->out .= $dat;
 		}
 
+		// print_r($this->env);
 		return $this->out;
 	}
 
@@ -414,6 +415,16 @@ class lessc
 		return $this;
 	}
 	
+	// print the head of the buffer
+	private function head()
+	{
+		echo '== head:';
+		for ($c = $this->count; $this->buffer{$c} && $this->buffer{$c} != "\n"; $c++)
+			echo $this->buffer{$c};
+		echo "\n";
+	}
+
+
 	// used to recursively love infix equation with proper operator order
 	private function expHelper($lhs, $minP)
 	{
@@ -421,8 +432,8 @@ class lessc
 		while ($this->match($this->matchString, $m) && $this->precedence[$m[1]] >= $minP) {
 			$this->value($rhs);
 
-			// peek next op
-			if ($this->match($this->matchString, $mi) & $this->precedence[$mi[1]] > $minP) {
+			// find out if next up needs rhs
+			if ($this->peek($this->matchString, $mi) & $this->precedence[$mi[1]] > $minP) {
 				$rhs = $this->expHelper($rhs, $this->precedence[$mi[1]]);
 			}
 
@@ -625,7 +636,7 @@ class lessc
 
 	private function compileProperty($name, $value, $level = 0)
 	{
-		// find out how deep we are for indentation
+		// compile all repeated properties
 		foreach ($value as $v)
 			$props[] = str_repeat('  ', $level).
 				$name.':'.$this->compileValue($v).';';
@@ -853,6 +864,11 @@ class lessc
 		} 
 
 		return false;
+	}
+
+	private function peek($regex, &$out = null)
+	{
+		return preg_match('/^.{'.$this->count.'}'.$regex.'/is', $this->buffer, $out);
 	}
 
 	// compress a list of values into a single type
