@@ -2,7 +2,7 @@
 
 /**
  * less.inc.php
- * v0.1.2
+ * v0.1.2-1
  *
  * less css compiler 
  * adapted from http://lesscss.org/docs.html
@@ -10,23 +10,6 @@
  * leaf corcoran <leafo.net>
  */
 
-
-// design todo:
-//
-// right now I use advance to advance the buffer, but i also use a temporary
-// counter to move up when exploring a parse tree.
-//
-// it works for what I have, but if I have branching parse trees then I think it
-// would be useful to have an counter stack. (forget and remember position)
-//
-// then I could get rid of advance completely, but it might be slow using the 
-// regex to ignore X characters on every match
-//
-// !! SCRATCH THIS.. regex {} fails if you got over about 70000 which won't 
-// work for big files, I need to split the buffer differently (it also
-// becomes really slow)
-//
-//
 
 // future todo: define type names as constants 
 
@@ -103,6 +86,7 @@ class lessc
 				' unclosed block'.($count > 1 ? 's' : ''));
 		}
 
+		// print_r($this->env);
 		return $this->out;
 	}
 
@@ -148,16 +132,19 @@ class lessc
 		try {
 			$this->literal('}')->advance();
 
-			$tags = $this->get('__tags');	
-			$env = $this->pop();
+			$tags = $this->multiplyTags(); // after pop
+
+			$env = end($this->env);
 			unset($env['__tags']);
 
-			$rtags = $this->multiplyTags($tags);
+			$out = $this->compileBlock($tags, $env);
+			$this->pop();
 
+			// make the block(s) available in the new current scope
 			foreach ($tags as $t)
 				$this->set($t, $env);
 
-			return $this->compileBlock($rtags, $env);
+			return $out;
 		} catch (exception $ex) {
 			$this->undo();
 		}	
@@ -445,13 +432,18 @@ class lessc
 			return $this;
 		} catch (exception $ex) { $this->count = $save; }
 
+		// try to get a variable
 		try { 
 			$this->variable($name); 
+			/*
 			$tmp = $this->get('@'.$name);
 			if (is_array($tmp))
 				$val = end($tmp);
 			else 
 				$val = '';
+			 */
+			$val = array('variable', '@'.$name);
+
 
 			return $this;
 		} catch (exception $ex) { /* $this->undo(); */ }
@@ -606,15 +598,7 @@ class lessc
 	 * compile functions turn data into css code
 	 */
 
-	private function compileProperty($name, $value, $level = 0)
-	{
-		// compile all repeated properties
-		foreach ($value as $v)
-			$props[] = str_repeat('  ', $level).
-				$name.':'.$this->compileValue($v).';';
 
-		return implode("\n", $props);
-	}
 
 	private function compileBlock($rtags, $env)
    	{
@@ -639,10 +623,28 @@ class lessc
 			$list."}\n";
 	}
 
+	private function compileProperty($name, $value, $level = 0)
+	{
+		// compile all repeated properties
+		foreach ($value as $v)
+			$props[] = str_repeat('  ', $level).
+				$name.':'.$this->compileValue($v).';';
+
+		return implode("\n", $props);
+	}
+
+
 	// todo replace render color
 	private function compileValue($value)
 	{
 		switch ($value[0]) {
+		case 'variable':
+			$tmp = $this->get($value[1]);
+			if (is_array($tmp))
+				return $this->compileValue(end($tmp));
+			else 
+				return '';
+
 		case 'color':
 			return $this->compileColor($value);
 
@@ -942,7 +944,7 @@ class lessc
 	}
 
 	// find the cartesian product of all tags in stack
-	private function multiplyTags($tags, $d = null)
+	private function multiplyTags($tags = array(''), $d = null)
 	{
 		if ($d === null) $d = count($this->env) - 1;
 
