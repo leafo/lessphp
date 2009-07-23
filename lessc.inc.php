@@ -91,10 +91,16 @@ class lessc
 		$this->push(); // set up global scope
 		$this->set('__tags', array('')); // equivalent to 1 in tag multiplication
 
-		$this->buffer = $this->removeComments($this->buffer);
+		$this->buffer = ltrim($this->removeComments($this->buffer));
 
 		while (false !== ($dat = $this->readChunk())) {
 			if (is_string($dat)) $this->out .= $dat;
+		}
+
+		if ($count = count($this->env) > 1) {
+			throw new 
+				exception('Failed to parse '.(count($this->env) - 1).
+				' unclosed block'.($count > 1 ? 's' : ''));
 		}
 
 		return $this->out;
