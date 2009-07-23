@@ -441,7 +441,10 @@ class lessc
 
 		try { 
 			$this->variable($name); 
-			$val = end($this->get('@'.$name));
+			if (!is_array($name)) 
+				$val = '';
+			else
+				$val = end($this->get('@'.$name));
 
 			return $this;
 		} catch (exception $ex) { /* $this->undo(); */ }
