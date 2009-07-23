@@ -149,9 +149,11 @@ class lessc
 			if ($this->importDisabled) return "/* import is disabled */\n";
 
 			if (file_exists($url)) {
-				$this->buffer = $this->removeComments(file_get_contents($url)).";\n".$this->buffer;
+				$this->buffer = file_get_contents($url).";\n".$this->buffer;
+				$this->removeComments();
 			} else if (file_exists($url.'.less')) {
-				$this->buffer = $this->removeComments(file_get_contents($url.'.less')).";\n".$this->buffer;
+				$this->buffer = file_get_contents($url.'.less').";\n".$this->buffer;
+				$this->removeComments();
 			} else {
 				return '@import url("'.$url.'")'.($media ? ' '.$media : '').";\n";
 			}
