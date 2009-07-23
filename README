@@ -57,7 +57,7 @@ the argument is left off, from standard in:
 Finally, by using the -w flag you can watch a specified input file and have it 
 compile as needed to the output file
 
-	~> plessc -watch input-file output-file
+	~> plessc -w input-file output-file
 
 Errors from watch mode are written to standard out.
 
