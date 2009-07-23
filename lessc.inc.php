@@ -89,8 +89,6 @@ class lessc
 
 		$this->buffer = $this->removeComments();
 
-		file_put_contents('tmp.css', $this->buffer);
-
 		while (false !== ($dat = $this->readChunk())) {
 			if (is_string($dat)) $this->out .= $dat;
 		}
@@ -863,13 +861,16 @@ class lessc
 			return true;
 		} 
 
+
 		return false;
+		
 	}
 
 	private function peek($regex, &$out = null)
 	{
 		return preg_match('/^.{'.$this->count.'}'.$regex.'/is', $this->buffer, $out);
 	}
+
 
 	// compress a list of values into a single type
 	// if the list contains one thing, then return that thing
