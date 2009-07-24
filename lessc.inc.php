@@ -86,7 +86,7 @@ class lessc
 				' unclosed block'.($count > 1 ? 's' : ''));
 		}
 
-		// print_r($this->env);
+		print_r($this->env);
 		return $this->out;
 	}
 
@@ -644,6 +644,8 @@ class lessc
 	private function compileValue($value)
 	{
 		switch ($value[0]) {
+		case 'list':
+			return implode($value[1], array_map(array($this, 'compileValue'), $value[2]));
 		case 'expression':
 			return $this->compileValue($this->evaluate($value[1], $value[2], $value[3]));
 		case 'variable':
@@ -652,7 +654,6 @@ class lessc
 				return $this->compileValue(end($tmp));
 			else 
 				return '';
-
 		case 'color':
 			return $this->compileColor($value);
 
@@ -689,21 +690,22 @@ class lessc
 	// this is a messy function, probably a better way to do it
 	private function evaluate($op, $lft, $rgt)
 	{
-		// evaluate any expressions
-		if ($lft[0] == 'expression')
-			$lft = $this->evaluate($lft[1], $lft[2], $lft[3]);
+		// figure out what expressions and variables are equal to
+		while (in_array($lft[0], $this->dtypes)) 
+		{
+			if ($lft[0] == 'expression')
+				$lft = $this->evaluate($lft[1], $lft[2], $lft[3]);
+			if ($lft[0] == 'variable')
+				$lft = $this->getVal($lft[1], array('number', 0));
+		}
 
-		if ($rgt[0] == 'expression')
-			$rgt = $this->evaluate($rgt[1], $rgt[2], $rgt[3]);
-
-
-		// get value of varialbes
-		if ($lft[0] == 'variable')
-			$lft = $this->getVal($lft[1], array('number', 0));
-
-		if ($rgt[0] == 'variable')
-			$rgt = $this->getVal($rgt[1], array('number', 0));
-
+		while (in_array($rgt[0], $this->dtypes))
+		{
+			if ($rgt[0] == 'expression')
+				$rgt = $this->evaluate($rgt[1], $rgt[2], $rgt[3]);
+			if ($rgt[0] == 'variable')
+				$rgt = $this->getVal($rgt[1], array('number', 0));
+		}
 
 		if ($lft [0] == 'color' && $rgt[0] == 'color') {
 			return $this->op_color_color($op, $lft, $rgt);
@@ -925,13 +927,18 @@ class lessc
 
 	// compress a list of values into a single type
 	// if the list contains one thing, then return that thing
-	// if list is full of things, implode whem with delim and return as keyword
+	// if list is full of things, return list type with proper delim
 	private function compressValues($values, $delim = ' ')
 	{
 		if (count($values) == 1) return $values[0];
 		
+
+		return array('list', $delim, $values);
+
+		/*
 		return array('keyword', implode($delim, 
 				array_map(array($this, 'compileValue'), $values)));
+		 */
 	}
 
 	// make sure a color's components don't go out of bounds
