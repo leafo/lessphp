@@ -86,7 +86,7 @@ class lessc
 				' unclosed block'.($count > 1 ? 's' : ''));
 		}
 
-		print_r($this->env);
+		// print_r($this->env);
 		return $this->out;
 	}
 
