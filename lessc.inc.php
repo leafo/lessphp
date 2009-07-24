@@ -86,10 +86,9 @@ class lessc
 				' unclosed block'.($count > 1 ? 's' : ''));
 		}
 
-		// print_r($this->env);
+		print_r($this->env);
 		return $this->out;
 	}
-
 
 
 	// read a chunk off the head of the buffer
@@ -374,6 +373,9 @@ class lessc
 		return $this;
 	}
 
+	// delayed types
+	private $dtypes = array('expression', 'variable');
+
 	// used to recursively love infix equation with proper operator order
 	private function expHelper($lhs, $minP)
 	{
@@ -386,7 +388,11 @@ class lessc
 				$rhs = $this->expHelper($rhs, $this->precedence[$mi[1]]);
 			}
 
-			$lhs = $this->evaluate($m[1], $lhs, $rhs);
+			// todo: find a way to precalculate non-delayed types
+			if (in_array($rhs[0], $this->dtypes) || in_array($lhs[0], $this->dtypes))
+				$lhs = array('expression', $m[1], $lhs, $rhs);
+			else
+				$lhs = $this->evaluate($m[1], $lhs, $rhs);
 		}
 		return $lhs;
 	}
@@ -638,6 +644,8 @@ class lessc
 	private function compileValue($value)
 	{
 		switch ($value[0]) {
+		case 'expression':
+			return $this->compileValue($this->evaluate($value[1], $value[2], $value[3]));
 		case 'variable':
 			$tmp = $this->get($value[1]);
 			if (is_array($tmp))
@@ -681,6 +689,22 @@ class lessc
 	// this is a messy function, probably a better way to do it
 	private function evaluate($op, $lft, $rgt)
 	{
+		// evaluate any expressions
+		if ($lft[0] == 'expression')
+			$lft = $this->evaluate($lft[1], $lft[2], $lft[3]);
+
+		if ($rgt[0] == 'expression')
+			$rgt = $this->evaluate($rgt[1], $rgt[2], $rgt[3]);
+
+
+		// get value of varialbes
+		if ($lft[0] == 'variable')
+			$lft = $this->getVal($lft[1], array('number', 0));
+
+		if ($rgt[0] == 'variable')
+			$rgt = $this->getVal($rgt[1], array('number', 0));
+
+
 		if ($lft [0] == 'color' && $rgt[0] == 'color') {
 			return $this->op_color_color($op, $lft, $rgt);
 		}
@@ -789,6 +813,16 @@ class lessc
 			if ($this->env[$i][$name]) return $this->env[$i][$name];
 
 		return null;
+	}
+
+	// get the most recent value of a variable
+	// return default if it isn't found
+	private function getVal($name, $default = array('keyword', ''))
+	{
+		$val = $this->get($name);
+		if (!is_array($val))
+			return $default;
+		else return end($val);
 	}
 
 	// set something in the current env
