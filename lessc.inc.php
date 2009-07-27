@@ -24,6 +24,9 @@
 // need more time to think about this, maybe leaving order requirement is good
 //
 
+error_reporting(E_ALL);
+
+
 class lessc 
 {
 	private $buffer;
@@ -86,7 +89,7 @@ class lessc
 				' unclosed block'.($count > 1 ? 's' : ''));
 		}
 
-		print_r($this->env);
+		// print_r($this->env);
 		return $this->out;
 	}
 
@@ -188,7 +191,8 @@ class lessc
 
 
 			while ($sub = array_shift($t)) {
-				if (is_array($env[$sub])) $env = $env[$sub];
+				if (isset($env[$sub]))  // todo add a type check for environment
+					$env = $env[$sub];
 				else { 
 					$env = null;
 					break;
@@ -327,10 +331,7 @@ class lessc
 		return $this;
 	}
 
-	// consume & evaluate a value for a property from head of buffer
-	// any list of properties is compessed into a single keyword variable
-	// type information only needs to be preserved when doing math, and we 
-	// shouldn't have to do math of a list of values
+	// consume list of values for property
 	private function propertyValue(&$value)
 	{
 		$out = array();
@@ -348,8 +349,7 @@ class lessc
 		return $this;
 	}
 
-	// evaluate a list of expressions separated by spaces from the 
-	// head of the buffer
+	// evaluate a list of expressions separated by spaces 
 	private function expressionList(&$vals)
 	{
 		$vals = array();
@@ -384,7 +384,7 @@ class lessc
 			$this->value($rhs);
 
 			// find out if next up needs rhs
-			if ($this->peek($this->matchString, $mi) & $this->precedence[$mi[1]] > $minP) {
+			if ($this->peek($this->matchString, $mi) && $this->precedence[$mi[1]] > $minP) {
 				$rhs = $this->expHelper($rhs, $this->precedence[$mi[1]]);
 			}
 
@@ -441,15 +441,7 @@ class lessc
 		// try to get a variable
 		try { 
 			$this->variable($name); 
-			/*
-			$tmp = $this->get('@'.$name);
-			if (is_array($tmp))
-				$val = end($tmp);
-			else 
-				$val = '';
-			 */
 			$val = array('variable', '@'.$name);
-
 
 			return $this;
 		} catch (exception $ex) { /* $this->undo(); */ }
@@ -472,7 +464,7 @@ class lessc
 		}
 
 		// throw on a default unit
-		if (!$m[3]) $m[3] = 'number'; 
+		if (!isset($m[3])) $m[3] = 'number'; 
 
 		$unit = array($m[3], $m[1]);
 		return $this;
@@ -484,22 +476,22 @@ class lessc
 	{
 		$color = array('color');
 		if($this->match('(#([0-9a-f]{6})|#([0-9a-f]{3}))', $m)) {
-				if (strlen($m[3])) {
-					$num = $m[3];
-					$width = 16;
-				} else {
-					$num = $m[2];
-					$width = 256;
-				}
+			if (isset($m[3])) {
+				$num = $m[3];
+				$width = 16;
+			} else {
+				$num = $m[2];
+				$width = 256;
+			}
 
-				$num = hexdec($num);
-				foreach(array(3,2,1) as $i) {
-					$t = $num % $width;
-					$num /= $width;
+			$num = hexdec($num);
+			foreach(array(3,2,1) as $i) {
+				$t = $num % $width;
+				$num /= $width;
 
-					// todo: this is retarded
-					$color[$i] = $t * (256/$width) + $t * floor(16/$width);
-				} 
+				// todo: this is retarded
+				$color[$i] = $t * (256/$width) + $t * floor(16/$width);
+			} 
 
 		} else {
 			$save = $this->count;
@@ -603,9 +595,6 @@ class lessc
 	/**
 	 * compile functions turn data into css code
 	 */
-
-
-
 	private function compileBlock($rtags, $env)
    	{
 		$props = 0;
@@ -614,7 +603,7 @@ class lessc
 		foreach ($env as $name => $value) {
 			// todo: change this, poor hack
 			// make a better name storage system!!! (value types are fine)
-			if ($value[0] && $name{0} != '@') { // isn't a block because it has a type and isn't a var
+			if (isset($value[0]) && $name{0} != '@') { // isn't a block because it has a type and isn't a var
 				echo $this->compileProperty($name, $value, 1)."\n";
 				$props++;
 			}
@@ -812,7 +801,7 @@ class lessc
 	private function get($name)
 	{
 		for ($i = count($this->env) - 1; $i >= 0; $i--)
-			if ($this->env[$i][$name]) return $this->env[$i][$name];
+			if (isset($this->env[$i][$name])) return $this->env[$i][$name];
 
 		return null;
 	}
@@ -927,18 +916,10 @@ class lessc
 
 	// compress a list of values into a single type
 	// if the list contains one thing, then return that thing
-	// if list is full of things, return list type with proper delim
 	private function compressValues($values, $delim = ' ')
 	{
 		if (count($values) == 1) return $values[0];
-		
-
 		return array('list', $delim, $values);
-
-		/*
-		return array('keyword', implode($delim, 
-				array_map(array($this, 'compileValue'), $values)));
-		 */
 	}
 
 	// make sure a color's components don't go out of bounds
@@ -985,7 +966,7 @@ class lessc
 	}
 
 	// find the cartesian product of all tags in stack
-	private function multiplyTags($tags = array(''), $d = null)
+	private function multiplyTags($tags = array(' '), $d = null)
 	{
 		if ($d === null) $d = count($this->env) - 1;
 
