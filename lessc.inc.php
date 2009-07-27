@@ -368,7 +368,12 @@ class lessc
 	// evaluate a group of values separated by operators
 	private function expression(&$result)
    	{
-		$this->value($lhs);
+		try {
+			$this->literal('(')->expression($exp)->literal(')');
+			$lhs = $exp;
+		} catch (exception $ex) {
+			$this->value($lhs);
+		}
 		$result = $this->expHelper($lhs, 0);
 		return $this;
 	}
@@ -381,7 +386,13 @@ class lessc
 	{
 		// while there is an operator and the precedence is greater or equal to min
 		while ($this->match($this->matchString, $m) && $this->precedence[$m[1]] >= $minP) {
-			$this->value($rhs);
+			// check for subexp
+			try {
+				$this->literal('(')->expression($exp)->literal(')');
+				$rhs = $exp;
+			} catch (exception $ex) {
+				$this->value($rhs);
+			}
 
 			// find out if next up needs rhs
 			if ($this->peek($this->matchString, $mi) && $this->precedence[$mi[1]] > $minP) {
