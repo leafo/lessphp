@@ -114,7 +114,8 @@ class lessc
 			if ($this->level > 1)
 				return true;
 			else
-				return $this->compileProperty($name, $this->get($name))."\n";
+				return $this->compileProperty($name, 
+					array($this->getVal($name)))."\n";
 		} catch (exception $ex) {
 			$this->undo();
 		}
@@ -431,8 +432,8 @@ class lessc
 		try {
 			$save = $this->count; // todo: replace with counter stack
 			$this->accessor($a);
-			$tmp = $this->get($a[0]);
-			$val = end($tmp[$a[1]]);
+			$tmp = $this->get($a[0]); // get env
+			$val = end($tmp[$a[1]]); // get latest var
 
 			return $this;
 		} catch (exception $ex) { $this->count = $save; /* $this->undo(); */ }
@@ -640,6 +641,8 @@ class lessc
 	}
 
 
+
+
 	// todo replace render color
 	private function compileValue($value)
 	{
@@ -648,12 +651,23 @@ class lessc
 			return implode($value[1], array_map(array($this, 'compileValue'), $value[2]));
 		case 'expression':
 			return $this->compileValue($this->evaluate($value[1], $value[2], $value[3]));
+
 		case 'variable':
-			$tmp = $this->get($value[1]);
-			if (is_array($tmp))
-				return $this->compileValue(end($tmp));
-			else 
-				return '';
+			/*
+			print_r($count."\n");
+
+			$this->depth ++;
+			if ($this->depth > 20) exit('recursion');
+			 */
+
+			$tmp =  $this->compileValue(
+				$this->getVal($value[1], 
+					$this->pushName($value[1]))
+			);
+			$this->popName();
+
+			return $tmp;
+
 		case 'color':
 			return $this->compileColor($value);
 
@@ -690,22 +704,30 @@ class lessc
 	// this is a messy function, probably a better way to do it
 	private function evaluate($op, $lft, $rgt)
 	{
+		$pushed = 0;
 		// figure out what expressions and variables are equal to
 		while (in_array($lft[0], $this->dtypes)) 
 		{
 			if ($lft[0] == 'expression')
 				$lft = $this->evaluate($lft[1], $lft[2], $lft[3]);
-			if ($lft[0] == 'variable')
-				$lft = $this->getVal($lft[1], array('number', 0));
+			else if ($lft[0] == 'variable') {
+				$lft = $this->getVal($lft[1], $this->pushName($lft[1]), array('number', 0));
+				$pushed++;
+			}
+
 		}
+		while ($pushed != 0) { $this->popName(); $pushed--; }
 
 		while (in_array($rgt[0], $this->dtypes))
 		{
 			if ($rgt[0] == 'expression')
 				$rgt = $this->evaluate($rgt[1], $rgt[2], $rgt[3]);
-			if ($rgt[0] == 'variable')
-				$rgt = $this->getVal($rgt[1], array('number', 0));
+			else if ($rgt[0] == 'variable') {
+				$rgt = $this->getVal($rgt[1], $this->pushName($rgt[1]), array('number', 0));
+				$pushed++;
+			}
 		}
+		while ($pushed != 0) { $this->popName(); $pushed--; }
 
 		if ($lft [0] == 'color' && $rgt[0] == 'color') {
 			return $this->op_color_color($op, $lft, $rgt);
@@ -809,22 +831,43 @@ class lessc
 
 	// get something out of the env
 	// search from the head of the stack down
-	private function get($name)
+	// $env what environment to search in
+	private function get($name, $env = null)
 	{
-		for ($i = count($this->env) - 1; $i >= 0; $i--)
-			if (isset($this->env[$i][$name])) return $this->env[$i][$name];
+		if (empty($env)) $env = $this->env;
+
+		for ($i = count($env) - 1; $i >= 0; $i--)
+			if (isset($env[$i][$name])) return $env[$i][$name];
 
 		return null;
 	}
 
+
 	// get the most recent value of a variable
 	// return default if it isn't found
-	private function getVal($name, $default = array('keyword', ''))
+	// $skip is number of vars to skip
+	// todo: rename to getVar 
+	private function getVal($name, $skip = 0, $default = array('keyword', ''))
 	{
 		$val = $this->get($name);
-		if (!is_array($val))
-			return $default;
-		else return end($val);
+		if ($val == null) return $default;
+		
+		while ($skip > 0) {
+			$skip--;
+
+			if (!empty($val))
+				array_pop($val);
+
+			if (empty($val)) {
+				$tmp = $this->env;
+				array_pop($tmp);
+				$val = $this->get($name, $tmp);
+			}
+
+			if ($val == null) return $default;
+		}
+
+		return end($val);
 	}
 
 	// set something in the current env
@@ -860,6 +903,26 @@ class lessc
 	/**
 	 * misc functions
 	 */
+
+	// functions for manipulating the expand stack
+	private $depth = 0;
+	private $expandStack = array();
+
+	// push name on expand stack and return its count
+	// before being pushed
+	private function pushName($name) {
+		$count = array_count_values($this->expandStack);
+		$count = isset($count[$name]) ? $count[$name] : 0;
+
+		$this->expandStack[] = $name;
+		return $count;
+	}
+
+	// pop name of expand stack and return it
+	private function popName() {
+		return array_pop($this->expandStack);
+	}
+
 
 	// remove comments from $text
 	// todo: make it work for all functions, not just url
