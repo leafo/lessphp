@@ -24,9 +24,6 @@
 // need more time to think about this, maybe leaving order requirement is good
 //
 
-error_reporting(E_ALL);
-
-
 class lessc 
 {
 	private $buffer;
@@ -653,13 +650,6 @@ class lessc
 			return $this->compileValue($this->evaluate($value[1], $value[2], $value[3]));
 
 		case 'variable':
-			/*
-			print_r($count."\n");
-
-			$this->depth ++;
-			if ($this->depth > 20) exit('recursion');
-			 */
-
 			$tmp =  $this->compileValue(
 				$this->getVal($value[1], 
 					$this->pushName($value[1]))
@@ -851,20 +841,22 @@ class lessc
 	{
 		$val = $this->get($name);
 		if ($val == null) return $default;
-		
+
+		$tmp = $this->env;
+		while (!isset($tmp[count($tmp) - 1][$name])) array_pop($tmp);
 		while ($skip > 0) {
 			$skip--;
 
-			if (!empty($val))
+			if (!empty($val)) {
 				array_pop($val);
+			}
 
 			if (empty($val)) {
-				$tmp = $this->env;
 				array_pop($tmp);
 				$val = $this->get($name, $tmp);
 			}
 
-			if ($val == null) return $default;
+			if (empty($val)) return $default;
 		}
 
 		return end($val);
