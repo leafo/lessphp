@@ -2,7 +2,7 @@
 
 /**
  * less.inc.php
- * v0.1.2-1
+ * v0.1.3
  *
  * less css compiler 
  * adapted from http://lesscss.org/docs.html
