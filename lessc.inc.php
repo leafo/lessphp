@@ -39,6 +39,13 @@ class lessc
 		'/' => '1',
 	);
 
+	// delayed types
+	private $dtypes = array('expression', 'variable');
+
+	// the default set of units
+	private $units = array(
+		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc');
+
 	public $importDisabled = false;
 	public $importDir = '';
 
@@ -56,8 +63,10 @@ class lessc
 		if (!is_file($fname)) {
 			throw new Exception('load error: failed to find '.$fname);
 		}
+		$pi = pathinfo($fname);
 
 		$this->file = $fname;
+		$this->importDir = $pi['dirname'].'/';
 		$this->buffer = file_get_contents($fname);
 	}
 
@@ -375,8 +384,6 @@ class lessc
 		return $this;
 	}
 
-	// delayed types
-	private $dtypes = array('expression', 'variable');
 
 	// used to recursively love infix equation with proper operator order
 	private function expHelper($lhs, $minP)
@@ -456,10 +463,6 @@ class lessc
 
 		throw new exception('parse error: failed to find value');
 	}
-
-	// the default set of units
-	private $units = array(
-		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc');
 
 	// $units the allowed units
 	// number is always allowed (is this okay?)
@@ -896,7 +899,6 @@ class lessc
 	 */
 
 	// functions for manipulating the expand stack
-	private $depth = 0;
 	private $expandStack = array();
 
 	// push name on expand stack and return its count
