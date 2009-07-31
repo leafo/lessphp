@@ -42,9 +42,6 @@ $colors = array (
 	)
 );
 
-
-
-
 array_shift($argv);
 
 // read less code from argument or from std in if there is no argument
@@ -97,11 +94,15 @@ if (false !== ($loc = array_search("-r", $argv))) {
 	if (!is_file($fname = array_shift($argv)))
 		exit('Fatal Error: failed to find file: '.$fname."\n");
 	$c = file_get_contents($fname);
+
+	$pi = pathinfo($fname);
+	$importDir = $pi['dirname'].'/';
 }
 
 error_reporting(E_ALL);
 
 $l = new lessc();
+if ($importDir) $l->importDir = $importDir;
 try {
 	echo $l->parse($c);
 } catch (exception $ex) {
