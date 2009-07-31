@@ -44,7 +44,7 @@ class lessc
 
 	// the default set of units
 	private $units = array(
-		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc');
+		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc', 's');
 
 	public $importDisabled = false;
 	public $importDir = '';
