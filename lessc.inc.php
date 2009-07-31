@@ -145,13 +145,14 @@ class lessc
 			$tags = $this->multiplyTags(); // after pop
 
 			$env = end($this->env);
+			$ctags = $env['__tags'];
 			unset($env['__tags']);
 
 			$out = $this->compileBlock($tags, $env);
 			$this->pop();
 
 			// make the block(s) available in the new current scope
-			foreach ($tags as $t)
+			foreach ($ctags as $t)
 				$this->set($t, $env);
 
 			return $out;
