@@ -40,6 +40,7 @@ class lessc
 	);
 
 	public $importDisabled = false;
+	public $importDir = '';
 
 	public function __construct($fname = null)
 	{
@@ -154,17 +155,15 @@ class lessc
 			$this->import($url, $media)->advance();
 			if ($this->importDisabled) return "/* import is disabled */\n";
 
-			if (file_exists($url)) {
-				$this->buffer = file_get_contents($url).";\n".$this->buffer;
-				$this->removeComments();
-			} else if (file_exists($url.'.less')) {
-				$this->buffer = file_get_contents($url.'.less').";\n".$this->buffer;
-				$this->removeComments();
-			} else {
-				return '@import url("'.$url.'")'.($media ? ' '.$media : '').";\n";
+			$full = $this->importDir.$url;
+
+			if (file_exists($file = $full) || file_exists($file = $full.'.less')) {
+				$this->buffer = 
+					$this->removeComments(file_get_contents($file).";\n".$this->buffer);
+				return true;
 			}
 
-			return true;
+			return '@import url("'.$url.'")'.($media ? ' '.$media : '').";\n";
 		} catch (exception $ex) {
 			$this->undo();
 		}
