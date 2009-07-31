@@ -99,6 +99,8 @@ if (false !== ($loc = array_search("-r", $argv))) {
 	$c = file_get_contents($fname);
 }
 
+error_reporting(E_ALL);
+
 $l = new lessc();
 try {
 	echo $l->parse($c);
