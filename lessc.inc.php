@@ -142,23 +142,38 @@ class lessc
 		try {
 			$this->literal('}')->advance();
 
-			$tags = $this->multiplyTags(); // after pop
+			$tags = $this->multiplyTags(); 
 
 			$env = end($this->env);
 			$ctags = $env['__tags'];
 			unset($env['__tags']);
+			
+			if (!empty($tags))
+				$out = $this->compileBlock($tags, $env);
 
-			$out = $this->compileBlock($tags, $env);
 			$this->pop();
 
 			// make the block(s) available in the new current scope
 			foreach ($ctags as $t)
 				$this->set($t, $env);
 
-			return $out;
+			return isset($out) ? $out : true;
 		} catch (exception $ex) {
 			$this->undo();
 		}	
+
+		// a function declaration
+		try {
+			$this->variable($name)->argumentList($args, 'variable')->literal('{')->advance();
+			$this->push();
+			$this->set('__args', $args);
+			$this->set('__tags', array('%'.$name));
+
+			return true;
+
+		} catch (exception $ex) {
+			$this->undo();
+		}
 
 		// look for import
 		try {
@@ -192,10 +207,22 @@ class lessc
 		// todo: this catches a lot of invalid syntax b/c tag 
 		// consumer is liberal. This causes errors to be hidden
 		try {
-			$this->tags($t, true, '>')->end()->advance();
+			$this->tags($t, true, '>');
 
+			// look for arguments
+			$save = $this->count;
+			try { 
+				$this->argumentList($argv); 
+				// the last argument can be a function name, if it is rename it
+				if (preg_match('/^@(.*)$/',end($t), $m)) {
+					$t[count($t) - 1] = '%'.$m[1];
+				}
+			} catch (exception $ex) { $this->count = $save; }
+
+			$this->end()->advance();
+
+			// find the final environment
 			$env = $this->get(array_shift($t));
-
 
 			while ($sub = array_shift($t)) {
 				if (isset($env[$sub]))  // todo add a type check for environment
@@ -208,17 +235,37 @@ class lessc
 
 			if ($env == null) return true;
 
+			// if we have argument names and values
+			if (!empty($argv) && !empty($env['__args'])) {
+				// insert args in env
+				$names = $env['__args'];
+				foreach ($argv as $aval) {
+					$name = array_shift($names); // arg name goes here
+					if ($name == null) break; // ran out of names
+
+
+					// if env already has something in this scope
+					if (isset($env['@'.$name])) {
+						array_unshift($env['@'.$name], $aval);
+					} else {
+						// new element
+						$env['@'.$name] = array($aval);
+					}
+				}
+			} 
+
 			// set all properties 
 			ob_start();
 			foreach ($env as $name => $value) {
-
 				// if it is a block then render it
 				if (!isset($value[0])) {
 					$rtags = $this->multiplyTags(array($name));
 					echo $this->compileBlock($rtags, $value);
 				}
 
-				$this->set($name, $value);
+				// copy everything except metadata
+				if (!preg_match('/^__/', $name))
+					$this->set($name, $value); // fixme: this should be append?
 			}
 
 			return ob_get_clean();
@@ -291,6 +338,24 @@ class lessc
 		return $this;
 	}
 
+	// gets a list of property values separated by ; between ( and )
+	private function argumentList(&$args, $type = 'propertyValue', $delim = ';')
+	{
+		$this->literal('(');
+
+		$values = array();
+		while (true){ 
+			try {
+				$this->$type($values[])->literal(';');
+			} catch (exception $ex) { break; }
+		}
+
+		$this->literal(')');
+		$args = $values;
+		
+		return $this;
+	}
+
 	// get a list of tags separated by commas
 	private function tags(&$tags, $simple = false, $delim = ',')
 	{
@@ -312,9 +377,9 @@ class lessc
 	private function tag(&$tag, $simple = false)
 	{
 		if ($simple)
-			$chars = '^,:;{}\][>';
+			$chars = '^,:;{}\][>\(\)';
 		else 
-			$chars = '^,;{}';
+			$chars = '^,;{}\(\)';
 
 		// can't start with a number
 		if (!$this->match('(['.$chars.'0-9]['.$chars.']*)', $m))
@@ -329,6 +394,7 @@ class lessc
 	private function literal($what)
 	{
 		// if $what is one char we can speed things up
+		// fixme: throws a notice here when going over the len of the buffer
 		if ((strlen($what) == 1 && $what != $this->buffer{$this->count}) ||
 			!$this->match($this->preg_quote($what), $m)) 
 		{
@@ -584,10 +650,13 @@ class lessc
 		$word = $m[1];
 
 		// find out if it is a function
+		/* fixme: turn this into a value 
+		 * does this have any side effects?
 		try {
 			$this->literal('(')->to(')', $args);
 			$word.= '('.$args.')';
 		} catch (exception $ex) { }
+		 */
 
 		return $this;
 	}
@@ -609,13 +678,20 @@ class lessc
 	 */
 	private function compileBlock($rtags, $env)
    	{
+		// don't render functions
+		foreach ($rtags as $i => $tag) {
+			if (preg_match('/( |^)%/', $tag))
+				unset($rtags[$i]);
+		}
+		if (empty($rtags)) return '';
+
 		$props = 0;
 		// print all the properties
 		ob_start();
 		foreach ($env as $name => $value) {
 			// todo: change this, poor hack
 			// make a better name storage system!!! (value types are fine)
-			if (isset($value[0]) && $name{0} != '@') { // isn't a block because it has a type and isn't a var
+			if (isset($value[0]) && $name{0} != '@' && $name != '__args') { // isn't a block because it has a type and isn't a var
 				echo $this->compileProperty($name, $value, 1)."\n";
 				$props++;
 			}
@@ -839,7 +915,7 @@ class lessc
 	// get the most recent value of a variable
 	// return default if it isn't found
 	// $skip is number of vars to skip
-	// todo: rename to getVar 
+	// todo: rename to getVar ?
 	private function getVal($name, $skip = 0, $default = array('keyword', ''))
 	{
 		$val = $this->get($name);
@@ -892,6 +968,12 @@ class lessc
 
 		$this->level--;
 		return array_pop($this->env);
+	}
+
+	// clear the meta data off the head of the stack
+	private function clearMetaData()
+	{
+
 	}
 
 
@@ -1044,6 +1126,7 @@ class lessc
 		$rtags = array();
 		foreach ($parents as $p) {
 			foreach ($tags as $t) {
+				if ($t{0} == '@') continue; // skip functions
 				$rtags[] = trim($p.($t{0} == ':' ? '' : ' ').$t);
 			}
 		}
