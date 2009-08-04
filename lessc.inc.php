@@ -492,6 +492,16 @@ class lessc
 		} catch (exception $ex) { /* $this->undo(); */ }
 
 		try {
+			$save = $this->count;
+			$this->func($f);
+
+			$val = array('keyword', $f);
+
+			return $this;
+		} catch (exception $ex) { $this->count = $save; }
+
+
+		try {
 			$this->keyword($k);
 			$val = array('keyword', $k);
 			return $this;
@@ -519,6 +529,9 @@ class lessc
 			$val = array('keyword', $d.$tmp.$d);
 			return $this;
 		} catch (exception $ex) { $this->count = $save; }
+
+
+
 
 		// try to get a variable
 		try { 
@@ -640,6 +653,15 @@ class lessc
 		return $this;
 	}
 
+	// read a css function off the head of the buffer
+	private function func(&$func)
+	{
+		$this->keyword($fname)->literal('(')->to(')', $args);
+
+		$func = $fname.'('.$args.')';
+		return $this;
+	}
+
 	// read a keyword off the head of the buffer
 	private function keyword(&$word)
 	{
@@ -648,16 +670,6 @@ class lessc
 		}
 
 		$word = $m[1];
-
-		// find out if it is a function
-		/* fixme: turn this into a value 
-		 * does this have any side effects?
-		try {
-			$this->literal('(')->to(')', $args);
-			$word.= '('.$args.')';
-		} catch (exception $ex) { }
-		 */
-
 		return $this;
 	}
 
