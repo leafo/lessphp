@@ -255,7 +255,7 @@ class lessc
 			if (!empty($env['__args'])) {
 				foreach($env['__args'] as $arg) {
 					$name = $arg[0];
-					$value = array_shift($argv);
+					$value = is_array($argv) ? array_shift($argv) : null;
 					// copy default value if there isn't one supplied
 					if ($value == null && isset($arg[1])) 
 						$value = $arg[1];
