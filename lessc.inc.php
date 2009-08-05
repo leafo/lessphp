@@ -135,18 +135,11 @@ class lessc
 			if (count($tags) == 1) {
 				try {
 					$save = $this->count;
-					$this->argumentList($args, 'variable');
+					$this->argumentDef($args);
 				} catch (exception $ex) {
 					$this->count = $save;
 				}
 			}
-		/*	
-		 
-		 	$this->variable($name)->argumentList($args, 'variable')->literal('{')->advance();
-			$this->push();
-			$this->set('__args', $args);
-			$this->set('__tags', array('%'.$name));
-		 */
 
 			$this->literal('{')->advance();
 			$this->push();
@@ -173,6 +166,15 @@ class lessc
 			$env = end($this->env);
 			$ctags = $env['__tags'];
 			unset($env['__tags']);
+
+			// insert the default arguments
+			if (isset($env['__args'])) {
+				foreach ($env['__args'] as $arg) {
+					if (isset($arg[1])) {
+						$this->prepend('@'.$arg[0], $arg[1]);
+					}	
+				}
+			}
 			
 			if (!empty($tags))
 				$out = $this->compileBlock($tags, $env);
@@ -216,8 +218,8 @@ class lessc
 		}
 
 
-		// look for a namespace to expand
-		// todo: this catches a lot of invalid syntax b/c tag 
+		// look for a namespace/function to expand
+		// todo: this catches a lot of invalid syntax because tag 
 		// consumer is liberal. This causes errors to be hidden
 		try {
 			$this->tags($tags, true, '>');
@@ -230,7 +232,7 @@ class lessc
 			// look for arguments
 			$save = $this->count;
 			try { 
-				$this->argumentList($argv); 
+				$this->argumentValues($argv); 
 			} catch (exception $ex) { $this->count = $save; }
 
 			$this->end()->advance();
@@ -249,20 +251,23 @@ class lessc
 
 			if ($env == null) return true;
 
-			// if we have argument names and values
-			if (!empty($argv) && !empty($env['__args'])) {
-				// insert args in env
-				$names = $env['__args'];
-				foreach ($argv as $aval) {
-					$name = array_shift($names); // arg name goes here
-					if ($name == null) break; // ran out of names
+			// if we have arguments then insert them
+			if (!empty($env['__args'])) {
+				foreach($env['__args'] as $arg) {
+					$name = $arg[0];
+					$value = array_shift($argv);
+					// copy default value if there isn't one supplied
+					if ($value == null && isset($arg[1])) 
+						$value = $arg[1];
 
-					// if env already has something in this scope
+					// if ($value == null) continue; // don't define so it can search up 
+
+					// create new entry if var doesn't exist in scope
 					if (isset($env['@'.$name])) {
-						array_unshift($env['@'.$name], $aval);
+						array_unshift($env['@'.$name], $value);
 					} else {
 						// new element
-						$env['@'.$name] = array($aval);
+						$env['@'.$name] = array($value);
 					}
 				}
 			} 
@@ -352,14 +357,14 @@ class lessc
 	}
 
 	// gets a list of property values separated by ; between ( and )
-	private function argumentList(&$args, $type = 'propertyValue', $delim = ';')
+	private function argumentValues(&$args, $delim = ';')
 	{
 		$this->literal('(');
 
 		$values = array();
 		while (true){ 
 			try {
-				$this->$type($values[])->literal(';');
+				$this->propertyValue($values[])->literal(';');
 			} catch (exception $ex) { break; }
 		}
 
@@ -368,6 +373,36 @@ class lessc
 		
 		return $this;
 	}
+
+	// consume agument definition, variable names with optional value
+	private function argumentDef(&$args, $delim = ';') 
+	{
+		$this->literal('(');
+
+		$values = array();
+		while (true) {
+			try { 
+				$arg = array();
+				$this->variable($arg[]);
+				// look for a default value
+				try {
+					$this->literal(':')->propertyValue($value);
+					$arg[] = $value;
+				} catch (exception $ax) { }
+
+				$values[] = $arg;
+				$this->literal($delim);
+			} catch (exception $ex) {
+				break;
+			}
+		}
+
+		$this->literal(')');
+		$args = $values;
+		
+		return $this;
+	}
+
 
 	// get a list of tags separated by commas
 	private function tags(&$tags, $simple = false, $delim = ',')
@@ -428,9 +463,11 @@ class lessc
 				$this->literal(','); } 
 			catch (exception $ex) { break; }
 		}
-
-		$out = array_map(array($this, 'compressValues'), $out);
-		$value = $this->compressValues($out, ', ');
+		
+		if (!empty($out)) {
+			$out = array_map(array($this, 'compressValues'), $out);
+			$value = $this->compressValues($out, ', ');
+		}
 
 		return $this;
 	}
@@ -716,7 +753,8 @@ class lessc
 		foreach ($env as $name => $value) {
 			// todo: change this, poor hack
 			// make a better name storage system!!! (value types are fine)
-			if (isset($value[0]) && $name{0} != '@' && $name != '__args') { // isn't a block because it has a type and isn't a var
+			// but.. don't render special properties (blocks, vars, metadata)
+			if (isset($value[0]) && $name{0} != '@' && $name != '__args') { 
 				echo $this->compileProperty($name, $value, 1)."\n";
 				$props++;
 			}
@@ -976,6 +1014,14 @@ class lessc
 	private function append($name, $value)
 	{
 		$this->env[count($this->env) - 1][$name][] = $value;
+	}
+
+	// put on the front of the value
+	private function prepend($name, $value) 
+	{
+		if (isset($this->env[count($this->env) - 1][$name]))
+			array_unshift($this->env[count($this->env) - 1][$name], $value);
+		else $this->append($name, $value);
 	}
 
 	// push a new environment stack
