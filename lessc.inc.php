@@ -129,9 +129,35 @@ class lessc
 
 		// entering a block
 		try {
-			$this->tags($tags)->literal('{')->advance();
+			$this->tags($tags);
+			
+			// it can only be a function if there is one tag
+			if (count($tags) == 1) {
+				try {
+					$save = $this->count;
+					$this->argumentList($args, 'variable');
+				} catch (exception $ex) {
+					$this->count = $save;
+				}
+			}
+		/*	
+		 
+		 	$this->variable($name)->argumentList($args, 'variable')->literal('{')->advance();
 			$this->push();
+			$this->set('__args', $args);
+			$this->set('__tags', array('%'.$name));
+		 */
+
+			$this->literal('{')->advance();
+			$this->push();
+
+			//  move @ tags out of variable namespace!
+			foreach($tags as &$tag) {
+				if ($tag{0} == "@") $tag[0] = "%";
+			}
+
 			$this->set('__tags', $tags);
+			if (isset($args)) $this->set('__args', $args);	
 
 			return true;
 		} catch (exception $ex) {
@@ -161,19 +187,6 @@ class lessc
 		} catch (exception $ex) {
 			$this->undo();
 		}	
-
-		// a function declaration
-		try {
-			$this->variable($name)->argumentList($args, 'variable')->literal('{')->advance();
-			$this->push();
-			$this->set('__args', $args);
-			$this->set('__tags', array('%'.$name));
-
-			return true;
-
-		} catch (exception $ex) {
-			$this->undo();
-		}
 
 		// look for import
 		try {
@@ -207,24 +220,25 @@ class lessc
 		// todo: this catches a lot of invalid syntax b/c tag 
 		// consumer is liberal. This causes errors to be hidden
 		try {
-			$this->tags($t, true, '>');
+			$this->tags($tags, true, '>');
+
+			//  move @ tags out of variable namespace
+			foreach($tags as &$tag) {
+				if ($tag{0} == "@") $tag[0] = "%";
+			}
 
 			// look for arguments
 			$save = $this->count;
 			try { 
 				$this->argumentList($argv); 
-				// the last argument can be a function name, if it is rename it
-				if (preg_match('/^@(.*)$/',end($t), $m)) {
-					$t[count($t) - 1] = '%'.$m[1];
-				}
 			} catch (exception $ex) { $this->count = $save; }
 
 			$this->end()->advance();
 
 			// find the final environment
-			$env = $this->get(array_shift($t));
+			$env = $this->get(array_shift($tags));
 
-			while ($sub = array_shift($t)) {
+			while ($sub = array_shift($tags)) {
 				if (isset($env[$sub]))  // todo add a type check for environment
 					$env = $env[$sub];
 				else { 
@@ -242,7 +256,6 @@ class lessc
 				foreach ($argv as $aval) {
 					$name = array_shift($names); // arg name goes here
 					if ($name == null) break; // ran out of names
-
 
 					// if env already has something in this scope
 					if (isset($env['@'.$name])) {
