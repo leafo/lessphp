@@ -338,6 +338,7 @@ class lessc
 		}
 
 		$this->to($delim, $string);
+
 		if (!isset($d)) $d = $delim;
 
 		return $this;
@@ -545,11 +546,18 @@ class lessc
 			$save = $this->count;
 			$this->func($f);
 
-			$val = array('keyword', $f);
+			$val = array('string', $f);
 
 			return $this;
 		} catch (exception $ex) { $this->count = $save; }
 
+		// a string
+		try { 
+			$save = $this->count;
+			$this->string($tmp, $d);
+			$val = array('string', $d.$tmp.$d);
+			return $this;
+		} catch (exception $ex) { $this->count = $save; }
 
 		try {
 			$this->keyword($k);
@@ -571,17 +579,6 @@ class lessc
 		try { 
 			return $this->color($val); 
 		} catch (exception $ex) { /* $this->undo(); */ }
-
-		// a string
-		try { 
-			$save = $this->count;
-			$this->string($tmp, $d);
-			$val = array('keyword', $d.$tmp.$d);
-			return $this;
-		} catch (exception $ex) { $this->count = $save; }
-
-
-
 
 		// try to get a variable
 		try { 
@@ -780,8 +777,6 @@ class lessc
 	}
 
 
-
-
 	// todo replace render color
 	private function compileValue($value)
 	{
@@ -799,6 +794,20 @@ class lessc
 			$this->popName();
 
 			return $tmp;
+
+		case 'string':
+			// search for values inside the string
+			$replace = array();
+			if (preg_match_all('/{(@[\w-_][0-9\w-_]*)}/', $value[1], $m)) {
+				foreach($m[1] as $name) {
+					if (!isset($replace[$name]))
+						$replace[$name] = $this->compileValue(array('variable', $name));
+				}
+			}
+			foreach ($replace as $var=>$val)
+			   $value[1] = str_replace('{'.$var.'}', $val, $value[1]);
+
+			return $value[1];
 
 		case 'color':
 			return $this->compileColor($value);
@@ -1040,13 +1049,6 @@ class lessc
 		$this->level--;
 		return array_pop($this->env);
 	}
-
-	// clear the meta data off the head of the stack
-	private function clearMetaData()
-	{
-
-	}
-
 
 	/**
 	 * misc functions
