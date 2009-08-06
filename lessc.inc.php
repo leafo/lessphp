@@ -282,8 +282,14 @@ class lessc
 				}
 
 				// copy everything except metadata
-				if (!preg_match('/^__/', $name))
-					$this->set($name, $value); // fixme: this should be append?
+				if (!preg_match('/^__/', $name)) {
+					// don't overwrite previous value
+					if ($this->get($name)) {
+						while ($tval = array_shift($value))
+							$this->append($name, $tval);
+					} else 
+						$this->set($name, $value); // fixme: this should be append?
+				}
 			}
 
 			return ob_get_clean();
