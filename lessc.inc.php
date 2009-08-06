@@ -542,6 +542,10 @@ class lessc
 			return $this->unit($val);
 		} catch (exception $ex) { /* $this->undo(); */ }
 
+		try { 
+			return $this->color($val); 
+		} catch (exception $ex) { /* $this->undo(); */ }
+
 		try {
 			$save = $this->count;
 			$this->func($f);
@@ -575,10 +579,6 @@ class lessc
 
 			return $this;
 		} catch (exception $ex) { $this->count = $save; /* $this->undo(); */ }
-
-		try { 
-			return $this->color($val); 
-		} catch (exception $ex) { /* $this->undo(); */ }
 
 		// try to get a variable
 		try { 
