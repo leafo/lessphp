@@ -548,6 +548,17 @@ class lessc
 			return $this->unit($val);
 		} catch (exception $ex) { /* $this->undo(); */ }
 
+		// look for accessor 
+		// must be done before color
+		try {
+			$save = $this->count; // todo: replace with counter stack
+			$this->accessor($a);
+			$tmp = $this->get($a[0]); // get env
+			$val = end($tmp[$a[1]]); // get latest var
+
+			return $this;
+		} catch (exception $ex) { $this->count = $save; /* $this->undo(); */ }
+
 		try { 
 			return $this->color($val); 
 		} catch (exception $ex) { /* $this->undo(); */ }
@@ -575,16 +586,7 @@ class lessc
 			return $this;
 		} catch (exception $ex) { /* $this->undo(); */ }
 
-		// look for accessor 
-		// must be done before color
-		try {
-			$save = $this->count; // todo: replace with counter stack
-			$this->accessor($a);
-			$tmp = $this->get($a[0]); // get env
-			$val = end($tmp[$a[1]]); // get latest var
 
-			return $this;
-		} catch (exception $ex) { $this->count = $save; /* $this->undo(); */ }
 
 		// try to get a variable
 		try { 
