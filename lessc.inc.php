@@ -283,8 +283,8 @@ class lessc
 
 				// copy everything except metadata
 				if (!preg_match('/^__/', $name)) {
-					// don't overwrite previous value
-					if ($this->get($name)) {
+					// don't overwrite previous value, look in current env for name
+					if ($this->get($name, array(end($this->env)))) {
 						while ($tval = array_shift($value))
 							$this->append($name, $tval);
 					} else 
