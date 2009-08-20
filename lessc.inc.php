@@ -182,8 +182,14 @@ class lessc
 			$this->pop();
 
 			// make the block(s) available in the new current scope
-			foreach ($ctags as $t)
-				$this->set($t, $env);
+			foreach ($ctags as $t) {
+				// if the block already exists then merge 
+				if ($this->get($t, array(end($this->env)))) {
+					$this->merge($t, $env);
+				} else {
+					$this->set($t, $env);
+				}
+			}
 
 			return isset($out) ? $out : true;
 		} catch (exception $ex) {
@@ -1019,6 +1025,21 @@ class lessc
 		}
 
 		return end($val);
+	}
+
+	// merge a block into the current env
+	private function merge($name, $value)
+	{
+		// if the current block isn't there then just set
+		$top =& $this->env[count($this->env) - 1];
+		if (!isset($top[$name])) return $this->set($name, $value);
+
+		// copy the block into the old one, including meta data
+		foreach ($value as $k=>$v) {
+			// todo: merge property values instead of replacing
+			// have to check type for this
+			$top[$name][$k] = $v;
+		}
 	}
 
 	// set something in the current env
