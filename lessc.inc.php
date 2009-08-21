@@ -362,7 +362,7 @@ class lessc
 			$this->literal(';');
 		} catch (exception $ex) { 
 			// there is an end of block next, then no problem
-			if ($this->buffer{$this->count} != '}')
+			if (strlen($this->buffer) <= $this->count || $this->buffer{$this->count} != '}')
 				throw new exception('parse error: failed to find end');
 		}
 
@@ -455,8 +455,7 @@ class lessc
 	private function literal($what)
 	{
 		// if $what is one char we can speed things up
-		// fixme: throws a notice here when going over the len of the buffer
-		if ((strlen($what) == 1 && $what != $this->buffer{$this->count}) ||
+		if ((strlen($what) == 1 && $this->count < strlen($this->buffer) && $what != $this->buffer{$this->count}) ||
 			!$this->match($this->preg_quote($what), $m)) 
 		{
 			throw new 
