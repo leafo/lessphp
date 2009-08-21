@@ -3,6 +3,7 @@
 //
 // command line utility to compile less to stdout
 // leaf corcoran <leafo.net>
+$VERSION = "v0.1.6";
 
 error_reporting(E_ALL);
 $path  = realpath(dirname(__FILE__)).'/';
@@ -63,6 +64,10 @@ function hasValue($o, &$value = null)
 	return true;
 }
 
+if (has("v")) {
+	exit($VERSION."\n");
+}
+
 if (has("r", $loc)) {
 	if (!hasValue("r", $data)) {
 		while (!feof(STDIN)) {
@@ -112,12 +117,16 @@ if (has("w")) {
 	exit(0);
 }
 
-$l = new lessc(array_shift($argv));
+if (!$fname = array_shift($argv)) {
+	echo "Usage: ".$exe." input-file > output-file\n";
+	exit(1);
+}
+
 try {
+	$l = new lessc($fname);
 	echo $l->parse();
 } catch (exception $ex) {
-	err($fa."\n".str_repeat('=', 20)."\n".
-		$ex->getMessage());
+	err($fa.$ex->getMessage());
 	exit(1);
 }
 
