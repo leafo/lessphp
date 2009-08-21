@@ -2,7 +2,7 @@
 
 /**
  * less.inc.php
- * v0.1.5
+ * v0.1.6
  *
  * less css compiler 
  * adapted from http://lesscss.org/docs.html
@@ -294,7 +294,7 @@ class lessc
 						while ($tval = array_shift($value))
 							$this->append($name, $tval);
 					} else 
-						$this->set($name, $value); // fixme: this should be append?
+						$this->set($name, $value); 
 				}
 			}
 
@@ -789,8 +789,6 @@ class lessc
 		return implode("\n", $props);
 	}
 
-
-	// todo replace render color
 	private function compileValue($value)
 	{
 		switch ($value[0]) {
@@ -1000,7 +998,6 @@ class lessc
 	// get the most recent value of a variable
 	// return default if it isn't found
 	// $skip is number of vars to skip
-	// todo: rename to getVar ?
 	private function getVal($name, $skip = 0, $default = array('keyword', ''))
 	{
 		$val = $this->get($name);
