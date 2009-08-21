@@ -4,71 +4,88 @@
 // command line utility to compile less to stdout
 // leaf corcoran <leafo.net>
 
-require './lessc.inc.php';
+error_reporting(E_ALL);
+$path  = realpath(dirname(__FILE__)).'/';
 
-$colors = array (
-	'color' => array(
-		'black'  => 30,
-		'red'    => 31,
-		'green'  => 32,
-		'brown'  => 33,
-		'blue'   => 34,
-		'purple' => 35,
-		'cyan'   => 36,
-		'grey'   => 37,
-		'yellow' => 33
-	),
-	'style' => array(
-		'normal'     => 0,
-		'bold'       => 1,
-		'light'      => 1,
-		'underscore' => 4,
-		'underline'  => 4,
-		'blink'      => 5,
-		'inverse'    => 6,
-		'hidden'     => 8,
-		'concealed'  => 8
-	),
-	'background' => array(
-		'black'  => 40,
-		'red'    => 41,
-		'green'  => 42,
-		'brown'  => 43,
-		'yellow' => 43,
-		'blue'   => 44,
-		'purple' => 45,
-		'cyan'   => 46,
-		'grey'   => 47
-	)
-);
+require $path."lessc.inc.php";
 
-array_shift($argv);
+$fa = "Fatal Error: ";
+function err($msg) {
+	fwrite(STDERR, $msg."\n");
+}
 
-// read less code from argument or from std in if there is no argument
-if (false !== ($loc = array_search("-r", $argv))) {
-	unset($argv[$loc]);
-	$c = array_shift($argv);
-	if (!$c) {
+if (php_sapi_name() != "cli") { 
+	err($fa.$argv[0]." must be run in the command line.");
+	exit(1);
+}
+$exe = array_shift($argv); // remove filename
+
+function process($data, $import = null) {
+	global $fa;
+
+	$l = new lessc();
+	if ($import) $l->importDi = $import;
+	try {
+		echo $l->parse($data);
+		exit(0);
+	} catch (exception $ex) {
+		err($fa."\n".str_repeat('=', 20)."\n".
+			$ex->getMessage());
+		exit(1);
+	}
+}
+
+// process args
+$opts = array();
+foreach ($argv as $loc => $a) {
+	if (preg_match("/^-([a-zA-Z]+)$/", $a, $m)) {
+		$m = $m[1];
+		for ($i = 0; $i < strlen($m); $i++)
+			$opts[$m{$i}] = $loc;
+		unset($argv[$loc]);
+	}
+}
+
+function has($o, &$loc = null)
+{
+	global $opts;
+	if (!isset($opts[$o])) return false;
+	$loc = $opts[$o];
+	return true;
+}
+
+function hasValue($o, &$value = null)
+{
+	global $argv;
+	if (!has($o,$loc)) return false;
+	if (!isset($argv[$loc+1])) return false;
+	$value = $argv[$loc+1];
+	return true;
+}
+
+if (has("r", $loc)) {
+	if (!hasValue("r", $data)) {
 		while (!feof(STDIN)) {
-			$c .= fread(STDIN, 8192);
+			$data .= fread(STDIN, 8192);
 		}
 	}
+	return process($data);
+}
 
-}  else if (false !== ($loc = array_search("-w", $argv))) {
-	unset($argv[$loc]);
-
-	// see if we are sending notifications
-	$notif = array_search("-n", $argv);
-	if ($notif) unset($argv[$notif]);
-
+if (has("w")) {
+	// need two files
 	if (!is_file($in = array_shift($argv)) || 
 		null == $out = array_shift($argv))
 	{
-		exit("\033[31m\033[1mFatal Error:\033[0m plessc -w infile outfile\n");
+		err($fa.$exe." -w infile outfile");
+		exit(1);
 	}
 
+	echo "Watching ".$in.
+		(has("n") ? ' with notifications' : '').
+		", press Ctrl + c to exit.\n";
+
 	$fail_time = 0;
-	echo "Watching ".$in.($notif ? ' with notifications' : '').", press Ctrl + c to exit.\n";
 	while (1) {
 		if (!is_file($out) || (filemtime($in) > filemtime($out) && $fail_time != filemtime($in))) {
 			// try to compile it
@@ -76,37 +93,33 @@ if (false !== ($loc = array_search("-r", $argv))) {
 				$l = new lessc($in);
 				$c = $l->parse();
 				echo "Writing updated file: ".$out."\n";	
-				if (!file_put_contents($out, $c))
-					exit('Fatal Error: Failed to write file '.$out."\n");
+				if (!file_put_contents($out, $c)) {
+					err($fa."Could not write to file ".$out);
+					exit(1);
+				}
 			} catch (exception $ex) {
 				echo "\nFatal Error:\n".str_repeat('=', 20)."\n".$ex->getMessage()."\n\n";
 				$fail_time = filemtime($in);
 
-				if ($notif) { 
+				if (has("n")) { 
 					`notify-send -u critical "compile failed" "{$ex->getMessage()}"`;
 				}
 			}
 		}
+
 		sleep(1);
 	}
-
-} else {
-	if (!is_file($fname = array_shift($argv)))
-		exit('Fatal Error: failed to find file: '.$fname."\n");
-	$c = file_get_contents($fname);
-
-	$pi = pathinfo($fname);
-	$importDir = $pi['dirname'].'/';
+	exit(0);
 }
 
-error_reporting(E_ALL);
-
-$l = new lessc();
-if ($importDir) $l->importDir = $importDir;
+$l = new lessc(array_shift($argv));
 try {
-	echo $l->parse($c);
+	echo $l->parse();
 } catch (exception $ex) {
-	echo "Fatal Error:\n".str_repeat('=', 20)."\n".$ex->getMessage()."\n";
+	err($fa."\n".str_repeat('=', 20)."\n".
+		$ex->getMessage());
+	exit(1);
 }
+
 
 ?>
