@@ -509,6 +509,7 @@ class lessc
 		} catch (exception $ex) {
 			$this->value($lhs);
 		}
+
 		$result = $this->expHelper($lhs, 0);
 		return $this;
 	}
@@ -568,6 +569,7 @@ class lessc
 			return $this->color($val); 
 		} catch (exception $ex) { /* $this->undo(); */ }
 
+		// a css function
 		try {
 			$save = $this->count;
 			$this->func($f);
@@ -806,6 +808,7 @@ class lessc
 
 			return $tmp;
 
+		// a special keyword that can support inline variables
 		case 'string':
 			// search for values inside the string
 			$replace = array();
@@ -891,6 +894,14 @@ class lessc
 
 		if ($rgt[0] == 'color') {
 			return $this->op_number_color($op, $lft, $rgt);
+		}
+
+		if ($lft[0] == 'keyword' || $rgt[0] == 'keyword' ||
+			$lft[0] == 'string' || $rgt[0] == 'string') 
+		{
+			// look for negative op
+			if ($op == '-') $rgt[1] = '-'.$rgt[1];
+			return array('keyword', $this->compileValue($lft) .' '. $this->compileValue($rgt));
 		}
 
 		// default number number
