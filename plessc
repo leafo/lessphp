@@ -118,13 +118,20 @@ if (has("w")) {
 }
 
 if (!$fname = array_shift($argv)) {
-	echo "Usage: ".$exe." input-file > output-file\n";
+	echo "Usage: ".$exe." input-file [output-file]\n";
 	exit(1);
 }
 
 try {
 	$l = new lessc($fname);
-	echo $l->parse();
+	$out =  $l->parse();
+
+	if (!$fout = array_shift($argv)) {
+		echo $out;
+	} else {
+		file_put_contents($fout, $out);
+	}
+
 } catch (exception $ex) {
 	err($fa.$ex->getMessage());
 	exit(1);
