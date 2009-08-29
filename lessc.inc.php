@@ -127,20 +127,26 @@ class lessc
 			$this->undo();
 		}
 
+		// defining a function block
+		try {
+			$this->tag($tag, true)->argumentDef($args)->literal('{')->advance();
+			
+			$this->push();
+			// move out of variable space
+			if ($tag{0} == "@") $tag[0] = "%";
+
+			$this->set('__tags', array($tag));
+			if (isset($args)) $this->set('__args', $args);	
+
+			return true;
+		} catch (exception $ex) {
+			$this->undo();
+		}
+
 		// entering a block
 		try {
 			$this->tags($tags);
 			
-			// it can only be a function if there is one tag
-			if (count($tags) == 1) {
-				try {
-					$save = $this->count;
-					$this->argumentDef($args);
-				} catch (exception $ex) {
-					$this->count = $save;
-				}
-			}
-
 			$this->literal('{')->advance();
 			$this->push();
 
@@ -150,7 +156,6 @@ class lessc
 			}
 
 			$this->set('__tags', $tags);
-			if (isset($args)) $this->set('__args', $args);	
 
 			return true;
 		} catch (exception $ex) {
@@ -440,7 +445,7 @@ class lessc
 		if ($simple)
 			$chars = '^,:;{}\][>\(\)';
 		else 
-			$chars = '^,;{}\(\)';
+			$chars = '^,;{}';
 
 		// can't start with a number
 		if (!$this->match('(['.$chars.'0-9]['.$chars.']*)', $m))
