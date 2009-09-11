@@ -823,8 +823,13 @@ class lessc
 						$replace[$name] = $this->compileValue(array('variable', $name));
 				}
 			}
-			foreach ($replace as $var=>$val)
-			   $value[1] = str_replace('{'.$var.'}', $val, $value[1]);
+			foreach ($replace as $var=>$val) {
+				// strip quotes	
+				if (preg_match('/^(["\']).*?(\1)$/', $val)) {
+					$val = substr($val, 1, -1);
+				}
+				$value[1] = str_replace('{'.$var.'}', $val, $value[1]);
+			}
 
 			return $value[1];
 
