@@ -286,21 +286,22 @@ class lessc
 			// set all properties 
 			ob_start();
 			foreach ($env as $name => $value) {
+				// skip the metatdata
+				if (preg_match('/^__/', $name)) continue;
+
 				// if it is a block then render it
 				if (!isset($value[0])) {
 					$rtags = $this->multiplyTags(array($name));
 					echo $this->compileBlock($rtags, $value);
 				}
 
-				// copy everything except metadata
-				if (!preg_match('/^__/', $name)) {
-					// don't overwrite previous value, look in current env for name
-					if ($this->get($name, array(end($this->env)))) {
-						while ($tval = array_shift($value))
-							$this->append($name, $tval);
-					} else 
-						$this->set($name, $value); 
-				}
+				// copy the block's data
+				// don't overwrite previous value, look in current env for name
+				if ($this->get($name, array(end($this->env)))) {
+					while ($tval = array_shift($value))
+						$this->append($name, $tval);
+				} else 
+					$this->set($name, $value); 
 			}
 
 			return ob_get_clean();
