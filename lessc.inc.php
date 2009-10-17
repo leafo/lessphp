@@ -523,7 +523,7 @@ class lessc
 	private function expHelper($lhs, $minP)
 	{
 		// while there is an operator and the precedence is greater or equal to min
-		while ($this->match($this->matchString, $m) && $this->precedence[$m[1]] >= $minP) {
+		while ($this->match($this->matchString . '\s+', $m) && $this->precedence[$m[1]] >= $minP) {
 			// check for subexp
 			try {
 				$this->literal('(')->expression($exp)->literal(')');
