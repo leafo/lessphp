@@ -25,7 +25,7 @@ function process($data, $import = null) {
 	global $fa;
 
 	$l = new lessc();
-	if ($import) $l->importDi = $import;
+	if ($import) $l->importDir = $import;
 	try {
 		echo $l->parse($data);
 		exit(0);
