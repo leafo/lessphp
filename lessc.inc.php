@@ -28,7 +28,8 @@ class lessc {
 	private $buffer;
 	private $count;
 	private $depth;
-	private $line ;
+	private $line;
+	private $expandStack;
 
 	private $tests = array();
 
@@ -58,18 +59,29 @@ class lessc {
 			$this->append($key, $value);
 			return "$key: ".$this->compileValue($value).";\n";
 		} else {
+			/*
 			if ($this->peek("(.*?)\n", $m))
 				echo "failed at `".$m[1]."`\n";
+			*/
 			$this->seek($s);
 		}
 
-
 		// function block
+
 		// regular block
 
 		// close block
 		// import statement
+
+
 		// setting variable
+		$s = $this->seek();
+		if ($this->variable($name) && $this->literal(':') && $this->propertyValue($value) && $this->end()) {
+			$this->append('@'.$name, $value);
+			return true;
+		} else {
+			$this->seek($s);
+		}
 
 		// mixin import
 
@@ -160,12 +172,24 @@ class lessc {
 		// try a unit
 		if ($this->unit($value)) return true;	
 
+		// accessor 
+		// color
+		if ($this->color($value)) return true;
+
+		// css function
+		// string
+
 		// try a keyword
 		if ($this->keyword($word)) {
 			$value = array('keyword', $word);
 			return true;
 		}
 
+		// try a variable
+		if ($this->variable($vname)) {
+			$value = array('variable', '@'.$vname);
+			return true;
+		}
 
 		return false;
 	}
@@ -179,6 +203,65 @@ class lessc {
 			return true;
 		}
 
+		return false;
+	}
+
+	function color(&$out) {
+		$color = array('color');
+
+		if ($this->match('(#([0-9a-f]{6})|#([0-9a-f]{3}))', $m)) {
+			if (isset($m[3])) {
+				$num = $m[3];
+				$width = 16;
+			} else {
+				$num = $m[2];
+				$width = 256;
+			}
+
+			$num = hexdec($num);
+			foreach(array(3,2,1) as $i) {
+				$t = $num % $width;
+				$num /= $width;
+
+				$color[$i] = $t * (256/$width) + $t * floor(16/$width);
+			}
+			
+			$out = $color;
+			return true;
+		} else {
+			// try for rgb(a) function	
+			$s = $this->seek();
+			if (!$this->literal('rgb')) return false;
+
+			if ($this->literal('a')) $count = 4;
+			else $count = 3;
+
+			if (!$this->literal('(')) {
+				$this->seek($s);
+				return false;
+			}
+
+			foreach (range(1, $count) as $i) {
+				
+			}
+
+			if (!$this->literal('(')) {
+				$this->seek($s);
+				return false;
+			}
+		
+			$out = $color;
+			return true;
+		}
+
+		return false;
+	}
+
+	function variable(&$name) {
+		$s = $this->seek();
+		if ($this->literal('@', false) && $this->keyword($name)) {
+			return true;	
+		}
 		return false;
 	}
 
@@ -206,14 +289,123 @@ class lessc {
 		case 'keyword':
 		case 'number':
 			return $value[1];
+		case 'expression':
+			return $this->compileValue($this->evaluate($value[1], $value[2], $value[3]));
+			break;
+		case 'variable':
+			$tmp = $this->compileValue(
+				$this->getVal($value[1], $this->pushName($value[1]))
+			);
+			$this->popName();
+
+			return $tmp;
 		default: // assumed to be unit	
 			return $value[1].$value[0];
 		}
 	}
 
-	// evaulate an expression
+	// evaluate an expression
 	function evaluate($op, $left, $right) {
+		// evaluate any expressions or variables on the left and right
+		$pushed = 0; // number of names pushed
+
+		while (in_array($left[0], self::$dtypes)) {
+			if($left[0] == 'expression')
+				$left = $this->evaluate($left[1], $left[2], $left[3]);
+			else if ($left[0] == 'variable') {
+				$left = $this->getVal($left[1], $this->pushName($left[1]), array('number', 0));
+				$pushed++;
+			}
+		}
+		while ($pushed != 0) { $this->popName(); $pushed--; }
+
+		while (in_array($right[0], self::$dtypes)) {
+			if($right[0] == 'expression')
+				$right = $this->evaluate($right[1], $right[2], $right[3]);
+			else if ($right[0] == 'variable') {
+				$right = $this->getVal($right[1], $this->pushName($right[1]), array('number', 0));
+				$pushed++;
+			}
+		}
+		while ($pushed != 0) { $this->popName(); $pushed--; }
+
+		if ($left [0] == 'color' && $right[0] == 'color') {
+			return $this->op_color_color($op, $left, $right);
+		}
+
+		if ($left[0] == 'color') {
+			return $this->op_color_number($op, $left, $right);
+		}
+
+		if ($right[0] == 'color') {
+			return $this->op_number_color($op, $left, $right);
+		}
+
+		if ($left[0] == 'keyword' || $right[0] == 'keyword' ||
+			$left[0] == 'string' || $right[0] == 'string')
+		{
+			// look for negative op
+			if ($op == '-') $right[1] = '-'.$right[1];
+			return array('keyword', $this->compileValue($left) .' '. $this->compileValue($right));
+		}
+	
+		// default to number operation
 		return $this->op_number_number($op, $left, $right);
+	}
+
+	// make sure a color's components don't go out of bounds
+	private function fixColor($c) {
+		for ($i = 1; $i < 4; $i++) {
+			if ($c[$i] < 0) $c[$i] = 0;
+			if ($c[$i] > 255) $c[$i] = 255;
+			$c[$i] = floor($c[$i]);
+		}
+		return $c;
+	}
+
+	private function op_number_color($op, $lft, $rgt) {
+		if ($op == '+' || $op = '*') {
+			return $this->op_color_number($op, $rgt, $lft);
+		}
+	}
+
+	private function op_color_number($op, $lft, $rgt) {
+		if ($rgt[0] == '%') $rgt[1] /= 100;
+
+		return $this->op_color_color($op, $lft,
+			array('color', $rgt[1], $rgt[1], $rgt[1]));
+	}
+
+	private function op_color_color($op, $lft, $rgt) {
+		$newc = array('color');
+
+		switch ($op) {
+		case '+':
+			$newc[] = $lft[1] + $rgt[1];
+			$newc[] = $lft[2] + $rgt[2];
+			$newc[] = $lft[3] + $rgt[3];
+			break;
+		case '*':
+			$newc[] = $lft[1] * $rgt[1];
+			$newc[] = $lft[2] * $rgt[2];
+			$newc[] = $lft[3] * $rgt[3];
+			break;
+		case '-':
+			$newc[] = $lft[1] - $rgt[1];
+			$newc[] = $lft[2] - $rgt[2];
+			$newc[] = $lft[3] - $rgt[3];
+			break;
+		case '/';
+			if ($rgt[1] == 0 || $rgt[2] == 0 || $rgt[3] == 0)
+				throw new exception("parse error: can't divide by zero");
+			$newc[] = $lft[1] / $rgt[1];
+			$newc[] = $lft[2] / $rgt[2];
+			$newc[] = $lft[3] / $rgt[3];
+			break;
+		default:
+			throw new exception('parse error: color op number failed on op '.$op);
+		}
+		return $this->fixColor($newc);
 	}
 
 	// operator on two numbers
@@ -248,6 +440,22 @@ class lessc {
 
 
 	/* environment functions */
+
+	// push name on expand stack, and return its 
+	// count before being pushed
+	function pushName($name) {
+		$count = array_count_values($this->expandStack);
+		$count = isset($count[$name]) ? $count[$name] : 0;
+
+		$this->expandStack[] = $name;
+
+		return $count;
+	}
+
+	// pop name off expand stack and return it
+	function popName() {
+		return array_pop($this->expandStack);
+	}
 
 	// push a new environment
 	private function push() {
@@ -385,6 +593,7 @@ class lessc {
 		if ($str) $this->buffer = $str;		
 
 		$this->env = array();
+		$this->expandStack = array();
 		$this->depth = $this->count = 0;
 		$this->line = 1;
 
@@ -401,6 +610,11 @@ class lessc {
 		$out = '';
 		while (false !== ($compiled = $this->chunk())) {
 			if (is_string($compiled)) $out .= $compiled;
+		}
+
+		if ($this->count != strlen($this->buffer))  {
+			if ($this->peek("(.*?)\n", $m))
+				throw new exception('parse error: failed at `'.$m[1].'`');
 		}
 
 		if (count($this->env) > 1)
