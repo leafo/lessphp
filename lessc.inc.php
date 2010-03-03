@@ -773,6 +773,24 @@ class lessc {
 			return $this->op_number_color($op, $left, $right);
 		}
 
+		// concatenate strings
+		if ($op == '+' && $left[0] == 'string') {
+			// todo: normalize string quotes
+			$append = $this->compileValue($right);
+			if ($right[0] == 'string' && ($append{0} == '"' || $append{0} == "'")) {
+				$append = substr($append, 1, -1);
+			}
+
+			$lhs = $this->compileValue($left);
+			$q = '';
+			if ($left[0] == 'string' && ($lhs{0} == '"' || $lhs{0} == "'")) {
+				$q = $lhs{0};
+				$lhs = substr($lhs, 1, -1);
+			}
+
+			return array('string', $q.$lhs.$append.$q);
+		}
+
 		if ($left[0] == 'keyword' || $right[0] == 'keyword' ||
 			$left[0] == 'string' || $right[0] == 'string')
 		{
