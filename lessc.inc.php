@@ -51,31 +51,78 @@ class lessc {
 	// compile chunk off the head of buffer
 	function chunk() {
 		if (empty($this->buffer)) return false;
+		$s = $this->seek();
 
 		// a property
 		// [keyword] : [propertyValue] ;
-		$s = $this->seek();
 		if ($this->keyword($key) && $this->literal(':') && $this->propertyValue($value) && $this->end()) {
 			$this->append($key, $value);
-			return "$key: ".$this->compileValue($value).";\n";
+
+			if (count($this->env) == 1)
+				return $this->compileProperty($key, array($value))."\n";
+			else
+				return true;
 		} else {
-			/*
-			if ($this->peek("(.*?)\n", $m))
-				echo "failed at `".$m[1]."`\n";
-			*/
 			$this->seek($s);
 		}
 
 		// function block
 
 		// regular block
+		if ($this->tags($tags) && $this->literal('{')) {
+			//  move @ tags out of variable namespace!
+			foreach($tags as &$tag) {
+				if ($tag{0} == "@") $tag[0] = "%";
+			}
+
+			$this->push();
+			$this->set('__tags', $tags);	
+
+			return true;
+		} else {
+			$this->seek($s);
+		}
 
 		// close block
+		if ($this->literal('}')) {
+			$tags = $this->multiplyTags();
+			$env = end($this->env);
+			$ctags = $env['__tags'];
+			unset($env['__tags']);
+
+			// insert the default arguments
+			if (isset($env['__args'])) {
+				foreach ($env['__args'] as $arg) {
+					if (isset($arg[1])) {
+						$this->prepend('@'.$arg[0], $arg[1]);
+					}
+				}
+			}
+
+			if (!empty($tags))
+				$out = $this->compileBlock($tags, $env);
+
+			$this->pop();
+
+			// make the block(s) available in the new current scope
+			foreach ($ctags as $t) {
+				// if the block already exists then merge
+				if ($this->get($t, array(end($this->env)))) {
+					$this->merge($t, $env);
+				} else {
+					$this->set($t, $env);
+				}
+			}
+
+			return isset($out) ? $out : true;
+		} else {
+			$this->seek($s);
+		}
+		
 		// import statement
 
 
 		// setting variable
-		$s = $this->seek();
 		if ($this->variable($name) && $this->literal(':') && $this->propertyValue($value) && $this->end()) {
 			$this->append('@'.$name, $value);
 			return true;
@@ -88,6 +135,24 @@ class lessc {
 		// spare ;
 
 		return false;	
+	}
+
+	// recursively find the cartesian product of all tags in stack
+	function multiplyTags($tags = array(' '), $d = null) {
+		if ($d === null) $d = count($this->env) - 1;
+
+		$parents = $d == 0 ? $this->env[$d]['__tags']
+			: $this->multiplyTags($this->env[$d]['__tags'], $d - 1);
+
+		$rtags = array();
+		foreach ($parents as $p) {
+			foreach ($tags as $t) {
+				if ($t{0} == '@') continue; // skip functions
+				$rtags[] = trim($p.($t{0} == ':' ? '' : ' ').$t);
+			}
+		}
+
+		return $rtags;
 	}
 
 	// a list of expressions
@@ -257,6 +322,31 @@ class lessc {
 		return false;
 	}
 
+	function tags(&$tags, $simple = false, $delim = ',') {
+		$tags = array();
+		while ($this->tag($tt, $simple)) {
+			$tags[] = $tt;
+			if (!$this->literal($delim)) break;
+		}
+		if (count($tags) == 0) return false;
+
+		return true;
+	}
+
+	function tag(&$tag, $simple = false) {
+		if ($simple)
+			$chars = '^,:;{}\][>\(\)';
+		else
+			$chars = '^,;{}';
+
+		// can't start with a number
+		if (!$this->match('(['.$chars.'0-9]['.$chars.']*)', $m))
+			return false;
+
+		$tag = trim($m[1]);
+		return true;
+	}
+
 	function variable(&$name) {
 		$s = $this->seek();
 		if ($this->literal('@', false) && $this->keyword($name)) {
@@ -282,6 +372,46 @@ class lessc {
 		else return array('list', $delim, $items);
 	}
 
+	function compileBlock($rtags, $env) {
+		// don't render functions
+		foreach ($rtags as $i => $tag) {
+			if (preg_match('/( |^)%/', $tag))
+				unset($rtags[$i]);
+		}
+		if (empty($rtags)) return '';
+
+		$props = 0;
+		// print all the visible properties
+		ob_start();
+		foreach ($env as $name => $value) {
+			// todo: change this, poor hack
+			// make a better name storage system!!! (value types are fine)
+			// but.. don't render special properties (blocks, vars, metadata)
+			if (isset($value[0]) && $name{0} != '@' && $name != '__args') {
+				echo $this->compileProperty($name, $value, 1)."\n";
+				$props++;
+			}
+		}
+		$list = ob_get_clean();
+
+		if ($props == 0) return '';
+
+		// do some formatting
+		if ($props == 1) $list = ' '.trim($list).' ';
+		return implode(", ", $rtags).' {'.($props  > 1 ? "\n" : '').
+			$list."}\n";
+
+	}
+
+	function compileProperty($name, $value, $level = 0) {
+		// output all repeated properties
+		foreach ($value as $v)
+			$props[] = str_repeat('  ', $level).
+				$name.':'.$this->compileValue($v).';';
+
+		return implode("\n", $props);
+	}
+
 	function compileValue($value) {
 		switch($value[0]) {
 		case 'list':
@@ -291,7 +421,15 @@ class lessc {
 			return $value[1];
 		case 'expression':
 			return $this->compileValue($this->evaluate($value[1], $value[2], $value[3]));
-			break;
+		case 'color':
+			if (count($value) == 5) { // rgba
+				return 'rgba('.$value[1].','.$value[2].','.$value[3].','.$value[4].')';
+			}
+
+			$out = '#';
+			foreach (range(1,3) as $i)
+				$out .= ($value[$i] < 16 ? '0' : '').dechex($value[$i]);
+			return $out;
 		case 'variable':
 			$tmp = $this->compileValue(
 				$this->getVal($value[1], $this->pushName($value[1]))
@@ -540,8 +678,10 @@ class lessc {
 		}
 	}
 
-
 	function literal($what, $eatWhitespace = true) {
+		// this is here mainly prevent notice from { } string accessor 
+		if ($this->count >= strlen($this->buffer)) return false;
+
 		// shortcut on single letter
 		if (!$eatWhitespace and strlen($what) == 1) {
 			if ($this->buffer{$this->count} == $what) {
@@ -583,7 +723,7 @@ class lessc {
 
 	// seek to a spot in the buffer or return where we are on no argument
 	function seek($where = null) {
-		if (!$where) return $this->count;
+		if ($where === null) return $this->count;
 		else $this->count = $where;
 		return true;
 	}
