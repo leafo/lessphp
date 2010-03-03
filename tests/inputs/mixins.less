@@ -1,0 +1,16 @@
+
+@rounded-corners {
+	border-radius: 10px;
+}
+
+.bold {
+	@font-size: 20px;
+	font-size: @font-size;
+	font-weight: bold;
+}
+
+body #window {
+	@rounded-corners;
+	.bold;
+	line-height: @font-size * 1.5;
+}

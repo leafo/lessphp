@@ -1,0 +1,28 @@
+/* accessors */
+
+#defaults {
+	@width: 960px;
+	@color: black;
+	.something {
+		@space: 10;
+	}
+}
+
+.article { color: #294366; }
+
+.comment {
+	width: #defaults[@width];
+	color: .article['color']; 
+}
+
+.wow {
+	height: .comment['width'];
+	background-color: .comment['color']; 
+}
+
+.mix {
+	#defaults;
+	font-size: .something[@space];
+}
+
+

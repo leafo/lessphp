@@ -1,0 +1,10 @@
+.bold {
+  font-size:20px;
+  font-weight:bold;
+}
+body #window {
+  border-radius:10px;
+  font-size:20px;
+  font-weight:bold;
+  line-height:30px;
+}
