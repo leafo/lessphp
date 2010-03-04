@@ -625,7 +625,7 @@ class lessc {
 
 	// consume a keyword
 	function keyword(&$word) {
-		if ($this->match('([\w_\-!"][\w\-_"]*)', $m)) {
+		if ($this->match('([\w_\-\*!"][\w\-_"]*)', $m)) {
 			$word = $m[1];
 			return true;
 		}
