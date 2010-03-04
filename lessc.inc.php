@@ -56,6 +56,16 @@ class lessc {
 			$this->seek($s);
 		}
 
+		// a font-face block
+		if (count($this->env) == 1 && $this->literal('@font-face') && $this->literal('{')) {
+			$this->push();
+			$this->set('__tags', array('@font-face'));
+			$this->set('__dontsave', true);
+			return true;
+		} else {
+			$this->seek($s);
+		}
+
 		// opening abstract block
 		if ($this->tag($tag, true) && $this->argumentDef($args) && $this->literal('{')) {
 			$this->push();
@@ -108,12 +118,14 @@ class lessc {
 			$this->pop();
 
 			// make the block(s) available in the new current scope
-			foreach ($ctags as $t) {
-				// if the block already exists then merge
-				if ($this->get($t, array(end($this->env)))) {
-					$this->merge($t, $env);
-				} else {
-					$this->set($t, $env);
+			if (!isset($env['__dontsave'])) {
+				foreach ($ctags as $t) {
+					// if the block already exists then merge
+					if ($this->get($t, array(end($this->env)))) {
+						$this->merge($t, $env);
+					} else {
+						$this->set($t, $env);
+					}
 				}
 			}
 
@@ -231,7 +243,7 @@ class lessc {
 		$rtags = array();
 		foreach ($parents as $p) {
 			foreach ($tags as $t) {
-				if ($t{0} == '@') continue; // skip functions
+				if ($t{0} == '%') continue; // skip functions
 				$rtags[] = trim($p.($t{0} == ':' ? '' : ' ').$t);
 			}
 		}
@@ -347,6 +359,7 @@ class lessc {
 		if ($this->color($value)) return true;
 
 		// css function
+		// must be done after color
 		if ($this->func($value)) return true;
 
 		// string
@@ -654,10 +667,13 @@ class lessc {
 
 	function compileBlock($rtags, $env) {
 		// don't render functions
+		// todo: this shouldn't need to happen because multiplyTags prunes them, verify
+		/*
 		foreach ($rtags as $i => $tag) {
 			if (preg_match('/( |^)%/', $tag))
 				unset($rtags[$i]);
 		}
+		 */
 		if (empty($rtags)) return '';
 
 		$props = 0;
@@ -1098,7 +1114,6 @@ class lessc {
 
 		if (count($this->env) > 1)
 			throw new exception('parse error: unclosed block');
-
 
 		// print_r($this->env);
 		return $out;
