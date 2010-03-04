@@ -8,3 +8,26 @@ body #window {
   font-weight:bold;
   line-height:30px;
 }
+#bundle .button:hover { background-color:white; }
+#bundle .button {
+  display:block;
+  border:1px solid black;
+  background-color:grey;
+}
+#header a:hover { background-color:white; }
+#header a {
+  color:orange;
+  display:block;
+  border:1px solid black;
+  background-color:grey;
+}
+div b { color:blue; }
+div {
+  color:blue;
+  hello:world;
+}
+body b { color:blue; }
+body {
+  color:blue;
+  hello:world;
+}

@@ -1,0 +1,13 @@
+
+
+@color: #fff;
+@images: "/assets/images/";
+@images: @images + "test/"; 
+.topbar { background: url({@images}topbar.png); }
+.hello { test: empty-function(@images, 40%, to(@color)); }
+
+.css3 {
+	background-image: -webkit-gradient(linear, 0% 0%, 0% 90%, 
+		from(#E9A000), to(#A37000));
+}
+
