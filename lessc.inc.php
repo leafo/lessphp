@@ -347,10 +347,7 @@ class lessc {
 		if ($this->color($value)) return true;
 
 		// css function
-		if ($this->func($f)) {
-			$value = array('string', $f);
-			return true;
-		}
+		if ($this->func($value)) return true;
 
 		// string
 		if ($this->string($tmp, $d)) {
@@ -378,7 +375,6 @@ class lessc {
 		$s = $this->seek();
 		if (!$this->literal('@import')) return false;
 
-		// there are many forms of import
 		// @import "something.css" media;
 		// @import url("something.css") media;
 		// @import url(something.css) media; 
@@ -400,7 +396,7 @@ class lessc {
 		}
 
 		// now the rest is media
-		return $this->to(';', $media);
+		return $this->to(';', $media, false, true);
 	}
 
 	// a scoped value accessor
@@ -606,10 +602,18 @@ class lessc {
 	function func(&$func) {
 		$s = $this->seek();
 
-		if ($this->keyword($fname) && $this->literal('(') && $this->to(')', $args)) {
-			$func = $fname.'('.$args.')';
-			return true;
+		if ($this->keyword($fname) && $this->literal('(')) {
+			if ($fname == 'url' || !$this->propertyValue($args)) {
+				$this->to(')', $content, true);
+				$args = array('string', $content);
+			}
+
+			if ($this->literal(')')) {
+				$func = array('function', $fname, $args);
+				return true;
+			}
 		}
+
 		$this->seek($s);
 		return false;
 	}
@@ -691,13 +695,22 @@ class lessc {
 	function compileValue($value) {
 		switch($value[0]) {
 		case 'list':
+			// [1] - delimiter
+			// [2] - array of values
 			return implode($value[1], array_map(array($this, 'compileValue'), $value[2]));
 		case 'keyword':
+			// [1] - the keyword 
 		case 'number':
+			// [1] - the number 
 			return $value[1];
 		case 'expression':
+			// [1] - operator
+			// [2] - value of left hand side
+			// [3] - value of right
 			return $this->compileValue($this->evaluate($value[1], $value[2], $value[3]));
 		case 'string':
+			// [1] - contents of string (includes quotes)
+			
 			// search for inline variables to replace
 			$replace = array();
 			if (preg_match_all('/{(@[\w-_][0-9\w-_]*)}/', $value[1], $m)) {
@@ -716,6 +729,10 @@ class lessc {
 
 			return $value[1];
 		case 'color':
+			// [1] - red component (either number for a %)
+			// [2] - green component
+			// [3] - blue component
+			// [4] - optional alpha component
 			if (count($value) == 5) { // rgba
 				return 'rgba('.$value[1].','.$value[2].','.$value[3].','.$value[4].')';
 			}
@@ -725,12 +742,18 @@ class lessc {
 				$out .= ($value[$i] < 16 ? '0' : '').dechex($value[$i]);
 			return $out;
 		case 'variable':
+			// [1] - the name of the variable including @
 			$tmp = $this->compileValue(
 				$this->getVal($value[1], $this->pushName($value[1]))
 			);
 			$this->popName();
 
 			return $tmp;
+		case 'function':
+			// [1] - function name
+			// [2] - some value representing arguments
+			return $value[1].'('.$this->compileValue($value[2]).')';
+
 		default: // assumed to be unit	
 			return $value[1].$value[0];
 		}
@@ -1011,9 +1034,12 @@ class lessc {
 		return preg_quote($what, '/');
 	}
 
-	// match to $what, doesn't include in output
-	function to($what, &$out) {
-		if (!$this->match('(.*?)'.$this->preg_quote($what), $m)) return false;
+	// advance counter to next occurrence of $what
+	// $until - don't include $what in advance
+	function to($what, &$out, $until = false, $allowNewline = false) {
+		$validChars = $allowNewline ? "[^\n]" : '.';
+		if (!$this->match('('.$validChars.'*?)'.$this->preg_quote($what), $m, !$until)) return false;
+		if ($until) $this->count -= strlen($what); // give back $what
 		$out = $m[1];
 		return true;
 	}
@@ -1068,18 +1094,20 @@ class lessc {
 			if (is_string($compiled)) $out .= $compiled;
 		}
 
-		if ($this->count != strlen($this->buffer))  {
-			$line = $this->line + substr_count(substr($this->buffer, 0, $this->count), "\n");
-			if ($this->peek("(.*?)\n", $m))
-				throw new exception('parse error: failed at `'.$m[1].'` line: '.$line);
-		}
+		if ($this->count != strlen($this->buffer)) $this->throwParseError();
 
 		if (count($this->env) > 1)
-			throw new exception('failed to parse: unclosed block');
+			throw new exception('parse error: unclosed block');
 
 
 		// print_r($this->env);
 		return $out;
+	}
+
+	function throwParseError($msg = 'parse error') {
+		$line = $this->line + substr_count(substr($this->buffer, 0, $this->count), "\n");
+		if ($this->peek("(.*?)\n", $m))
+			throw new exception($msg.': failed at `'.$m[1].'` line: '.$line);
 	}
 
 	function __construct($fname = null) {
