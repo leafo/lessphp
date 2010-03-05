@@ -31,7 +31,7 @@ class lessc {
 		'/' => 1,
 		'%' => 1,
 	);
-	static private $operatorString; // regex string to any of the operators
+	static private $operatorString; // regex string to match any of the operators
 
 	static private $dtypes = array('expression', 'variable'); // types with delayed computation
 	static private $units = array(
@@ -670,7 +670,7 @@ class lessc {
 		if ($this->literal(';'))
 			return true;
 		elseif ($this->count == strlen($this->buffer) || $this->buffer{$this->count} == '}') {
-			// if there is  end of file or a closing block next then we don't need a ;
+			// if there is end of file or a closing block next then we don't need a ;
 			return true;
 		}
 		return false;
