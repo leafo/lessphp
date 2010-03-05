@@ -12,7 +12,7 @@
  */
 
 //
-// investigate trouble with  
+// investigate trouble with ^M
 // fix the alpha value with color when using a percent
 //
 
@@ -25,11 +25,11 @@ class lessc {
 	private $env = array();
 
 	static private $precedence = array(
-		'+' => '0',
-		'-' => '0',
-		'*' => '1',
-		'/' => '1',
-		'%' => '1',
+		'+' => 0,
+		'-' => 0,
+		'*' => 1,
+		'/' => 1,
+		'%' => 1,
 	);
 	static private $operatorString; // regex string to any of the operators
 
@@ -466,13 +466,28 @@ class lessc {
 
 	// a numerical unit
 	function unit(&$unit, $allowed = null) {
+		$simpleCase = $allowed == null;
 		if (!$allowed) $allowed = self::$units;
 
-		if ($this->match('(-?[0-9]*(\.)?[0-9]+)('.implode('|', $allowed).')?', $m)) {
+		if ($this->match('(-?[0-9]*(\.)?[0-9]+)('.implode('|', $allowed).')?', $m, !$simpleCase)) {
 			if (!isset($m[3])) $m[3] = 'number';
 			$unit = array($m[3], $m[1]);
+
+			// check for size/height font unit.. should this even be here?
+			if ($simpleCase) {
+				$s = $this->seek();
+				if ($this->literal('/', false) && $this->unit($right, self::$units)) {
+					$unit = array('keyword', $this->compileValue($unit).'/'.$this->compileValue($right));
+				} else {
+					// get rid of whitespace
+					$this->seek($s);
+					$this->match('', $_);
+				}
+			}
+
 			return true;
 		}
+
 
 		return false;
 	}
@@ -654,8 +669,8 @@ class lessc {
 	function end() {
 		if ($this->literal(';'))
 			return true;
-		elseif ($this->buffer{$this->count} == '}') {
-			// if there is a closing block next then we don't need a ;
+		elseif ($this->count == strlen($this->buffer) || $this->buffer{$this->count} == '}') {
+			// if there is  end of file or a closing block next then we don't need a ;
 			return true;
 		}
 		return false;
