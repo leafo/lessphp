@@ -2,6 +2,7 @@
 @x: @a * @a;
 @y: @x + 1;
 @z: @y + @x * 2;
+@m: @z % @y;
  
 @nice-blue: #5B83AD;
 @light-blue: @nice-blue + #111;
@@ -20,6 +21,7 @@
   color: @c;
   background: @light-blue;
   font-family: @fonts;
+  margin: @m + 0px; // 3px
 }
 
 .external {

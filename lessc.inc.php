@@ -29,6 +29,7 @@ class lessc {
 		'-' => '0',
 		'*' => '1',
 		'/' => '1',
+		'%' => '1',
 	);
 	static private $operatorString; // regex string to any of the operators
 
@@ -916,6 +917,9 @@ class lessc {
 			break;	
 		case '-':
 			$value = $left[1] - $right[1];
+			break;	
+		case '%':
+			$value = $left[1] % $right[1];
 			break;	
 		case '/':
 			if ($right[1] == 0) throw new exception('parse error: divide by zero');
