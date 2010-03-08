@@ -33,7 +33,7 @@ class lessc {
 	);
 	static private $operatorString; // regex string to match any of the operators
 
-	static private $dtypes = array('expression', 'variable'); // types with delayed computation
+	static private $dtypes = array('expression', 'variable', 'function'); // types with delayed computation
 	static private $units = array(
 		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc', 's');
 
@@ -488,11 +488,10 @@ class lessc {
 			return true;
 		}
 
-
 		return false;
 	}
 
-	// a color
+	// a # color
 	function color(&$out) {
 		$color = array('color');
 
@@ -515,41 +514,7 @@ class lessc {
 			
 			$out = $color;
 			return true;
-		} else {
-			// try for rgb(a) function	
-			$s = $this->seek();
-
-			if (!$this->literal('rgb')) return false;
-
-			if ($this->literal('a')) $count = 4;
-			else $count = 3;
-
-			if (!$this->literal('(')) {
-				$this->seek($s);
-				return false;
-			}
-
-			// grab the numbers and format
-			foreach (range(1, $count) as $i) {
-				if (!$this->unit($color[], array('%')) || !($i == $count || $this->literal(','))) {
-					$this->seek($s);
-					return false;
-				}
-
-				if ($color[$i][0] == '%')
-					$color[$i] = 255 * ($color[$i][1] / 100);
-				else
-					$color[$i] = $color[$i][1];
-			}
-
-			if (!$this->literal(')')) {
-				$this->seek($s);
-				return false;
-			}
-		
-			$out = $this->fixColor($color);
-			return true;
-		}
+		} 
 
 		return false;
 	}
@@ -791,33 +756,64 @@ class lessc {
 		}
 	}
 
+
+	// convert rgb, rgba into color type suitable for math
+	// todo: add hsl
+	function funcToColor($func) {
+		$fname = $func[1];
+		if (!preg_match('/^(rgb|rgba)$/', $fname)) return false;
+		if ($func[2][0] != 'list') return false; // need a list of arguments
+
+		$components = array();
+		$i = 1;
+		foreach	($func[2][2] as $c) {
+			$c = $this->reduce($c);
+			if ($i < 4) {
+				if ($c[0] == '%') $components[] = 255 * ($c[1] / 100);
+				else $components[] = floatval($c[1]); 
+			} elseif ($i == 4) {
+				if ($c[0] == '%') $components[] = 1.0 * ($c[1] / 100);
+				else $components[] = floatval($c[1]);
+			} else break;
+
+			$i++;
+		}
+		while (count($components) < 3) $components[] = 0;
+
+		array_unshift($components, 'color');
+		return $this->fixColor($components);
+	}
+
+	// reduce a delayed type to its final value
+	// dereference variables and solve equations
+	function reduce($var, $defaultValue = array('number', 0)) {
+		$pushed = 0; // number of variable names pushed
+
+		while (in_array($var[0], self::$dtypes)) {
+			if ($var[0] == 'expression')
+				$var = $this->evaluate($var[1], $var[2], $var[3]);
+			else if ($var[0] == 'variable') {
+				$var = $this->getVal($var[1], $this->pushName($var[1]), $defaultValue);
+				$pushed++;
+			} else if ($var[0] == 'function') {
+				$color = $this->funcToColor($var);
+				if ($color) $var = $color;
+				break; // no where to go after a function
+			}
+		}
+
+		while ($pushed != 0) { $this->popName(); $pushed--; }
+		return $var;
+	}
+
 	// evaluate an expression
 	function evaluate($op, $left, $right) {
-		// evaluate any expressions or variables on the left and right
-		$pushed = 0; // number of names pushed
+		$left = $this->reduce($left);
+		$right = $this->reduce($right);
 
-		while (in_array($left[0], self::$dtypes)) {
-			if($left[0] == 'expression')
-				$left = $this->evaluate($left[1], $left[2], $left[3]);
-			else if ($left[0] == 'variable') {
-				$left = $this->getVal($left[1], $this->pushName($left[1]), array('number', 0));
-				$pushed++;
-			}
-		}
-		while ($pushed != 0) { $this->popName(); $pushed--; }
-
-		while (in_array($right[0], self::$dtypes)) {
-			if($right[0] == 'expression')
-				$right = $this->evaluate($right[1], $right[2], $right[3]);
-			else if ($right[0] == 'variable') {
-				$right = $this->getVal($right[1], $this->pushName($right[1]), array('number', 0));
-				$pushed++;
-			}
-		}
-		while ($pushed != 0) { $this->popName(); $pushed--; }
-
-		if ($left [0] == 'color' && $right[0] == 'color') {
-			return $this->op_color_color($op, $left, $right);
+		if ($left[0] == 'color' && $right[0] == 'color') {
+			$out = $this->op_color_color($op, $left, $right);
+			return $out;
 		}
 
 		if ($left[0] == 'color') {
@@ -879,39 +875,37 @@ class lessc {
 		if ($rgt[0] == '%') $rgt[1] /= 100;
 
 		return $this->op_color_color($op, $lft,
-			array('color', $rgt[1], $rgt[1], $rgt[1]));
+			array_fill(1, count($lft) - 1, $rgt[1]));
 	}
 
-	function op_color_color($op, $lft, $rgt) {
-		$newc = array('color');
-
-		switch ($op) {
-		case '+':
-			$newc[] = $lft[1] + $rgt[1];
-			$newc[] = $lft[2] + $rgt[2];
-			$newc[] = $lft[3] + $rgt[3];
-			break;
-		case '*':
-			$newc[] = $lft[1] * $rgt[1];
-			$newc[] = $lft[2] * $rgt[2];
-			$newc[] = $lft[3] * $rgt[3];
-			break;
-		case '-':
-			$newc[] = $lft[1] - $rgt[1];
-			$newc[] = $lft[2] - $rgt[2];
-			$newc[] = $lft[3] - $rgt[3];
-			break;
-		case '/';
-			if ($rgt[1] == 0 || $rgt[2] == 0 || $rgt[3] == 0)
-				throw new exception("parse error: can't divide by zero");
-			$newc[] = $lft[1] / $rgt[1];
-			$newc[] = $lft[2] / $rgt[2];
-			$newc[] = $lft[3] / $rgt[3];
-			break;
-		default:
-			throw new exception('parse error: color op number failed on op '.$op);
+	function op_color_color($op, $left, $right) {
+		$out = array('color');
+		$max = count($left) > count($right) ? count($left) : count($right);
+		foreach (range(1, $max - 1) as $i) {
+			$lval = isset($left[$i]) ? $left[$i] : 0;
+			$rval = isset($right[$i]) ? $right[$i] : 0;
+			switch ($op) {
+			case '+':
+				$out[] = $lval + $rval;
+				break;
+			case '-':
+				$out[] = $lval - $rval;
+				break;
+			case '*':
+				$out[] = $lval * $rval;
+				break;
+			case '%':
+				$out[] = $lval % $rval;
+				break;
+			case '/':
+				if ($rval == 0) throw new exception("evaluate error: can't divide by zero");
+				$out[] = $lval / $rval;
+				break;
+			default:
+				throw new exception('evaluate error: color op number failed on op '.$op);
+			}
 		}
-		return $this->fixColor($newc);
+		return $this->fixColor($out);
 	}
 
 	// operator on two numbers
