@@ -156,31 +156,8 @@ class lessc {
 		}
 
 		// mixin/function expand
-		if ($this->tags($tags, true, '>')) {
-			//  move @ tags out of variable namespace
-			foreach($tags as &$tag) {
-				if ($tag{0} == "@") $tag[0] = "%";
-			}
-
-			// look for arguments
-			$this->argumentValues($argv);
-
-			if (!$this->end()) {
-				$this->seek($s);
-				return false; // don't do this here
-			}
-			
-			// find the referenced environment
-			$env = $this->get(array_shift($tags));
-			while ($sub = array_shift($tags)) {
-				if (isset($env[$sub]))  // todo add a type check for environment
-					$env = $env[$sub];
-				else {
-					$env = null;
-					break;
-				}
-			}
-
+		if ($this->tags($tags, true, '>') && ($this->argumentValues($argv) || true) && $this->end()) {
+			$env = $this->getEnv($tags);
 			if ($env == null) return true;
 
 			// if we have arguments then insert them
@@ -226,6 +203,8 @@ class lessc {
 			}
 
 			return ob_get_clean();
+		} else {
+			$this->seek($s);
 		}
 
 		// spare ;
@@ -350,9 +329,9 @@ class lessc {
 		// accessor 
 		// must be done before color
 		if ($this->accessor($a)) {
-			$tmp = $this->get($a[0]);
-			if (isset($tmp[$a[1]]))
-				$value = end($tmp[$a[1]]); // fails if $tmp isn't an environment
+			$tmp = $this->getEnv($a[0]);
+			if ($tmp && isset($tmp[$a[1]]))
+				$value = end($tmp[$a[1]]);
 			return true;
 		}
 		
@@ -414,14 +393,14 @@ class lessc {
 	}
 
 	// a scoped value accessor
+	// .hello > @scope1 > @scope2['value'];
 	function accessor(&$var) {
 		$s = $this->seek();
-		if (!$this->tag($scope, true) || !$this->literal('[')) {
+
+		if (!$this->tags($scope, true, '>') || !$this->literal('[')) {
 			$this->seek($s);
 			return false;
 		}
-
-		if ($scope{0} == '@') $scope{0} = '%';
 
 		// either it is a variable or a property
 		// why is a property wrapped in quotes, who knows!
@@ -440,7 +419,6 @@ class lessc {
 		}
 
 		$var = array($scope, $name);
-
 		return true;
 	}
 
@@ -566,6 +544,7 @@ class lessc {
 	}
 
 	// consume a list of tags
+	// this accepts a hanging delimiter
 	function tags(&$tags, $simple = false, $delim = ',') {
 		$tags = array();
 		while ($this->tag($tt, $simple)) {
@@ -1027,6 +1006,26 @@ class lessc {
 		}
 
 		return end($val);
+	}
+
+	// get the environment described by path, an array of env names
+	function getEnv($path) {
+		if (!is_array($path)) $path = array($path);
+
+		//  move @ tags out of variable namespace
+		foreach($path as &$tag)
+			if ($tag{0} == "@") $tag[0] = "%";
+
+		$env = $this->get(array_shift($path));
+		while ($sub = array_shift($path)) {
+			if (isset($env[$sub]))  // todo add a type check for environment
+				$env = $env[$sub];
+			else {
+				$env = null;
+				break;
+			}
+		}
+		return $env;
 	}
 
 	// merge a block into the current env
