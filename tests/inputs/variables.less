@@ -10,13 +10,15 @@
 @rgb-color: rgb(20%, 15%, 80%);
 @rgba-color: rgba(23,68,149,0.5);
  
-@b: @a * 10;
+@b: @a * 10px;
 @c: #888;
 @fonts: "Trebuchet MS", Verdana, sans-serif;
  
 .variables {
   width: @z + 1cm; // 14cm
   height: @b + @x + 0px; // 24px
+  margin-top: -@b; // -20px
+  margin-bottom: 10 - -@b; // 30px
   @c: @c + #001;
   color: @c;
   background: @light-blue;
