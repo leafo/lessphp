@@ -2,9 +2,11 @@
 .comment {
   width:960px;
   color:#294366;
+  padding:10px;
 }
 .wow {
   height:960px;
   background-color:#294366;
+  color:green;
 }
-.mix { font-size:10; }
+.mix { font-size:10px; }
