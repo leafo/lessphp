@@ -316,18 +316,21 @@ class lessc {
 
 	// a single value
 	function value(&$value) {
-		/*
-		switch (true) {
-			case $this->unit($value): return true;
-			// ...
-		}
-		 */
-
 		// try a unit
 		if ($this->unit($value)) return true;	
 
+		// see if there is a negation
+		$s = $this->seek();
+		if ($this->literal('-', false) && $this->variable($vname)) {
+			$value = array('negative', array('variable', '@'.$vname));
+			return true;
+		} else {
+			$this->seek($s);
+		}
+
 		// accessor 
 		// must be done before color
+		// this needs negation too
 		if ($this->accessor($a)) {
 			$tmp = $this->getEnv($a[0]);
 			if ($tmp && isset($tmp[$a[1]]))
@@ -725,6 +728,8 @@ class lessc {
 			$this->popName();
 
 			return $tmp;
+		case 'negative':
+			return $this->compileValue($this->evaluate('-', array('number', 0), $value[1]));
 		case 'function':
 			// [1] - function name
 			// [2] - some value representing arguments
