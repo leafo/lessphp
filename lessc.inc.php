@@ -722,7 +722,14 @@ class lessc {
 			return $out;
 		case 'variable':
 			// [1] - the name of the variable including @
+			$tmp = $this->compileValue(
+				$this->getVal($value[1], $this->pushName($value[1]))
+			);
+			$this->popName();
+
+			return $tmp;
 		case 'negative':
+			// [1] - some value that needs to become negative
 			return $this->compileValue($this->reduce($value));
 		case 'function':
 			// [1] - function name
