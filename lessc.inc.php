@@ -33,7 +33,7 @@ class lessc {
 	);
 	static private $operatorString; // regex string to match any of the operators
 
-	static private $dtypes = array('expression', 'variable', 'function'); // types with delayed computation
+	static private $dtypes = array('expression', 'variable', 'function', 'negative'); // types with delayed computation
 	static private $units = array(
 		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc', 's');
 
@@ -722,14 +722,8 @@ class lessc {
 			return $out;
 		case 'variable':
 			// [1] - the name of the variable including @
-			$tmp = $this->compileValue(
-				$this->getVal($value[1], $this->pushName($value[1]))
-			);
-			$this->popName();
-
-			return $tmp;
 		case 'negative':
-			return $this->compileValue($this->evaluate('-', array('number', 0), $value[1]));
+			return $this->compileValue($this->reduce($value));
 		case 'function':
 			// [1] - function name
 			// [2] - some value representing arguments
@@ -774,15 +768,21 @@ class lessc {
 		$pushed = 0; // number of variable names pushed
 
 		while (in_array($var[0], self::$dtypes)) {
-			if ($var[0] == 'expression')
+			if ($var[0] == 'expression') {
 				$var = $this->evaluate($var[1], $var[2], $var[3]);
-			else if ($var[0] == 'variable') {
+			} else if ($var[0] == 'variable') {
 				$var = $this->getVal($var[1], $this->pushName($var[1]), $defaultValue);
 				$pushed++;
 			} else if ($var[0] == 'function') {
 				$color = $this->funcToColor($var);
 				if ($color) $var = $color;
 				break; // no where to go after a function
+			} else if ($var[0] == 'negative') {
+				$value = $this->reduce($var[1]);
+				if (is_numeric($value[1])) {
+					$value[1] = -1*$value[1];
+				} 
+				$var = $value;
 			}
 		}
 
