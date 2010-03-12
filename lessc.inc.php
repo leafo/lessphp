@@ -27,7 +27,6 @@ class lessc {
 	public $vPrefix = '@';
 	public $mPrefix = '$';
 	public $imPrefix = '!'; // important!
-	public $assignOp = '=';
 
 	static private $precedence = array(
 		'+' => 0,
@@ -51,7 +50,7 @@ class lessc {
 		$s = $this->seek();
 
 		// a property
-		if ($this->keyword($key) && $this->literal($this->assignOp) && $this->propertyValue($value) && $this->end()) {
+		if ($this->keyword($key) && $this->assign() && $this->propertyValue($value) && $this->end()) {
 			// look for important prefix
 			if ($key{0} == $this->imPrefix && strlen($key) > 1) {
 				$key = substr($key, 1);
@@ -172,7 +171,7 @@ class lessc {
 		}
 
 		// setting variable
-		if ($this->variable($name) && $this->literal($this->assignOp) && $this->propertyValue($value) && $this->end()) {
+		if ($this->variable($name) && $this->assign() && $this->propertyValue($value) && $this->end()) {
 			$this->append($this->vPrefix.$name, $value);
 			return true;
 		} else {
@@ -552,7 +551,7 @@ class lessc {
 		$values = array();
 		while ($this->variable($vname)) {
 			$arg = array($vname);
-			if ($this->literal($this->assignOp) && $this->propertyValue($value)) {
+			if ($this->assign() && $this->propertyValue($value)) {
 				$arg[] = $value;
 				// let the : slide if there is no value
 			}
@@ -642,6 +641,10 @@ class lessc {
 			return true;	
 		}
 		return false;
+	}
+
+	function assign() {
+		return $this->literal(':') || $this->literal('=');
 	}
 
 	// consume a keyword
