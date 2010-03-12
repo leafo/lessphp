@@ -10,7 +10,7 @@
   </head>
   <body>
 	
-	<h1>Documentation - lessphp v0.1.6</h1>
+	<h1>Documentation - lessphp v0.2.0</h1>
 	<div class="content">
 
 	<ul id="nav">
@@ -25,19 +25,20 @@
 			<ul><li><a href="#import">Import Statement</a></li></ul>
 			<ul><li><a href="#strings">String Mixins</a></li></ul>
 			<ul><li><a href="#misc">Miscellaneous</a></li></ul>
+			<ul><li><a href="#differences">Differences from Ruby LESS</a></li></ul>
 		</li>
 		<li><a href="#interface">The Interface</a></li>
 	</ul>
-	
-	<p class="important">This documentation is specific to the 
-	<a href="http://leafo.net/lessphp/">php version of LESS, <strong>lessphp</strong></a>. <strong>lessphp</strong> is 
-	a superset of LESS classic. Everything you can do in LESS classic will work
-	in lessphp but there are additional features unique to the php version.
-	</p>
+
+	<p><strong>lessphp</strong> is a compiler that generates css from a small superset language that adds
+	many additional features seen in other languages. It is based off an original Ruby implementation
+	called <a href="http://lesscss.org/">LESS</a>. For the most part, <strong>lessphp</strong> is syntactically
+	compatible with LESS, with the exception of a few things noted below.</p>
 
 	<a name="start"></a>
 	<h2>Getting Started</h2>
 	<p>Download the latest version of <strong>lessphp</strong> <a href="http://leafo.net/lessphp/">here</a>.</p>
+	<p>You can also find the latest development version in the <a href="http://github.com/leafo/lessphp">git repository</a>.</p>
 
 	</div>
 
@@ -91,6 +92,7 @@ pre {
     width: 3430px + 22;        // evaluates to 3452px;
     margin: (1.5em / 2) + 2px; // evaluates to 2.85px;
     margin: 20 + 2px;          // evaluates to 22px;
+    font-family: "Some " + "Family; // evaluates to "Some Family"
 }</pre>
 
 	<p>It is important to notice that in the example above the output will print the margin property twice. 
@@ -253,7 +255,7 @@ body {
 
 #something {
     @what: 200;
-	body > .class;	
+    body > .class;	
 }</pre>
 
 	<p>In the output, <code>body .class</code> has width set to 5, and <code>#something</code> has width set to 201. It appears from that result that
@@ -270,14 +272,14 @@ body {
 	the chain of dereferencing.</p>
 
 
-
-
-<pre class="code bnf" style="display: none"><b>property-value</b> <u>:=</u> <b>inner-list</b> , <b>property-value</b> <u>|</u> <b>inner-list</b>
-<b>inner-list</b> <u>:=</u> <b>expression</b> <b>inner-list</b> <u>|</u> <b>expression</b>
-<b>expression</b> <u>:=</u> <b>simple-value</b> <b>operator</b> <b>expression</b> <u>|</u> <b>simple-value</b>
-<b>operator</b> <u>:=</u> + <u>|</u> - <u>|</u> * <u>|</u> /
-<b>simple-value</b> <u>:=</u> <b>keyword</b> <u>|</u> <b>string</b> <u>|</u> <b>unit</b> <u>|</u>  
-</pre>
+	<a name="differences"></a>
+	<h2>Differences from Ruby LESS</h2>
+	<p class="important">Report missing ones <a href="http://github.com/leafo/lessphp/issues">here</a>.</p>
+	<ul>
+		<li>Arguments to mixins are separated by <code>;</code> instead of <code>,</code>.
+			<p><b>Rationale</b>: the value of a css property can contain commas, so by using a comma as an argument separator you limit the kinds of input you can pass to a mixin.</p>
+		</li>
+	</ul>
 
 	</div>
 
@@ -328,12 +330,16 @@ If you need more control then you can make your own instance of <code>lessc</cod
 	import directory</p>
 
 
+	<h2>Library Functions</h2>
+	<p>Functions within the compiler class that are prefixed with <code>lib_</code> are visible visible to the less
+	code while it is being parsed. The easiest way to add your own functions is to subclass <code>lessc</code> and insert
+	the implementations.</p>
 
 	<br />
 	<br />
 	<hr />
 	<p class="foot">
-		<a href="http://leafo.net/lessphp/">http://leafo.net/lessphp</a> - Last updated August 6th 2009</p>
+		<a href="http://leafo.net/lessphp/">http://leafo.net/lessphp</a> - Last updated March 9th 2010</p>
 
 	</div>
 

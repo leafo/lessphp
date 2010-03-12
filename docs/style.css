@@ -75,73 +75,6 @@ hr {
 	background: none;
 }
 
-.demo {
-	border: 1px solid #777777;
-	margin: 1.0em;
-}
-
-table.demo {
-	width: 938px;
-}
-
-div.demo {
-	margin-bottom: 0;
-	padding: 0.5em 0em;
-}
-
-.demo .input, .demo .output {
-	width: 50%;
-	padding: 0.5em;
-}
-
-.demo .output {
-	background: #f4f4f4;
-	border-left: 1px dashed #777;
-}
-
-.demo textarea {
-	width: 99%;
-}
-
-.demo pre {
-	overflow-x: auto; 
-	white-space: pre-wrap;
-	white-space: -moz-pre-wrap !important;
-	white-space: -pre-wrap;
-	white-space: -o-pre-wrap;
-	word-wrap: break-word;
-}
-
-.demo .buttons {
-	text-align: right;
-}
-
-.examples {
-	display: none;
-}
-
-.comments {
-	margin: 0.0em 1.0em;
-	padding: 0.5em;
-	border: 1px solid #777777;
-}
-
-#twitter {
-	border: 0;
-	text-decoration: none;
-	display: block;
-	position: absolute;
-	top:4px;
-	left:776px;
-}
-
-#twitter:hover {
-	background: none;
-}
-
-#twitter img {
-	border: 0;
-}
 
 p.important {
 	background-color: #FBE7E7;
@@ -150,7 +83,6 @@ p.important {
 	padding: 1em 0.5em;
 	margin: 0.5em 0.0em 0.5em 0.5em;
 }
-
 
 .info {
 	background: #ECFBE7;
@@ -185,8 +117,8 @@ p.important {
 .Function { color: #ffd2a7; }
 .Type { color: #ffffb6; }
 pre.code { font-family: monospace; 
-	color: #f6f3e8; background-color: #000000;
-	background-color: #101C2D /*#090E16*/;
+	color: #f6f3e8;
+	background-color: #000000;
 	background-color: #101010;
 	padding: 1.0em 4.0em;
 	margin: 1.0em;
@@ -198,6 +130,13 @@ pre.code b {
 pre.code u {
 	color: #a8ff60; 
 	text-decoration: none;
+}
+
+code {
+	background-color: #E7F3FB;
+	color: #182F51;
+	font-weight: bold;
+	padding: 0px 2px;
 }
 
 
