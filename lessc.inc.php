@@ -60,14 +60,24 @@ class lessc {
 			$this->seek($s);
 		}
 
-		// a font-face block
-		if (count($this->env) == 1 && $this->literal('@font-face') && $this->literal('{')) {
-			$this->push();
-			$this->set('__tags', array('@font-face'));
-			$this->set('__dontsave', true);
-			return true;
-		} else {
-			$this->seek($s);
+		// look for special css @ directives
+		if (count($this->env) == 1 && $this->count < strlen($this->buffer) && $this->buffer[$this->count] == '@') {
+			// a font-face block
+			if ($this->literal('@font-face') && $this->literal('{')) {
+				$this->push();
+				$this->set('__tags', array('@font-face'));
+				$this->set('__dontsave', true);
+				return true;
+			} else {
+				$this->seek($s);
+			}
+
+			// charset
+			if ($this->literal('@charset') && $this->propertyValue($value) && $this->end()) {
+				return "@charset ".$this->compileValue($value).";\n";
+			} else {
+				$this->seek($s);
+			}
 		}
 
 		// opening abstract block
