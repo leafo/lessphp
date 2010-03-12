@@ -24,6 +24,9 @@ class lessc {
 
 	private $env = array();
 
+	protected $vPrefix = '@';
+	protected $mPrefix = '$';
+
 	static private $precedence = array(
 		'+' => 0,
 		'-' => 0,
@@ -72,7 +75,7 @@ class lessc {
 			$this->push();
 
 			// move out of variable scope
-			if ($tag{0} == "@") $tag[0] = "%";
+			if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
 
 			$this->set('__tags', array($tag));
 			if (isset($args)) $this->set('__args', $args);
@@ -86,7 +89,7 @@ class lessc {
 		if ($this->tags($tags) && $this->literal('{')) {
 			//  move @ tags out of variable namespace!
 			foreach($tags as &$tag) {
-				if ($tag{0} == "@") $tag[0] = "%";
+				if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
 			}
 
 			$this->push();
@@ -108,7 +111,7 @@ class lessc {
 			if (isset($env['__args'])) {
 				foreach ($env['__args'] as $arg) {
 					if (isset($arg[1])) {
-						$this->prepend('@'.$arg[0], $arg[1]);
+						$this->prepend($this->vPrefix.$arg[0], $arg[1]);
 					}
 				}
 			}
@@ -149,7 +152,7 @@ class lessc {
 
 		// setting variable
 		if ($this->variable($name) && $this->literal(':') && $this->propertyValue($value) && $this->end()) {
-			$this->append('@'.$name, $value);
+			$this->append($this->vPrefix.$name, $value);
 			return true;
 		} else {
 			$this->seek($s);
@@ -163,7 +166,7 @@ class lessc {
 			// if we have arguments then insert them
 			if (!empty($env['__args'])) {
 				foreach($env['__args'] as $arg) {
-					$name = $arg[0];
+					$vname = $this->vPrefix.$arg[0];
 					$value = is_array($argv) ? array_shift($argv) : null;
 					// copy default value if there isn't one supplied
 					if ($value == null && isset($arg[1]))
@@ -172,11 +175,11 @@ class lessc {
 					// if ($value == null) continue; // don't define so it can search up
 
 					// create new entry if var doesn't exist in scope
-					if (isset($env['@'.$name])) {
-						array_unshift($env['@'.$name], $value);
+					if (isset($env[$vname])) {
+						array_unshift($env[$vname], $value);
 					} else {
 						// new element
-						$env['@'.$name] = array($value);
+						$env[$vname] = array($value);
 					}
 				}
 			}
@@ -223,7 +226,7 @@ class lessc {
 		$rtags = array();
 		foreach ($parents as $p) {
 			foreach ($tags as $t) {
-				if ($t{0} == '%') continue; // skip functions
+				if ($t{0} == $this->mPrefix) continue; // skip functions
 				$rtags[] = trim($p.($t{0} == ':' ? '' : ' ').$t);
 			}
 		}
@@ -322,7 +325,7 @@ class lessc {
 		// see if there is a negation
 		$s = $this->seek();
 		if ($this->literal('-', false) && $this->variable($vname)) {
-			$value = array('negative', array('variable', '@'.$vname));
+			$value = array('negative', array('variable', $this->vPrefix.$vname));
 			return true;
 		} else {
 			$this->seek($s);
@@ -359,7 +362,7 @@ class lessc {
 
 		// try a variable
 		if ($this->variable($vname)) {
-			$value = array('variable', '@'.$vname);
+			$value = array('variable', $this->vPrefix.$vname);
 			return true;
 		}
 
@@ -408,7 +411,7 @@ class lessc {
 		// either it is a variable or a property
 		// why is a property wrapped in quotes, who knows!
 		if ($this->variable($name)) {
-			$name = '@'.$name;
+			$name = $this->vPrefix.$name;
 		} elseif($this->literal("'") && $this->keyword($name) && $this->literal("'")) {
 			// .. $this->count is messed up if we wanted to test another access type
 		} else {
@@ -597,7 +600,7 @@ class lessc {
 	// consume a less variable
 	function variable(&$name) {
 		$s = $this->seek();
-		if ($this->literal('@', false) && $this->keyword($name)) {
+		if ($this->literal($this->vPrefix, false) && $this->keyword($name)) {
 			return true;	
 		}
 		return false;
@@ -646,7 +649,7 @@ class lessc {
 			// todo: change this, poor hack
 			// make a better name storage system!!! (value types are fine)
 			// but.. don't render special properties (blocks, vars, metadata)
-			if (isset($value[0]) && $name{0} != '@' && $name != '__args') {
+			if (isset($value[0]) && $name{0} != $this->vPrefix && $name != '__args') {
 				echo $this->compileProperty($name, $value, 1)."\n";
 				$props++;
 			}
@@ -1026,7 +1029,7 @@ class lessc {
 
 		//  move @ tags out of variable namespace
 		foreach($path as &$tag)
-			if ($tag{0} == "@") $tag[0] = "%";
+			if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
 
 		$env = $this->get(array_shift($path));
 		while ($sub = array_shift($path)) {
