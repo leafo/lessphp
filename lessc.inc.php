@@ -24,8 +24,8 @@ class lessc {
 
 	private $env = array();
 
-	protected $vPrefix = '@';
-	protected $mPrefix = '$';
+	public $vPrefix = '@';
+	public $mPrefix = '$';
 
 	static private $precedence = array(
 		'+' => 0,
