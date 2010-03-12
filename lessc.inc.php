@@ -26,6 +26,7 @@ class lessc {
 
 	public $vPrefix = '@';
 	public $mPrefix = '$';
+	public $imPrefix = '!'; // important!
 
 	static private $precedence = array(
 		'+' => 0,
@@ -50,6 +51,15 @@ class lessc {
 
 		// a property
 		if ($this->keyword($key) && $this->literal(':') && $this->propertyValue($value) && $this->end()) {
+			// look for important prefix
+			if ($key{0} == $this->imPrefix && strlen($key) > 1) {
+				$key = substr($key, 1);
+				if ($value[0] == 'list' && $value[1] == ' ') {
+					$value[2][] = array('keyword', '!important');
+				} else {
+					$value = array('list', ' ', array($value, array('keyword', '!important')));
+				}
+			}
 			$this->append($key, $value);
 
 			if (count($this->env) == 1)
