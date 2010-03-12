@@ -431,9 +431,9 @@ class lessc {
 	// a string 
 	function string(&$string, &$d = null) {
 		$s = $this->seek();
-		if ($this->literal('"')) {
+		if ($this->literal('"', false)) {
 			$delim = '"';
-		} else if($this->literal("'")) {
+		} else if($this->literal("'", false)) {
 			$delim = "'";
 		} else {
 			return false;
@@ -754,6 +754,13 @@ class lessc {
 		case 'function':
 			// [1] - function name
 			// [2] - some value representing arguments
+
+			// see if there is a library function for this func
+			$f = array($this, 'lib_'.$value[1]);
+			if (is_callable($f)) {
+				return call_user_func($f, $value[2]);
+			}
+
 			return $value[1].'('.$this->compileValue($value[2]).')';
 
 		default: // assumed to be unit	
@@ -761,6 +768,22 @@ class lessc {
 		}
 	}
 
+	function lib_quote($arg) {
+		return '"'.$this->compileValue($arg).'"';
+	}
+
+	function lib_unquote($arg) {
+		$out = $this->compileValue($arg);
+		if ($this->quoted($out)) $out = substr($out, 1, -1);
+		return $out;
+	}
+
+	// is a string surrounded in quotes? returns the quoting char if true
+	function quoted($s) {
+		if (preg_match('/^("|\').*?\1$/', $s, $m))
+			return $m[1];
+		else return false;
+	}
 
 	// convert rgb, rgba into color type suitable for math
 	// todo: add hsl
@@ -837,18 +860,12 @@ class lessc {
 
 		// concatenate strings
 		if ($op == '+' && $left[0] == 'string') {
-			// todo: normalize string quotes
 			$append = $this->compileValue($right);
-			if ($right[0] == 'string' && ($append{0} == '"' || $append{0} == "'")) {
-				$append = substr($append, 1, -1);
-			}
+			if ($this->quoted($append)) $append = substr($append, 1, -1);
 
 			$lhs = $this->compileValue($left);
-			$q = '';
-			if ($left[0] == 'string' && ($lhs{0} == '"' || $lhs{0} == "'")) {
-				$q = $lhs{0};
-				$lhs = substr($lhs, 1, -1);
-			}
+			if ($q = $this->quoted($lhs)) $lhs = substr($lhs, 1, -1);
+			if (!$q) $q = '';
 
 			return array('string', $q.$lhs.$append.$q);
 		}
@@ -1159,7 +1176,7 @@ class lessc {
 		if (count($this->env) > 1)
 			throw new exception('parse error: unclosed block');
 
-		// print_r($this->env);
+		//print_r($this->env);
 		return $out;
 	}
 
