@@ -207,23 +207,29 @@ class lessc {
 
 			// set all properties
 			ob_start();
+			$blocks = array();
 			foreach ($env as $name => $value) {
 				// skip the metatdata
 				if (preg_match('/^__/', $name)) continue;
 
-				// if it is a block then render it
-				if (!isset($value[0])) {
-					$rtags = $this->multiplyTags(array($name));
-					echo $this->compileBlock($rtags, $value);
-				}
+				// if it is a block, remember it to compile after everything
+				// is mixed in
+				if (!isset($value[0]))
+					$blocks[] = array($name, $value);
 
-				// copy the block's data
+				// copy the property
 				// don't overwrite previous value, look in current env for name
 				if ($this->get($name, array(end($this->env)))) {
 					while ($tval = array_shift($value))
 						$this->append($name, $tval);
 				} else 
 					$this->set($name, $value); 
+			}
+
+			// render sub blocks
+			foreach ($blocks as $b) {
+				$rtags = $this->multiplyTags(array($b[0]));
+				echo $this->compileBlock($rtags, $b[1]);
 			}
 
 			return ob_get_clean();
@@ -1207,7 +1213,7 @@ class lessc {
 		if (count($this->env) > 1)
 			throw new exception('parse error: unclosed block');
 
-		//print_r($this->env);
+		print_r($this->env);
 		return $out;
 	}
 
