@@ -26,7 +26,8 @@ class lessc {
 
 	public $vPrefix = '@';
 	public $mPrefix = '$';
-	public $imPrefix = '!'; // important!
+	public $imPrefix = '!';
+	public $selfSelector = '&';
 
 	static private $precedence = array(
 		'+' => 0,
@@ -247,7 +248,12 @@ class lessc {
 		foreach ($parents as $p) {
 			foreach ($tags as $t) {
 				if ($t{0} == $this->mPrefix) continue; // skip functions
-				$rtags[] = trim($p.($t{0} == ':' ? '' : ' ').$t);
+				$d = ' ';
+				if ($t{0} == ':' || $t{0} == $this->selfSelector) {
+					$t = ltrim($t, $this->selfSelector);
+					$d = '';
+				}
+				$rtags[] = trim($p.$d.$t);
 			}
 		}
 
@@ -643,6 +649,7 @@ class lessc {
 		return false;
 	}
 
+	// consume an assignment operator
 	function assign() {
 		return $this->literal(':') || $this->literal('=');
 	}
