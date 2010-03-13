@@ -217,7 +217,7 @@ class lessc {
 				if (!isset($value[0]))
 					$blocks[] = array($name, $value);
 
-				// copy the property
+				// copy the data
 				// don't overwrite previous value, look in current env for name
 				if ($this->get($name, array(end($this->env)))) {
 					while ($tval = array_shift($value))
@@ -1213,7 +1213,7 @@ class lessc {
 		if (count($this->env) > 1)
 			throw new exception('parse error: unclosed block');
 
-		print_r($this->env);
+		// print_r($this->env);
 		return $out;
 	}
 
