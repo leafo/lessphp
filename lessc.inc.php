@@ -1,14 +1,13 @@
 <?php
 
 /**
- * less.inc.php
- * v0.2.0
+ * lessphp v0.2.0
+ * http://leafo.net/lessphp
  *
- * less css compiler
- * adapted from http://lesscss.org/docs.html
+ * LESS Css compiler, adapted from http://lesscss.org/docs.html
  *
- * leaf corcoran <leafot@gmail.com>
- * leafo.net
+ * Copyright 2010, Leaf Corcoran <leafot@gmail.com>
+ * Licensed under MIT or GPLv3, see LICENSE
  */
 
 //
