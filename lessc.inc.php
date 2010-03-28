@@ -599,13 +599,24 @@ class lessc {
 		if ($simple)
 			$chars = '^,:;{}\][>\(\) ';
 		else
-			$chars = '^,;{}';
+			$chars = '^,;{}[';
 
-		// can't start with a number
-		if (!$this->match('(['.$chars.'0-9]['.$chars.']*)', $m))
-			return false;
+		$tag = '';
+		while ($this->match('(['.$chars.'0-9]['.$chars.']*)', $m)) {
+			$tag.= $m[1];
+			if ($simple) break;
 
-		$tag = trim($m[1]);
+			$s = $this->seek();
+			if ($this->literal('[') && $this->to(']', $c, true) && $this->literal(']')) {
+				$tag .= '['.$c.'] ';
+			} else {
+				$this->seek($s);
+				break;
+			}
+		}
+		$tag = trim($tag);
+		if ($tag == '') return false;
+
 		return true;
 	}
 
