@@ -756,10 +756,10 @@ class lessc {
 			return $this->compileValue($this->evaluate($value[1], $value[2], $value[3]));
 		case 'string':
 			// [1] - contents of string (includes quotes)
-			
+
 			// search for inline variables to replace
 			$replace = array();
-			if (preg_match_all('/{(@[\w-_][0-9\w-_]*)}/', $value[1], $m)) {
+			if (preg_match_all('/{(@[\w-_][0-9\w-_]*?)}/', $value[1], $m)) {
 				foreach($m[1] as $name) {
 					if (!isset($replace[$name]))
 						$replace[$name] = $this->compileValue(array('variable', $name));
@@ -772,6 +772,7 @@ class lessc {
 				}
 				$value[1] = str_replace('{'.$var.'}', $val, $value[1]);
 			}
+
 
 			return $value[1];
 		case 'color':
@@ -1229,7 +1230,7 @@ class lessc {
 
 	function throwParseError($msg = 'parse error') {
 		$line = $this->line + substr_count(substr($this->buffer, 0, $this->count), "\n");
-		if ($this->peek("(.*?)\n", $m))
+		if ($this->peek("(.*?)(\n|$)", $m))
 			throw new exception($msg.': failed at `'.$m[1].'` line: '.$line);
 	}
 
