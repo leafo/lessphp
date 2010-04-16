@@ -70,6 +70,8 @@ class lessc {
 			$this->seek($s);
 		}
 
+
+
 		// look for special css @ directives
 		if (count($this->env) == 1 && $this->count < strlen($this->buffer) && $this->buffer[$this->count] == '@') {
 			// a font-face block
@@ -88,6 +90,14 @@ class lessc {
 			} else {
 				$this->seek($s);
 			}
+		}
+
+		// setting variable
+		if ($this->variable($name) && $this->assign() && $this->propertyValue($value) && $this->end()) {
+			$this->append($this->vPrefix.$name, $value);
+			return true;
+		} else {
+			$this->seek($s);
 		}
 
 		// opening abstract block
@@ -168,14 +178,6 @@ class lessc {
 			}
 
 			return '@import url("'.$url.'")'.($media ? ' '.$media : '').";\n";
-		}
-
-		// setting variable
-		if ($this->variable($name) && $this->assign() && $this->propertyValue($value) && $this->end()) {
-			$this->append($this->vPrefix.$name, $value);
-			return true;
-		} else {
-			$this->seek($s);
 		}
 
 		// mixin/function expand
@@ -662,6 +664,7 @@ class lessc {
 		if ($this->literal($this->vPrefix, false) && $this->keyword($name)) {
 			return true;	
 		}
+
 		return false;
 	}
 
@@ -756,7 +759,7 @@ class lessc {
 			return $this->compileValue($this->evaluate($value[1], $value[2], $value[3]));
 		case 'string':
 			// [1] - contents of string (includes quotes)
-
+			
 			// search for inline variables to replace
 			$replace = array();
 			if (preg_match_all('/{(@[\w-_][0-9\w-_]*?)}/', $value[1], $m)) {
