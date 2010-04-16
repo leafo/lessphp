@@ -70,8 +70,6 @@ class lessc {
 			$this->seek($s);
 		}
 
-
-
 		// look for special css @ directives
 		if (count($this->env) == 1 && $this->count < strlen($this->buffer) && $this->buffer[$this->count] == '@') {
 			// a font-face block
@@ -595,6 +593,20 @@ class lessc {
 		return true;
 	}
 
+	// a bracketed value (contained within in a tag definition)
+	function tagBracket(&$value) {
+		$s = $this->seek();
+		if ($this->literal('[') && $this->to(']', $c, true) && $this->literal(']', false)) {
+			$value .= '['.$c.']';
+			// whitespace?
+			if ($this->match('', $_)) $value .= $_[0];
+			return true;
+		}
+
+		$this->seek($s);
+		return false;
+	}
+
 	// a single tag
 	function tag(&$tag, $simple = false) {
 		if ($simple)
@@ -603,17 +615,12 @@ class lessc {
 			$chars = '^,;{}[';
 
 		$tag = '';
+		if ($this->tagBracket($first)) $tag .= $first;
 		while ($this->match('(['.$chars.'0-9]['.$chars.']*)', $m)) {
-			$tag.= $m[1];
+			$tag .= $m[1];
 			if ($simple) break;
 
-			$s = $this->seek();
-			if ($this->literal('[') && $this->to(']', $c, true) && $this->literal(']')) {
-				$tag .= '['.$c.'] ';
-			} else {
-				$this->seek($s);
-				break;
-			}
+			if ($this->tagBracket($brack)) $tag .= $brack;
 		}
 		$tag = trim($tag);
 		if ($tag == '') return false;
