@@ -762,7 +762,7 @@ class lessc {
 			// but.. don't render special properties (blocks, vars, metadata)
 			if (isset($value[0]) && $name{0} != $this->vPrefix && $name != '__args') {
 				echo $this->compileProperty($name, $value, 1)."\n";
-				$props =+ count($value);
+				$props += count($value);
 			}
 		}
 		$list = ob_get_clean();
