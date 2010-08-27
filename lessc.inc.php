@@ -31,8 +31,6 @@ class lessc {
 	public $imPrefix = '!';
 	public $selfSelector = '&';
 
-
-
 	static private $precedence = array(
 		'+' => 0,
 		'-' => 0,
@@ -634,7 +632,7 @@ class lessc {
 	function tagBracket(&$value) {
 		$s = $this->seek();
 		if ($this->literal('[') && $this->to(']', $c, true) && $this->literal(']', false)) {
-			$value .= '['.$c.']';
+			$value = '['.$c.']';
 			// whitespace?
 			if ($this->match('', $_)) $value .= $_[0];
 			return true;
@@ -652,12 +650,12 @@ class lessc {
 			$chars = '^,;{}[';
 
 		$tag = '';
-		if ($this->tagBracket($first)) $tag .= $first;
+		while ($this->tagBracket($first)) $tag .= $first;
 		while ($this->match('(['.$chars.'0-9]['.$chars.']*)', $m)) {
 			$tag .= $m[1];
 			if ($simple) break;
 
-			if ($this->tagBracket($brack)) $tag .= $brack;
+			while ($this->tagBracket($brack)) $tag .= $brack;
 		}
 		$tag = trim($tag);
 		if ($tag == '') return false;
