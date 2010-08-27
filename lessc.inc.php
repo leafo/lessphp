@@ -20,6 +20,9 @@ class lessc {
 	private $count;
 	private $line;
 	private $expandStack;
+	private $media;
+	private $indentLevel;
+	private $level;
 
 	private $env = array();
 
@@ -27,6 +30,8 @@ class lessc {
 	public $mPrefix = '$';
 	public $imPrefix = '!';
 	public $selfSelector = '&';
+
+
 
 	static private $precedence = array(
 		'+' => 0,
@@ -84,10 +89,20 @@ class lessc {
 
 			// charset
 			if ($this->literal('@charset') && $this->propertyValue($value) && $this->end()) {
-				return "@charset ".$this->compileValue($value).";\n";
+				return $this->indent('@charset '.$this->compileValue($value).';');
 			} else {
 				$this->seek($s);
 			}
+
+			// media
+			if ($this->literal('@media') && $this->mediaTypes($types) && $this->literal('{')) {
+				$this->media = $types;
+				$this->indentLevel++;
+				return "@media ".join(', ', $types)." {\n";
+			} else {
+				$this->seek($s);
+			}
+
 		}
 
 		// setting variable
@@ -130,6 +145,12 @@ class lessc {
 
 		// closing block
 		if ($this->literal('}')) {
+			if ($this->level == 1 && !is_null($this->media)) {
+				$this->indentLevel--;
+				$this->media = null;
+				return "}\n";
+			}
+
 			$tags = $this->multiplyTags();
 			$env = end($this->env);
 			$ctags = $env['__tags'];
@@ -175,7 +196,7 @@ class lessc {
 				return true;
 			}
 
-			return '@import url("'.$url.'")'.($media ? ' '.$media : '').";\n";
+			return $this->indent('@import url("'.$url.'")'.($media ? ' '.$media : '').';');
 		}
 
 		// mixin/function expand
@@ -427,6 +448,17 @@ class lessc {
 
 		// now the rest is media
 		return $this->to(';', $media, false, true);
+	}
+
+	// a list of media types, very leniant
+	function mediaTypes(&$types) {
+		$s = $this->seek();
+		$types = array();
+		while ($this->match('([^,{\s]+)', $m)) {
+			$types[] = $m[1];
+			if (!$this->literal(',')) break;
+		}
+		return count($types) > 0;
 	}
 
 	// a scoped value accessor
@@ -729,17 +761,26 @@ class lessc {
 			}
 		}
 		$list = ob_get_clean();
-
 		if ($props == 0) return '';
 
-		// do some formatting
-		if ($props == 1) $list = ' '.trim($list).' ';
-		return implode(", ", $rtags).' {'.($props  > 1 ? "\n" : '').
-			$list."}\n";
+		$blockDecl = implode(", ", $rtags).' {';
+		if ($props > 1)
+			return $this->indent($blockDecl).$list.$this->indent('}');
+		else {
+			$list = ' '.trim($list).' ';
+			return $this->indent($blockDecl.$list.'}');
+		}
 
 	}
 
+	// write a line a the proper indent
+	function indent($str, $level = null) {
+		if (is_null($level)) $level = $this->indentLevel;
+		return str_repeat('  ', $level).$str."\n";
+	}
+
 	function compileProperty($name, $value, $level = 0) {
+		$level = $this->indentLevel + $level;
 		// output all repeated properties
 		foreach ($value as $v)
 			$props[] = str_repeat('  ', $level).
@@ -1211,8 +1252,11 @@ class lessc {
 
 		$this->env = array();
 		$this->expandStack = array();
+		$this->indentLevel = 0;
+		$this->media = null;
 		$this->count = 0;
 		$this->line = 1;
+		$this->level = 0;
 
 		$this->buffer = $this->removeComments($this->buffer);
 		$this->push(); // set up global scope
