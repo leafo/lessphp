@@ -168,7 +168,12 @@ class lessc {
 			if (!empty($tags))
 				$out = $this->compileBlock($tags, $env);
 
-			$this->pop();
+			try {
+				$this->pop();
+			} catch (exception $e) {
+				$this->seek($s);
+				$this->throwParseError($e->getMessage());
+			}
 
 			// make the block(s) available in the new current scope
 			if (!isset($env['__dontsave'])) {
@@ -757,7 +762,7 @@ class lessc {
 			// but.. don't render special properties (blocks, vars, metadata)
 			if (isset($value[0]) && $name{0} != $this->vPrefix && $name != '__args') {
 				echo $this->compileProperty($name, $value, 1)."\n";
-				$props = $props + count($value);
+				$props =+ count($value);
 			}
 		}
 		$list = ob_get_clean();
