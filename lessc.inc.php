@@ -11,7 +11,6 @@
  */
 
 //
-// investigate trouble with ^M
 // fix the alpha value with color when using a percent
 //
 
@@ -228,9 +227,10 @@ class lessc {
 				}
 			}
 
-			// set all properties
+			// copy all properties from tmp env to current block
 			ob_start();
 			$blocks = array();
+			$toReduce = array();
 			foreach ($env as $name => $value) {
 				// skip the metatdata
 				if (preg_match('/^__/', $name)) continue;
@@ -239,6 +239,8 @@ class lessc {
 				// is mixed in
 				if (!isset($value[0]))
 					$blocks[] = array($name, $value);
+				else if ($name{0} != $this->vPrefix)
+					$toReduce[] = $name;
 
 				// copy the data
 				// don't overwrite previous value, look in current env for name
@@ -247,6 +249,15 @@ class lessc {
 						$this->append($name, $tval);
 				} else 
 					$this->set($name, $value); 
+			}
+
+			// reduce all values that came out of this mixin
+			foreach ($toReduce as $name) {
+				$reduced = array();
+				foreach ($this->get($name) as $value) {
+					$reduced[] = $this->reduce($value);
+				}
+				$this->set($name, $reduced);
 			}
 
 			// render sub blocks
