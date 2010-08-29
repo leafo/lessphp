@@ -192,7 +192,7 @@ class lessc {
 			if ($this->importDisabled) return "/* import is disabled */\n";
 
 			$full = $this->importDir.$url;
-			if (file_exists($file = $full) || file_exists($file = $full.'.less')) {
+			if (file_exists($file = $full) || file_exists($file = $full.'.less') || file_exists($this->normalizePath($file = $full)) || file_exists($this->normalizePath($file = $full.'.less'))) {
 				$loaded = ltrim($this->removeComments(file_get_contents($file).";"));
 				$this->buffer = substr($this->buffer, 0, $this->count).$loaded.substr($this->buffer, $this->count);
 				return true;
@@ -275,6 +275,11 @@ class lessc {
 		if ($this->literal(';')) return true;
 
 		return false; // couldn't match anything, throw error
+	}
+
+	// Normalize pathname
+	function normalizePath($path) {
+		return realpath(preg_replace('/\w+\/\.\.\//', '', $path));
 	}
 
 	// recursively find the cartesian product of all tags in stack
