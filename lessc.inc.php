@@ -195,6 +195,7 @@ class lessc {
 
 			$full = $this->importDir.$url;
 			if ($this->fileExists($file = $full) || $this->fileExists($file = $full.'.less')) {
+				$this->addParsedFile($file);
 				$loaded = ltrim($this->removeComments(file_get_contents($file).";"));
 				$this->buffer = substr($this->buffer, 0, $this->count).$loaded.substr($this->buffer, $this->count);
 				return true;
