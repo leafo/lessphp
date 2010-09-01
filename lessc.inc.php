@@ -254,6 +254,19 @@ class lessc {
 					$this->set($name, $value); 
 			}
 
+			// extract the args as a temp environment, put them before top
+			if (isset($env['__args'])) {
+				$tmp = array();
+				foreach ($env['__args'] as $arg) {
+					if (isset($arg[1])) // if there is a value
+						$tmp[$this->vPrefix.$arg[0]] = array($arg[1]);
+				}
+
+				$top = array_pop($this->env);
+				array_push($this->env, $tmp, $top);
+			}
+
+
 			// reduce all values that came out of this mixin
 			foreach ($toReduce as $name) {
 				$reduced = array();
@@ -261,6 +274,13 @@ class lessc {
 					$reduced[] = $this->reduce($value);
 				}
 				$this->set($name, $reduced);
+			}
+
+			if (isset($env['__args'])) {
+				// get rid of tmp
+				$top = array_pop($this->env);
+				array_pop($this->env);
+				array_push($this->env, $top);
 			}
 
 			// render sub blocks
