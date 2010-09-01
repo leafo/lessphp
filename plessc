@@ -91,24 +91,38 @@ if (has("w")) {
 		", press Ctrl + c to exit.\n";
 
 	$fail_time = 0;
+	// $l = new lessc($in);
+	$cache = $in;
+	$last_build = 0;
 	while (1) {
-		if (!is_file($out) || (filemtime($in) > filemtime($out) && $fail_time != filemtime($in))) {
-			// try to compile it
-			try {
-				$l = new lessc($in);
-				$c = $l->parse();
+		// check if anything has changed since last fail
+		$updated = false;
+		if (is_array($cache)) {
+			foreach ($cache['files'] as $fname=>$_) {
+				if (filemtime($fname) > $fail_time) {
+					$updated = true;
+					break;
+				}
+			}
+		} else $updated = true;
+
+		// try to compile it
+		if ($updated) try {
+			$cache = lessc::cexecute($cache);
+			if ($cache['updated'] > $last_build) {
+				$last_build = $cache['updated'];
 				echo "Writing updated file: ".$out."\n";	
-				if (!file_put_contents($out, $c)) {
+				if (!file_put_contents($out, $cache['compiled'])) {
 					err($fa."Could not write to file ".$out);
 					exit(1);
 				}
-			} catch (exception $ex) {
-				echo "\nFatal Error:\n".str_repeat('=', 20)."\n".$ex->getMessage()."\n\n";
-				$fail_time = filemtime($in);
+			}
+		} catch (exception $ex) {
+			echo "\nFatal Error:\n".str_repeat('=', 20)."\n".$ex->getMessage()."\n\n";
+			$fail_time = time();
 
-				if (has("n")) { 
-					`notify-send -u critical "compile failed" "{$ex->getMessage()}"`;
-				}
+			if (has("n")) { 
+				`notify-send -u critical "compile failed" "{$ex->getMessage()}"`;
 			}
 		}
 
