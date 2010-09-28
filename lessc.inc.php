@@ -1352,43 +1352,58 @@ class lessc {
 
 	// remove comments from $text
 	// todo: make it work for all functions, not just url
-	// todo: make it not mess up line counter with block comments
 	function removeComments($text) {
+		$look = array(
+			'url(', '//', '/*', '"', "'"
+		);
+
 		$out = '';
+		$min = null;
+		$done = false;
+		while (true) {
+			// find the next item
+			foreach($look as $token) {
+				$pos = strpos($text, $token);
+				if ($pos !== false) {
+					if (!isset($min) || $pos < $min[1]) $min = array($token, $pos);
+				}
+			}
 
-		while (!empty($text) &&
-			preg_match('/^(.*?)("|\'|\/\/|\/\*|url\(|$)/is', $text, $m))
-		{
-			if (!trim($text)) break;
+			if (is_null($min)) break;
 
-			$out .= $m[1];
-			$text = substr($text, strlen($m[0]));
-
-			switch ($m[2]) {
+			$count = $min[1];
+			$skip = 0;
+			$newlines = 0;
+			switch($min[0]) {
 			case 'url(':
-				preg_match('/^(.*?)(\)|$)/is', $text, $inner);
-				$text = substr($text, strlen($inner[0]));
-				$out .= $m[2].$inner[1].$inner[2];
-				break;
-			case '//':
-				preg_match("/^(.*?)(\n|$)/is", $text, $inner);
-				// give back the newline
-				$text = substr($text, strlen($inner[0]) - 1);
-				break;
-			case '/*';
-				preg_match("/^(.*?)(\*\/|$)/is", $text, $inner);
-				$text = substr($text, strlen($inner[0]));
+				if (preg_match('/url\(.*?\)/', $text, $m, 0, $count))
+					$count += strlen($m[0]) - strlen($min[0]);
 				break;
 			case '"':
 			case "'":
-				preg_match("/^(.*?)(".$m[2]."|$)/is", $text, $inner);
-				$text = substr($text, strlen($inner[0]));
-				$out .= $m[2].$inner[1].$inner[2];
+				if (preg_match('/'.$min[0].'.*?'.$min[0].'/', $text, $m, 0, $count))
+					$count += strlen($m[0]) - 1;
+				break;
+			case '//':
+				$skip = strpos($text, "\n", $count) - $count;
+				break;
+			case '/*': 
+				if (preg_match('/\/\*.*?\*\//s', $text, $m, 0, $count)) {
+					$skip = strlen($m[0]);
+					$newlines = substr_count($m[0], "\n");
+				}
 				break;
 			}
+
+			if ($skip == 0) $count += strlen($min[0]);
+
+			$out .= substr($text, 0, $count).str_repeat("\n", $newlines);
+			$text = substr($text, $count + $skip);
+
+			$min = null;
 		}
 
-		return $out;
+		return $out.$text;
 	}
 
 	public function allParsedFiles() { return $this->allParsedFiles; }
