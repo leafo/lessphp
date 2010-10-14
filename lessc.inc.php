@@ -614,10 +614,14 @@ class lessc {
 		if (!$this->literal('(')) return false;
 
 		$values = array();
-		while ($this->propertyValue($value)) {
-			$values[] = $value;
+		while (true) {
+			if ($this->propertyValue($value)) $values[] = $value;
 			if (!$this->literal($delim)) break;
-		}
+			else {
+				if ($value == null) $values[] = null;
+				$value = null;
+			}
+		}	
 
 		if (!$this->literal(')')) {
 			$this->seek($s);

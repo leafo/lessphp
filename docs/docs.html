@@ -182,27 +182,26 @@ div {
 }</pre>
 
 	<p>It is possible to give an abstract block the same name as an abstract property; their names will not collide.
-	Block names and property names exist in different spaces.</p>
+	Block names and property names exist in different spaces. For example:</p>
 
+<pre class="code">@color(@color:red) { color: @color; } // this is valid
+</pre>
 
 	<a name="args"></a>
 	<h2>Mixin Arguments</h2>
 	<p>All blocks have the option of taking argument lists, and the arguments can have default values.</p>
 
-<pre class="code">.myclass(@width: 200px;@radius) {
+<pre class="code">@some_mixin(@width: 200px;@radius) {
     border-radius: @radius;
     width: @width
 }
 
-@color(@color:red) { color: @color; } // this is valid
-
 .first {
-    .myclass(300px; 2em);
-    @color(blue);
+    @some_mixin(300px; 2em);
 }
 
 .second {
-    .myclass(;4px); // blank argument takes default value
+    @some_mixin(;4px); // blank argument takes default value
 }</pre>
 
 	<a name="import"></a>
