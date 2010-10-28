@@ -94,10 +94,10 @@ class lessc {
 			}
 
 			// media
-			if ($this->literal('@media') && $this->mediaTypes($types) && $this->literal('{')) {
+			if ($this->literal('@media') && $this->mediaTypes($types, $rest) && $this->literal('{')) {
 				$this->media = $types;
 				$this->indentLevel++;
-				return "@media ".join(', ', $types)." {\n";
+				return "@media ".join(', ', $types).(!empty($rest) ? " $rest" : '' )." {\n";
 			} else {
 				$this->seek($s);
 			}
@@ -493,13 +493,17 @@ class lessc {
 	}
 
 	// a list of media types, very leniant
-	function mediaTypes(&$types) {
+	function mediaTypes(&$types, &$rest) {
 		$s = $this->seek();
 		$types = array();
 		while ($this->match('([^,{\s]+)', $m)) {
 			$types[] = $m[1];
 			if (!$this->literal(',')) break;
 		}
+
+		// get everything else
+		$this->to('{', $rest, true, true);
+
 		return count($types) > 0;
 	}
 
