@@ -22,6 +22,7 @@ class lessc {
 	private $media;
 	private $indentLevel;
 	private $level;
+	private $inAnimation;
 
 	private $env = array();
 
@@ -101,7 +102,24 @@ class lessc {
 			} else {
 				$this->seek($s);
 			}
-
+			
+			// css animations
+			if ($this->match('(@(-[a-z]+-)?keyframes)', $m) && $this->propertyValue($value) && $this->literal('{')) {
+				$this->indentLevel++;
+				$this->inAnimations = true;
+				return $m[0].$this->compileValue($value)." {\n";
+			} else {
+				$this->seek($s);
+			}
+		}
+		
+		// see if we're in animations and handle pseudo classes
+		if($this->inAnimations && $this->match("(to|from|[0-9]+%)", $m) && $this->literal('{')) {
+			$this->push();
+			$this->set('__tags', array($m[1]));
+			return true;
+		} else {
+			$this->seek($s);
 		}
 
 		// setting variable
@@ -147,6 +165,12 @@ class lessc {
 			if ($this->level == 1 && !is_null($this->media)) {
 				$this->indentLevel--;
 				$this->media = null;
+				return "}\n";
+			}
+			
+			if ($this->level == 1 && $this->inAnimations === true) {
+				$this->indentLevel--;
+				$this->inAnimations = false;
 				return "}\n";
 			}
 
