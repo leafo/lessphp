@@ -492,7 +492,7 @@ class lessc {
 		return $this->to(';', $media, false, true);
 	}
 
-	// a list of media types, very leniant
+	// a list of media types, very lenient
 	function mediaTypes(&$types, &$rest) {
 		$s = $this->seek();
 		$types = array();
@@ -502,7 +502,9 @@ class lessc {
 		}
 
 		// get everything else
-		$this->to('{', $rest, true, true);
+		if ($this->to('{', $rest, true, true)) {
+			$rest = trim($rest);
+		}
 
 		return count($types) > 0;
 	}
