@@ -22,7 +22,7 @@ class lessc {
 	private $media;
 	private $indentLevel;
 	private $level;
-	private $inAnimation;
+	private $inAnimations;
 
 	private $env = array();
 
