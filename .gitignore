@@ -1,4 +1,4 @@
 *.swp
 *~
-*.less
-*.css
+/*.less
+/*.css
