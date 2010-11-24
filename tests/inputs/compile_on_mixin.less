@@ -1,0 +1,23 @@
+
+@mixin {
+	height: 22px;
+	ul {
+		height: 20px;
+		li {
+			@color: red;
+			height: 10px;
+			div span, link {
+				margin: 10px;
+				color: @color;
+			}
+		}
+
+		a {
+			color: blue;
+		}
+	}
+}
+
+body {
+	@mixin;
+}

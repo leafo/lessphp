@@ -310,7 +310,7 @@ class lessc {
 			// render sub blocks
 			foreach ($blocks as $b) {
 				$rtags = $this->multiplyTags(array($b[0]));
-				echo $this->compileBlock($rtags, $b[1]);
+				echo $this->compileBlock($rtags, $b[1], true);
 			}
 
 			return ob_get_clean();
@@ -813,17 +813,10 @@ class lessc {
 		else return array('list', $delim, $items);
 	}
 
-	function compileBlock($rtags, $env) {
-		// don't render functions
-		// todo: this shouldn't need to happen because multiplyTags prunes them, verify
-		/*
-		foreach ($rtags as $i => $tag) {
-			if (preg_match('/( |^)%/', $tag))
-				unset($rtags[$i]);
-		}
-		 */
+	function compileBlock($rtags, $env, $doSubBlocks = false) {
 		if (empty($rtags)) return '';
 
+		$children = array();
 		$props = 0;
 		// print all the visible properties
 		ob_start();
@@ -834,17 +827,24 @@ class lessc {
 			if (isset($value[0]) && $name{0} != $this->vPrefix && $name != '__args') {
 				echo $this->compileProperty($name, $value, 1)."\n";
 				$props += count($value);
+			} elseif ($doSubBlocks && !isset($value[0]) && $name{0} != $this->mPrefix) {
+				$this->push($env);
+				$new_tags = array();
+				foreach ($rtags as $tag) $new_tags[] = $tag.' '.$name;
+				$children[] = $this->compileBlock($new_tags, $value, true);
+				$this->pop();
 			}
 		}
 		$list = ob_get_clean();
 		if ($props == 0) return '';
 
+		$after = implode('', $children);
 		$blockDecl = implode(", ", $rtags).' {';
 		if ($props > 1)
-			return $this->indent($blockDecl).$list.$this->indent('}');
+			return $this->indent($blockDecl).$list.$this->indent('}').$after;
 		else {
 			$list = ' '.trim($list).' ';
-			return $this->indent($blockDecl.$list.'}');
+			return $this->indent($blockDecl.$list.'}').$after;
 		}
 
 	}
@@ -1164,9 +1164,9 @@ class lessc {
 	}
 
 	// push a new environment
-	function push() {
+	function push($base = null) {
 		$this->level++;
-		$this->env[] = array();
+		$this->env[] = is_null($base) ? array() : $base;
 	}
 
 	// pop environment off the stack

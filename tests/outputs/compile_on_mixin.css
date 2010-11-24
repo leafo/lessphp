@@ -1,0 +1,12 @@
+body ul { height:20px; }
+body ul li { height:10px; }
+body ul li div span {
+  margin:10px;
+  color:red;
+}
+body ul li link {
+  margin:10px;
+  color:red;
+}
+body ul a { color:blue; }
+body { height:22px; }
