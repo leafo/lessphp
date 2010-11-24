@@ -836,17 +836,18 @@ class lessc {
 			}
 		}
 		$list = ob_get_clean();
-		if ($props == 0) return '';
 
-		$after = implode('', $children);
 		$blockDecl = implode(", ", $rtags).' {';
+
+		$out = '';
 		if ($props > 1)
-			return $this->indent($blockDecl).$list.$this->indent('}').$after;
-		else {
+			$out = $this->indent($blockDecl).$list.$this->indent('}');
+		elseif ($props == 1) {
 			$list = ' '.trim($list).' ';
-			return $this->indent($blockDecl.$list.'}').$after;
+			$out = $this->indent($blockDecl.$list.'}');
 		}
 
+		return $out.implode('', $children);
 	}
 
 	// write a line a the proper indent
