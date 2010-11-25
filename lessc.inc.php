@@ -114,7 +114,7 @@ class lessc {
 		}
 		
 		// see if we're in animations and handle pseudo classes
-		if($this->inAnimations && $this->match("(to|from|[0-9]+%)", $m) && $this->literal('{')) {
+		if ($this->inAnimations && $this->match("(to|from|[0-9]+%)", $m) && $this->literal('{')) {
 			$this->push();
 			$this->set('__tags', array($m[1]));
 			return true;
@@ -148,7 +148,7 @@ class lessc {
 		// opening css block
 		if ($this->tags($tags) && $this->literal('{')) {
 			//  move @ tags out of variable namespace!
-			foreach($tags as &$tag) {
+			foreach ($tags as &$tag) {
 				if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
 			}
 
@@ -241,7 +241,7 @@ class lessc {
 			// arguments. -- change to making arg temp env and pushing and stack then recursively
 			// resolving all mixed in names.
 			if (!empty($env['__args'])) {
-				foreach($env['__args'] as $arg) {
+				foreach ($env['__args'] as $arg) {
 					$vname = $this->vPrefix.$arg[0];
 					$value = is_array($argv) ? array_shift($argv) : null;
 					// copy default value if there isn't one supplied
@@ -484,7 +484,7 @@ class lessc {
 		// why is a property wrapped in quotes, who knows!
 		if ($this->variable($name)) {
 			$name = $this->vPrefix.$name;
-		} elseif($this->literal("'") && $this->keyword($name) && $this->literal("'")) {
+		} elseif ($this->literal("'") && $this->keyword($name) && $this->literal("'")) {
 			// .. $this->count is messed up if we wanted to test another access type
 		} else {
 			$this->seek($s);
@@ -505,7 +505,7 @@ class lessc {
 		$s = $this->seek();
 		if ($this->literal('"', false)) {
 			$delim = '"';
-		} else if($this->literal("'", false)) {
+		} elseif ($this->literal("'", false)) {
 			$delim = "'";
 		} else {
 			return false;
@@ -561,7 +561,7 @@ class lessc {
 			}
 
 			$num = hexdec($num);
-			foreach(array(3,2,1) as $i) {
+			foreach (array(3,2,1) as $i) {
 				$t = $num % $width;
 				$num /= $width;
 
@@ -814,7 +814,7 @@ class lessc {
 	}
 
 	function compileValue($value) {
-		switch($value[0]) {
+		switch ($value[0]) {
 		case 'list':
 			// [1] - delimiter
 			// [2] - array of values
@@ -835,7 +835,7 @@ class lessc {
 			// search for inline variables to replace
 			$replace = array();
 			if (preg_match_all('/{('.$this->preg_quote($this->vPrefix).'[\w-_][0-9\w-_]*?)}/', $value[1], $m)) {
-				foreach($m[1] as $name) {
+				foreach ($m[1] as $name) {
 					if (!isset($replace[$name]))
 						$replace[$name] = $this->compileValue(array('variable', $name));
 				}
@@ -943,14 +943,14 @@ class lessc {
 		while (in_array($var[0], self::$dtypes)) {
 			if ($var[0] == 'expression') {
 				$var = $this->evaluate($var[1], $var[2], $var[3]);
-			} else if ($var[0] == 'variable') {
+			} elseif ($var[0] == 'variable') {
 				$var = $this->getVal($var[1], $this->pushName($var[1]), $defaultValue);
 				$pushed++;
-			} else if ($var[0] == 'function') {
+			} elseif ($var[0] == 'function') {
 				$color = $this->funcToColor($var);
 				if ($color) $var = $color;
 				break; // no where to go after a function
-			} else if ($var[0] == 'negative') {
+			} elseif ($var[0] == 'negative') {
 				$value = $this->reduce($var[1]);
 				if (is_numeric($value[1])) {
 					$value[1] = -1*$value[1];
@@ -1068,7 +1068,7 @@ class lessc {
 		else $type = $right[0];
 
 		$value = 0;
-		switch($op) {
+		switch ($op) {
 		case '+':
 			$value = $left[1] + $right[1];
 			break;	
@@ -1190,7 +1190,7 @@ class lessc {
 		if (!is_array($path)) $path = array($path);
 
 		//  move @ tags out of variable namespace
-		foreach($path as &$tag)
+		foreach ($path as &$tag)
 			if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
 
 		$env = $this->get(array_shift($path));
@@ -1390,7 +1390,7 @@ class lessc {
 		$done = false;
 		while (true) {
 			// find the next item
-			foreach($look as $token) {
+			foreach ($look as $token) {
 				$pos = strpos($text, $token);
 				if ($pos !== false) {
 					if (!isset($min) || $pos < $min[1]) $min = array($token, $pos);
@@ -1402,7 +1402,7 @@ class lessc {
 			$count = $min[1];
 			$skip = 0;
 			$newlines = 0;
-			switch($min[0]) {
+			switch ($min[0]) {
 			case 'url(':
 				if (preg_match('/url\(.*?\)/', $text, $m, 0, $count))
 					$count += strlen($m[0]) - strlen($min[0]);
@@ -1477,17 +1477,17 @@ class lessc {
 		// assume no root
 		$root = null;
 
-		if ( is_string($in) ) {
+		if (is_string($in)) {
 			$root = $in;
-		} elseif ( is_array($in) and isset($in['root']) ) {
-			if ( $force or ! isset($in['files']) ) {
+		} elseif (is_array($in) and isset($in['root'])) {
+			if ($force or ! isset($in['files'])) {
 				// If we are forcing a recompile or if for some reason the
 				// structure does not contain any file information we should
 				// specify the root to trigger a rebuild.
 				$root = $in['root'];
-			} elseif ( isset($in['files']) and is_array($in['files']) ) {
-				foreach ( $in['files'] as $fname => $ftime ) {
-					if ( ! file_exists($fname) or filemtime($fname) > $ftime ) {
+			} elseif (isset($in['files']) and is_array($in['files'])) {
+				foreach ($in['files'] as $fname => $ftime ) {
+					if (!file_exists($fname) or filemtime($fname) > $ftime) {
 						// One of the files we knew about previously has changed
 						// so we should look at our incoming root again.
 						$root = $in['root'];
@@ -1501,7 +1501,7 @@ class lessc {
 			return null;
 		}
 
-		if ( $root !== null ) {
+		if ($root !== null) {
 			// If we have a root value which means we should rebuild.
 			$less = new lessc($root);
 			$out = array();
@@ -1517,7 +1517,5 @@ class lessc {
 		}
 
 	}
-
 }
 
-?>
