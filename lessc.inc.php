@@ -174,10 +174,8 @@ class lessc {
 				return "}\n";
 			}
 
-			$tags = $this->multiplyTags();
 			$env = end($this->env);
-			$ctags = $env['__tags'];
-			unset($env['__tags']);
+			$tags = $env['__tags'];
 
 			// insert the default arguments
 			if (isset($env['__args'])) {
@@ -188,8 +186,17 @@ class lessc {
 				}
 			}
 
-			if (!empty($tags))
-				$out = $this->compileBlock($tags, $env);
+			// show the compiled block if we have the whole thing and it is visisble
+			if ($this->level == 2) {
+				$concreteTags = array();
+				foreach ($tags as $tag) {
+					if ($tag{0} != $this->mPrefix) $concreteTags[] = $tag;
+				}
+
+				if (!empty($concreteTags)) {
+					$out = $this->compileBlock($concreteTags, $env);
+				}
+			}
 
 			try {
 				$this->pop();
@@ -200,14 +207,9 @@ class lessc {
 
 			// make the block(s) available in the new current scope
 			if (!isset($env['__dontsave'])) {
-				foreach ($ctags as $t) {
-					// if the block already exists then merge
-					if ($this->get($t, array(end($this->env)))) {
-						$this->merge($t, $env);
-					} else {
-						$this->set($t, $env);
-					}
-				}
+				$merge_env = array();
+				foreach ($tags as $t) $merge_env[$t] = $env;
+				$this->merge($merge_env);
 			}
 
 			return isset($out) ? $out : true;
@@ -233,7 +235,11 @@ class lessc {
 			$env = $this->getEnv($tags);
 			if ($env == null) return true;
 
-			// if we have arguments then insert them
+			// if we have arguments then insert them before their respective env values
+			// TODO: this is silly, because it makes it so the arguments are also mixed
+			// into the new scope. Keeping it for now though otherwise sub-blocks won't see
+			// arguments. -- change to making arg temp env and pushing and stack then recursively
+			// resolving all mixed in names.
 			if (!empty($env['__args'])) {
 				foreach($env['__args'] as $arg) {
 					$vname = $this->vPrefix.$arg[0];
@@ -248,72 +254,26 @@ class lessc {
 					if (isset($env[$vname])) {
 						array_unshift($env[$vname], $value);
 					} else {
-						// new element
 						$env[$vname] = array($value);
 					}
 				}
 			}
 
-			// copy all properties from tmp env to current block
-			ob_start();
-			$blocks = array();
-			$toReduce = array();
+			$this->merge($env);
+
+			// reduce any immedate incoming values in order to prevent values changing
+			// due to namespace collision. This is to compensate for mixing in __args.
 			foreach ($env as $name => $value) {
-				// skip the metatdata
-				if (preg_match('/^__/', $name)) continue;
-
-				// if it is a block, remember it to compile after everything
-				// is mixed in
-				if (!isset($value[0]))
-					$blocks[] = array($name, $value);
-				else if ($name{0} != $this->vPrefix)
-					$toReduce[] = $name;
-
-				// copy the data
-				// don't overwrite previous value, look in current env for name
-				if ($this->get($name, array(end($this->env)))) {
-					while ($tval = array_shift($value))
-						$this->append($name, $tval);
-				} else 
-					$this->set($name, $value); 
-			}
-
-			// extract the args as a temp environment, put them before top
-			if (isset($env['__args'])) {
-				$tmp = array();
-				foreach ($env['__args'] as $arg) {
-					if (isset($arg[1])) // if there is a value
-						$tmp[$this->vPrefix.$arg[0]] = array($arg[1]);
+				if ($this->isProperty($name, $value)) {
+					$reduced = array();
+					foreach ($this->get($name) as $value) {
+						$reduced[] = $this->reduce($value);
+					}
+					$this->set($name, $reduced);
 				}
-
-				$top = array_pop($this->env);
-				array_push($this->env, $tmp, $top);
 			}
 
-
-			// reduce all values that came out of this mixin
-			foreach ($toReduce as $name) {
-				$reduced = array();
-				foreach ($this->get($name) as $value) {
-					$reduced[] = $this->reduce($value);
-				}
-				$this->set($name, $reduced);
-			}
-
-			if (isset($env['__args'])) {
-				// get rid of tmp
-				$top = array_pop($this->env);
-				array_pop($this->env);
-				array_push($this->env, $top);
-			}
-
-			// render sub blocks
-			foreach ($blocks as $b) {
-				$rtags = $this->multiplyTags(array($b[0]));
-				echo $this->compileBlock($rtags, $b[1], true);
-			}
-
-			return ob_get_clean();
+			return true;
 		} else {
 			$this->seek($s);
 		}
@@ -327,29 +287,6 @@ class lessc {
 	function fileExists($name) {
 		// sym link workaround
 		return file_exists($name) || file_exists(realpath(preg_replace('/\w+\/\.\.\//', '', $name)));
-	}
-
-	// recursively find the cartesian product of all tags in stack
-	function multiplyTags($tags = array(' '), $d = null) {
-		if ($d === null) $d = count($this->env) - 1;
-
-		$parents = $d == 0 ? $this->env[$d]['__tags']
-			: $this->multiplyTags($this->env[$d]['__tags'], $d - 1);
-
-		$rtags = array();
-		foreach ($parents as $p) {
-			foreach ($tags as $t) {
-				if ($t{0} == $this->mPrefix) continue; // skip functions
-				$d = ' ';
-				if ($t{0} == ':' || $t{0} == $this->selfSelector) {
-					$t = ltrim($t, $this->selfSelector);
-					$d = '';
-				}
-				$rtags[] = trim($p.$d.$t);
-			}
-		}
-
-		return $rtags;
 	}
 
 	// a list of expressions
@@ -813,25 +750,35 @@ class lessc {
 		else return array('list', $delim, $items);
 	}
 
-	function compileBlock($rtags, $env, $doSubBlocks = false) {
+	function compileBlock($rtags, $env) {
 		if (empty($rtags)) return '';
 
 		$children = array();
+		$visitedMixins = array(); // mixins to skip
 		$props = 0;
-		// print all the visible properties
+
 		ob_start();
 		foreach ($env as $name => $value) {
-			// todo: change this, poor hack
-			// make a better name storage system!!! (value types are fine)
-			// but.. don't render special properties (blocks, vars, metadata)
-			if (isset($value[0]) && $name{0} != $this->vPrefix && $name != '__args') {
+			if ($this->isProperty($name, $value)) {
 				echo $this->compileProperty($name, $value, 1)."\n";
 				$props += count($value);
-			} elseif ($doSubBlocks && !isset($value[0]) && $name{0} != $this->mPrefix) {
+			} elseif ($this->isBlock($name, $value)) {
+				if (isset($visitedMixins[$name])) continue;
+
 				$this->push($env);
+
 				$new_tags = array();
-				foreach ($rtags as $tag) $new_tags[] = $tag.' '.$name;
-				$children[] = $this->compileBlock($new_tags, $value, true);
+				// multiply tags
+				foreach ($rtags as $outerTag) {
+					foreach ($value['__tags'] as $innerTag) {
+						$visitedMixins[$innerTag] = true; // prevent rendering this block multiple times
+						$new_tags[] = trim($outerTag.
+							($innerTag{0} == $this->selfSelector || $innerTag{0} == ':'
+								? ltrim($innerTag, $this->selfSelector) : ' '.$innerTag));
+					}
+				}
+				$children[] = $this->compileBlock($new_tags, $value);
+
 				$this->pop();
 			}
 		}
@@ -1189,6 +1136,11 @@ class lessc {
 		$this->env[count($this->env) - 1][$name][] = $value;
 	}
 
+	function append_all($name, $values) {
+		$top =& $this->env[count($this->env) - 1];
+		foreach ($values as $value) $top[$name][] = $value;
+	}
+
 	// put on the front of the value
 	function prepend($name, $value) {
 		if (isset($this->env[count($this->env) - 1][$name]))
@@ -1197,11 +1149,11 @@ class lessc {
 	}
 
 	// get the highest occurrence of value
-	function get($name, $env = null) {
-		if (empty($env)) $env = $this->env;
+	function get($name, $env_stack = null) {
+		if (empty($env_stack)) $env_stack = $this->env;
 
-		for ($i = count($env) - 1; $i >= 0; $i--)
-			if (isset($env[$i][$name])) return $env[$i][$name];
+		for ($i = count($env_stack) - 1; $i >= 0; $i--)
+			if (isset($env_stack[$i][$name])) return $env_stack[$i][$name];
 
 		return null;
 	}
@@ -1253,18 +1205,59 @@ class lessc {
 		return $env;
 	}
 
-	// merge a block into the current env
-	function merge($name, $value) {
-		// if the current block isn't there then just set
-		$top =& $this->env[count($this->env) - 1];
-		if (!isset($top[$name])) return $this->set($name, $value);
+	// merge $env into the environment on the top of the stack
+	function merge($env) {
+		// see if we have to rework __tags, mixing into some of bound blocks breaks them up
+		foreach ($env as $name => $value) {
+			if (!$this->isBlock($name, $value, false)) continue;
 
-		// copy the block into the old one, including meta data
-		foreach ($value as $k=>$v) {
-			// todo: merge property values instead of replacing
-			// have to check type for this
-			$top[$name][$k] = $v;
+			$top =& $this->env[count($this->env) - 1];
+			if (isset($top[$name]) && $top[$name]['__tags'] != $value['__tags']) {
+
+				$source = $top[$name]['__tags'];
+				$dest = $value['__tags'];
+
+				$shared = array_values(array_intersect($source, $dest));
+
+				$broken = array_values(array_diff($source, $dest));
+				$split = array_values(array_diff($dest, $source));
+
+				$top[$name]['__tags'] = $shared;
+				foreach ($broken as $brokenName) {
+					$top[$brokenName]['__tags'] = $broken;
+				}
+
+				foreach ($split as $splitName) {
+					$env[$splitName]['__tags'] = $split;
+				}
+			}
 		}
+
+		foreach ($env as $name => $value) {
+			if ($this->isProperty($name, $value, false)) {
+				$this->append_all($name, $value);
+			} elseif ($this->isBlock($name, $value, false)) {
+				$top =& $this->env[count($this->env) - 1];
+				if (isset($top[$name])) {
+					// echo "merging $name\n";
+					$this->push($top[$name]);
+					$this->merge($value);
+					$this->set($name, $this->pop());
+				} else {
+					$this->set($name, $value);
+				}
+			}
+		}
+	}
+	
+	function isProperty($name, $value, $isConcrete = true) {
+		return is_array($value) && array_key_exists(0, $value) && substr($name, 0,2) != '__' &&
+			(!$isConcrete || $name{0} != $this->vPrefix);
+	}
+
+	function isBlock($name, $value, $isConcrete = true) {
+		return is_array($value) && !array_key_exists(0, $value) &&
+			(!$isConcrete || $name{0} != $this->mPrefix);
 	}
 
 	function literal($what, $eatWhitespace = true) {
