@@ -9,7 +9,7 @@ error_reporting(E_ALL);
 $difftool = 'diff';
 $input = array(
 	'dir' => 'inputs',
-	'match' => '(.*?)\.less',
+	'glob' => '*.less',
 );
 
 $output = array(
@@ -17,7 +17,10 @@ $output = array(
 	'filename' => '%s.css',
 );
 
-require realpath(dirname(__FILE__)).'/../lessc.inc.php';
+
+$prefix = realpath(dirname(__FILE__));
+require $prefix.'/../lessc.inc.php';
+
 $compiler = new lessc();
 
 $fa = 'Fatal Error: ';
@@ -43,16 +46,28 @@ if (flag('h', 'help')) {
 	exit('help me');
 }
 
+$input['dir'] = $prefix.'/'.$input['dir'];
+$output['dir'] = $prefix.'/'.$output['dir'];
 if (!is_dir($input['dir']) || !is_dir($output['dir']))
 	exit($fa." both input and output directories must exist\n");
 
+// get the first non flag as search string
+$searchString = null;
+foreach ($argv as $a) {
+	if (strlen($a) > 0 && $a{0} != '-') {
+		$searchString = $a;
+		break;
+	}
+}
+
 $tests = array();
-// todo: use glob so user can select tests by name
-foreach (scandir($input['dir']) as $fname) {
-	if (preg_match('/^'.$input['match'].'$/', $fname, $match)) {
+$matches = glob($input['dir'].'/'.(!is_null($searchString) ? '*'.$searchString : '' ).$input['glob']);
+if ($matches) {
+	foreach ($matches as $fname) {
+		extract(pathinfo($fname)); // for $filename, from php 5.2
 		$tests[] = array(
-			'in' => $input['dir'].'/'.$fname,
-			'out' => $output['dir'].'/'.sprintf($output['filename'], $match[1]),
+			'in' => $fname,
+			'out' => $output['dir'].'/'.sprintf($output['filename'], $filename), 
 		);
 	}
 }

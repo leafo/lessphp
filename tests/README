@@ -2,7 +2,7 @@ test.php
 ========================================
 
 to run:
-	php test.php
+	php test.php [test-name-glob]
 
 
 Runs through all files in `inputs`, compiles them, then
@@ -18,4 +18,6 @@ the appropriate file. This will overwrite any existing
 outputs. Use this when you want to save verified test
 results.
 
+You can also run specific tests by passing in an argument 
+that contains any part of the test name.
 
