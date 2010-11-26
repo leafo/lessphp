@@ -46,11 +46,8 @@ class lessc {
 	static private $units = array(
 		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc', 'ms', 's', 'deg', 'gr');
     
-	// public options
-	public $options = array(
-	    'importDisabled' => false,
-	    'importDir' => array(''),
-    );
+	public $importDisabled = false;
+	public $importDir = '';
 
 	// compile chunk off the head of buffer
 	function chunk() {
@@ -220,18 +217,17 @@ class lessc {
 		
 		// import statement
 		if ($this->import($url, $media)) {
-			if ($this->options['importDisabled']) return "/* import is disabled */\n";
-			
-			foreach($this->options['importDir'] as $importDir) {
+			if ($this->importDisabled) return "/* import is disabled */\n";
 
-    			$full = $importDir.$url;
-    			if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
-    				$this->addParsedFile($file);
-    				$loaded = ltrim($this->removeComments(file_get_contents($file).";"));
-    				$this->buffer = substr($this->buffer, 0, $this->count).$loaded.substr($this->buffer, $this->count);
-    				return true;
-    			}
-            }
+			foreach((array)$this->importDir as $dir) {
+				$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
+				if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
+					$this->addParsedFile($file);
+					$loaded = ltrim($this->removeComments(file_get_contents($file).";"));
+					$this->buffer = substr($this->buffer, 0, $this->count).$loaded.substr($this->buffer, $this->count);
+					return true;
+				}
+			}
 			return $this->indent('@import url("'.$url.'")'.($media ? ' '.$media : '').';');
 		}
 
@@ -1323,13 +1319,9 @@ class lessc {
 		else $this->count = $where;
 		return true;
 	}
-    
-	function merge_options($a, $b) {
-	    return array_merge((array)$a, (array)$b);
-	}
 	
 	// parse and compile buffer
-	function parse($str = null, $opts) {
+	function parse($str = null) {
 		if ($str) $this->buffer = $str;		
 
 		$this->env = array();
@@ -1339,7 +1331,6 @@ class lessc {
 		$this->count = 0;
 		$this->line = 1;
 		$this->level = 0;
-		$this->options = $this->merge_options($this->options, $opts);
 
 		$this->buffer = $this->removeComments($this->buffer);
 		$this->push(); // set up global scope
@@ -1371,7 +1362,7 @@ class lessc {
 			throw new exception($msg.': failed at `'.$m[1].'` line: '.$line);
 	}
 
-	function __construct($fname = null) {
+	function __construct($fname = null, $opts = null) {
 		if (!self::$operatorString) {
 			self::$operatorString = 
 				'('.implode('|', array_map(array($this, 'preg_quote'), array_keys(self::$precedence))).')';
