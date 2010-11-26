@@ -278,7 +278,9 @@ class lessc {
 				}
 			}
 
-			return true;
+			// render mixin contents if mixing into global scope
+			if ($this->level == 1) return $this->compileBlock(null, $env);
+			else return true;
 		} else {
 			$this->seek($s);
 		}
@@ -756,8 +758,6 @@ class lessc {
 	}
 
 	function compileBlock($rtags, $env) {
-		if (empty($rtags)) return '';
-
 		$children = array();
 		$visitedMixins = array(); // mixins to skip
 		$props = 0;
@@ -765,7 +765,7 @@ class lessc {
 		ob_start();
 		foreach ($env as $name => $value) {
 			if ($this->isProperty($name, $value)) {
-				echo $this->compileProperty($name, $value, 1)."\n";
+				echo $this->compileProperty($name, $value, is_null($rtags) ? 0 : 1)."\n";
 				$props += count($value);
 			} elseif ($this->isBlock($name, $value)) {
 				if (isset($visitedMixins[$name])) continue;
@@ -774,7 +774,7 @@ class lessc {
 
 				$new_tags = array();
 				// multiply tags
-				foreach ($rtags as $outerTag) {
+				foreach ((is_null($rtags) ? array('') : $rtags) as $outerTag) {
 					foreach ($value['__tags'] as $innerTag) {
 						$visitedMixins[$innerTag] = true; // prevent rendering this block multiple times
 						$new_tags[] = trim($outerTag.
@@ -789,14 +789,17 @@ class lessc {
 		}
 		$list = ob_get_clean();
 
-		$blockDecl = implode(", ", $rtags).' {';
+		if ($rtags == null) {
+			$out = $list;
+		} else {
+			$blockDecl = implode(", ", $rtags).' {';
 
-		$out = '';
-		if ($props > 1)
-			$out = $this->indent($blockDecl).$list.$this->indent('}');
-		elseif ($props == 1) {
-			$list = ' '.trim($list).' ';
-			$out = $this->indent($blockDecl.$list.'}');
+			if ($props > 1)
+				$out = $this->indent($blockDecl).$list.$this->indent('}');
+			elseif ($props == 1) {
+				$list = ' '.trim($list).' ';
+				$out = $this->indent($blockDecl.$list.'}');
+			} else $out = '';
 		}
 
 		return $out.implode('', $children);
