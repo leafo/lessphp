@@ -1,0 +1,21 @@
+
+@import 'file1.less'; // file found and imported
+
+@import "something.css" media;
+@import url("something.css") media;
+@import url(something.css) media, screen, print; 
+
+@color: maroon;
+
+@import url(file2); // found and imported
+
+body { 
+	line-height: 10em;
+	@colors;
+}
+
+div {
+	@color: fuchsia;
+	@import "file2";
+}
+
