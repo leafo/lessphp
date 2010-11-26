@@ -1,0 +1,14 @@
+@import url("something.css") media;
+@import url("something.css") media;
+@import url("something.css") media, screen, print;
+b {
+  color:maroon;
+  padding:16px;
+}
+body { line-height:10em; }
+body div.bright { color:red; }
+body div.sad { color:blue; }
+div b {
+  color:fuchsia;
+  padding:16px;
+}

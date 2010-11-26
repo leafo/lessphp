@@ -22,6 +22,7 @@ $prefix = realpath(dirname(__FILE__));
 require $prefix.'/../lessc.inc.php';
 
 $compiler = new lessc();
+$compiler->importDir = $input['dir'].'/test-imports';
 
 $fa = 'Fatal Error: ';
 if (php_sapi_name() != 'cli') { 
