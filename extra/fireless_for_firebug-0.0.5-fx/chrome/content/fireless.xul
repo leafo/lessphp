@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<overlay id="sample"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+  <script type="application/x-javascript" src="reps.js" />
+  <stringbundleset>
+    <stringbundle id="strings" src="chrome://fireless/locale/fireless.properties"/>
+  </stringbundleset>
+</overlay>

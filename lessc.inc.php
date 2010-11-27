@@ -48,6 +48,7 @@ class lessc {
     
 	public $importDisabled = false;
 	public $importDir = '';
+	public $debug_info = true;
 
 	// compile chunk off the head of buffer
 	function chunk() {
@@ -791,7 +792,7 @@ class lessc {
 		if ($rtags == null) {
 			$out = $list;
 		} else {
-			$blockDecl = "@media -less-debug-info{filename{font-family:http://tempurl.com;}line{font-family:'".$env['__tagsline']."';}}\n";
+			$blockDecl = ($this->debug_info) ? "@media -less-debug-info{filename{font-family:http://tempurl.com;}line{font-family:'".$env['__tagsline']."';}}\n" : '';
 			$blockDecl .= implode(", ", $rtags).' {';
 
 			if ($props > 1)
