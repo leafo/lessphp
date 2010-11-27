@@ -51,6 +51,7 @@ class lessc {
 
 	// compile chunk off the head of buffer
 	function chunk() {
+
 		if (empty($this->buffer)) return false;
 		$s = $this->seek();
 
@@ -147,14 +148,16 @@ class lessc {
 
 		// opening css block
 		if ($this->tags($tags) && $this->literal('{')) {
+
 			//  move @ tags out of variable namespace!
+			$tagline = $this->line + substr_count(substr($this->buffer, 0, $s), "\n");
 			foreach ($tags as &$tag) {
 				if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
 			}
 
 			$this->push();
-			$this->set('__tags', $tags);	
-
+			$this->set('__tags', $tags);
+			$this->set('__tagsline', $tagline);
 			return true;
 		} else {
 			$this->seek($s);
@@ -765,7 +768,6 @@ class lessc {
 				$props += count($value);
 			} elseif ($this->isBlock($name, $value)) {
 				if (isset($visitedMixins[$name])) continue;
-
 				$this->push($env);
 
 				$new_tags = array();
@@ -783,12 +785,14 @@ class lessc {
 				$this->pop();
 			}
 		}
+		
 		$list = ob_get_clean();
 
 		if ($rtags == null) {
 			$out = $list;
 		} else {
-			$blockDecl = implode(", ", $rtags).' {';
+			$blockDecl = "@media -less-debug-info{filename{font-family:http://tempurl.com;}line{font-family:'".$env['__tagsline']."';}}\n";
+			$blockDecl .= implode(", ", $rtags).' {';
 
 			if ($props > 1)
 				$out = $this->indent($blockDecl).$list.$this->indent('}');
@@ -1331,11 +1335,11 @@ class lessc {
 		$this->count = 0;
 		$this->line = 1;
 		$this->level = 0;
-
+		
 		$this->buffer = $this->removeComments($this->buffer);
 		$this->push(); // set up global scope
 		$this->set('__tags', array('')); // equivalent to 1 in tag multiplication
-
+			
 		// trim whitespace on head
 		if (preg_match('/^\s+/', $this->buffer, $m)) {
 			$this->line  += substr_count($m[0], "\n");
@@ -1352,7 +1356,6 @@ class lessc {
 		if (count($this->env) > 1)
 			throw new exception('parse error: unclosed block');
 
-		// print_r($this->env);
 		return $out;
 	}
 
@@ -1522,4 +1525,3 @@ class lessc {
 
 	}
 }
-
