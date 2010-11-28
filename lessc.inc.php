@@ -17,7 +17,7 @@
 class lessc {
 	private $buffer;
 	private $count;
-	private $line;
+	private $line = array();
 	private $expandStack;
 	private $media;
 	private $indentLevel;
@@ -46,9 +46,11 @@ class lessc {
 	static private $units = array(
 		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc', 'ms', 's', 'deg', 'gr');
     
+	public $endImport = array(0);
+	public $levelImport = 0; // level inside the different imported less files
 	public $importDisabled = false;
 	public $importDir = '';
-	public $debug_info = true;
+	public $debug_info = true; // activate the debug mode with Fireless
 
 	// compile chunk off the head of buffer
 	function chunk() {
@@ -56,6 +58,11 @@ class lessc {
 		if (empty($this->buffer)) return false;
 		$s = $this->seek();
 
+		if ($this->levelImport != 0 && $this->endImport[$this->levelImport] != 0 && $s >= $this->endImport[$this->levelImport]) {
+			$this->levelImport--;
+			$this->prevBuffer = 0;
+		}
+		
 		// a property
 		if ($this->keyword($key) && $this->assign() && $this->propertyValue($value) && $this->end()) {
 			// look for important prefix
@@ -149,16 +156,25 @@ class lessc {
 
 		// opening css block
 		if ($this->tags($tags) && $this->literal('{')) {
-
+			if ($this->debug_info) {
+				$thisFile = $this->findParsedFile($this->levelImport);
+				if (!empty($this->allParsedFiles[$thisFile])) {
+					// counts the selector line
+					$tagline = $this->line[$this->levelImport] + substr_count(substr($this->buffer, 0+$this->allParsedFiles[$thisFile]['position'], $s-$this->allParsedFiles[$thisFile]['position']), "\n") - $this->allParsedFiles[$thisFile]['importedlines'];
+				} else {
+				    throw new exception('You must specify whether it\'s a direct less entry in the parameters of the "parse" method or virtually add the file with the "addParsedFile" method.');
+				}
+			}
 			//  move @ tags out of variable namespace!
-			$tagline = $this->line + substr_count(substr($this->buffer, 0, $s), "\n");
 			foreach ($tags as &$tag) {
 				if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
 			}
-
 			$this->push();
 			$this->set('__tags', $tags);
-			$this->set('__tagsline', $tagline);
+			if ($this->debug_info) {
+				$this->set('__tagsline', $tagline);
+				$this->set('__file', $thisFile);
+			}	
 			return true;
 		} else {
 			$this->seek($s);
@@ -226,9 +242,28 @@ class lessc {
 			foreach((array)$this->importDir as $dir) {
 				$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
 				if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
-					$this->addParsedFile($file);
-					$loaded = ltrim($this->removeComments(file_get_contents($file).";"));
+					$this->levelImport++; // enters a new level
+					$this->addParsedFile($file, $this->count);
+					$loaded = $this->removeComments(file_get_contents($file).";");
+					$this->line[$this->levelImport] = 1;  // current line of the parsed less file
+					// trim whitespace on head
+					if (preg_match('/^\s+/', $loaded, $m)) {
+						$this->line[$this->levelImport] += substr_count($m[0], "\n");
+					}
+					$loaded = ltrim($loaded); // removes space
+					
 					$this->buffer = substr($this->buffer, 0, $this->count).$loaded.substr($this->buffer, $this->count);
+					
+					$this->endImport[$this->levelImport] = $this->count + strlen($loaded); // counts the return to previous level
+					
+					$totalLines = count(explode("\n", $loaded)) - 1; // counts lines of the imported file
+
+					// update the count & the line position of previous less files
+					for($i = $this->levelImport-1; $i >= 0; $i--) {
+						$prevfile = $this->findParsedFile($i);
+						$this->allParsedFiles[$prevfile]['importedlines'] += $totalLines;
+						$this->endImport[$i] += strlen($loaded); // redefines the return to a previous level for all levels
+					}
 					return true;
 				}
 			}
@@ -792,7 +827,7 @@ class lessc {
 		if ($rtags == null) {
 			$out = $list;
 		} else {
-			$blockDecl = ($this->debug_info) ? "@media -less-debug-info{filename{font-family:http://tempurl.com;}line{font-family:'".$env['__tagsline']."';}}\n" : '';
+			$blockDecl = ($this->debug_info) ? "@media -less-debug-info{filename{font-family:".$env['__file'].";}line{font-family:'".$env['__tagsline']."';}}\n" : '';
 			$blockDecl .= implode(", ", $rtags).' {';
 
 			if ($props > 1)
@@ -1326,7 +1361,7 @@ class lessc {
 	}
 	
 	// parse and compile buffer
-	function parse($str = null) {
+	function parse($str = null, $directinput = false) {
 		if ($str) $this->buffer = $str;		
 
 		$this->env = array();
@@ -1334,8 +1369,13 @@ class lessc {
 		$this->indentLevel = 0;
 		$this->media = null;
 		$this->count = 0;
-		$this->line = 1;
+		$this->line[$this->levelImport] = 1;
 		$this->level = 0;
+		
+		// we must define if it's a direct ouput or not to specify an original way to count lines in debug mode
+		if ($directinput && $this->debug_info) {
+			$this->addParsedFile('direct_ouput', 0, true);
+		}
 		
 		$this->buffer = $this->removeComments($this->buffer);
 		$this->push(); // set up global scope
@@ -1343,7 +1383,7 @@ class lessc {
 			
 		// trim whitespace on head
 		if (preg_match('/^\s+/', $this->buffer, $m)) {
-			$this->line  += substr_count($m[0], "\n");
+			$this->line[$this->levelImport]  += substr_count($m[0], "\n");
 			$this->buffer = ltrim($this->buffer);
 		}
 
@@ -1360,8 +1400,8 @@ class lessc {
 		return $out;
 	}
 
-	function throwParseError($msg = 'parse error') {
-		$line = $this->line + substr_count(substr($this->buffer, 0, $this->count), "\n");
+	function throwParseError($msg = 'parse error', $thisFile = 'default') {
+		$line = $this->line[$this->levelImport] + substr_count(substr($this->buffer, 0, $this->count), "\n");
 		if ($this->peek("(.*?)(\n|$)", $m))
 			throw new exception($msg.': failed at `'.$m[1].'` line: '.$line);
 	}
@@ -1443,8 +1483,31 @@ class lessc {
 	}
 
 	public function allParsedFiles() { return $this->allParsedFiles; }
-	protected function addParsedFile($file) {
-		$this->allParsedFiles[realpath($file)] = filemtime($file);
+	public function addParsedFile($entryname, $pos = 0, $directoutput = false) {
+		if ($directoutput) {
+			$this->allParsedFiles[$entryname] = array(
+					'filemtime' => false,
+					'position' => $pos,
+					'importedlines' => 0
+			);
+		} else {
+			$this->allParsedFiles[realpath($entryname)] = array(
+					'filemtime' => filemtime($entryname),
+					'position' => $pos,
+					'importedlines' => 0
+			);
+		}
+	}
+	public function findParsedFile($eq) {
+		$parsedfiles = $this->allParsedFiles();
+		$i = 0;
+		foreach($parsedfiles as $key=>$value) {
+			if ($i == $eq) {
+				return $key;
+			}
+			$i++;
+		}
+		return false;
 	}
 
 
