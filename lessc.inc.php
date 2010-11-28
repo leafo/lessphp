@@ -46,6 +46,7 @@ class lessc {
 	static private $units = array(
 		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc', 'ms', 's', 'deg', 'gr');
     
+	public $ignoreNonExistantLessImports = false;
 	public $importDisabled = false;
 	public $importDir = '';
 
@@ -228,6 +229,11 @@ class lessc {
 					return true;
 				}
 			}
+			
+			if(strtolower(substr($url, -4)) == 'less' && $this->ignoreNonExistantLessImports) {
+				return "/* ignored import */\n";
+			}
+			
 			return $this->indent('@import url("'.$url.'")'.($media ? ' '.$media : '').';');
 		}
 
