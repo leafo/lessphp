@@ -827,7 +827,7 @@ class lessc {
 		if ($rtags == null) {
 			$out = $list;
 		} else {
-			$blockDecl = ($this->debug_info) ? "@media -less-debug-info{filename{font-family:".$env['__file'].";}line{font-family:'".$env['__tagsline']."';}}\n" : '';
+			$blockDecl = ($this->debug_info) ? "@media -less-debug-info{filename{font-family:'".addslashes($env['__file'])."';}line{font-family:'".$env['__tagsline']."';}}\n" : '';
 			$blockDecl .= implode(", ", $rtags).' {';
 
 			if ($props > 1)
