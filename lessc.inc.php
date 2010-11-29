@@ -187,23 +187,23 @@ class lessc {
 				}
 			}
 
+			try {
+				$block = $this->pop();
+			} catch (exception $e) {
+				$this->seek($s);
+				$this->throwParseError($e->getMessage());
+			}
+
 			// show the compiled block if we have the whole thing and it is visisble
-			if ($this->level == 2) {
+			if ($this->level == 1) {
 				$concreteTags = array();
 				foreach ($tags as $tag) {
 					if ($tag{0} != $this->mPrefix) $concreteTags[] = $tag;
 				}
 
 				if (!empty($concreteTags)) {
-					$out = $this->compileBlock($concreteTags, $env);
+					$out = $this->compileBlock($concreteTags, $block);
 				}
-			}
-
-			try {
-				$this->pop();
-			} catch (exception $e) {
-				$this->seek($s);
-				$this->throwParseError($e->getMessage());
 			}
 
 			// make the block(s) available in the new current scope
@@ -220,7 +220,7 @@ class lessc {
 		if ($this->import($url, $media)) {
 			if ($this->importDisabled) return "/* import is disabled */\n";
 
-			foreach((array)$this->importDir as $dir) {
+			foreach ((array)$this->importDir as $dir) {
 				$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
 				if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
 					$this->addParsedFile($file);
@@ -281,7 +281,7 @@ class lessc {
 			}
 
 			// render mixin contents if mixing into global scope
-			if ($this->level == 1) return $this->compileBlock(null, $env);
+			if ($this->level == 1) return $this->compileBlock(null, $env, false);
 			else return true;
 		} else {
 			$this->seek($s);
@@ -759,12 +759,13 @@ class lessc {
 		else return array('list', $delim, $items);
 	}
 
-	function compileBlock($rtags, $env) {
+	function compileBlock($rtags, $env, $bindEnv = true) {
 		$children = array();
 		$visitedMixins = array(); // mixins to skip
 		$props = 0;
 
 		ob_start();
+		if ($bindEnv) $this->push($env);
 		foreach ($env as $name => $value) {
 			if ($this->isProperty($name, $value)) {
 				echo $this->compileProperty($name, $value, is_null($rtags) ? 0 : 1)."\n";
@@ -772,7 +773,6 @@ class lessc {
 			} elseif ($this->isBlock($name, $value)) {
 				if (isset($visitedMixins[$name])) continue;
 
-				$this->push($env);
 
 				$new_tags = array();
 				// multiply tags
@@ -786,9 +786,9 @@ class lessc {
 				}
 				$children[] = $this->compileBlock($new_tags, $value);
 
-				$this->pop();
 			}
 		}
+		if ($bindEnv) $this->pop();
 		$list = ob_get_clean();
 
 		if ($rtags == null) {
@@ -1358,7 +1358,7 @@ class lessc {
 		if (count($this->env) > 1)
 			throw new exception('parse error: unclosed block');
 
-		// print_r($this->env);
+		// print_r($this->env[0]);
 		return $out;
 	}
 
