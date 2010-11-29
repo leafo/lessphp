@@ -1,0 +1,5 @@
+body div other world { height:50; }
+div other world { height:50; }
+.test { height:10; }
+.test .test { height:; }
+.test .test .test { height:; }
