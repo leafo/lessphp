@@ -1484,23 +1484,14 @@ class lessc {
 	public function addParsedFile($entryname, $pos = 0, $directinput = false) {
 		$parent = $this->currentParsedFile;
 		$this->currentParsedFile = ($directinput) ? $entryname : realpath($entryname);
-		if ($directinput) {
-			$this->allParsedFiles[$this->currentParsedFile] = array(
-					'filemtime' => time(),
-					'position' => $pos,
-					'importedlines' => 0,
-					'parent' => $parent,
-					'endImport' => 0
-			);
-		} else {
-			$this->allParsedFiles[$this->currentParsedFile] = array(
-					'filemtime' => filemtime($entryname),
-					'position' => $pos,
-					'importedlines' => 0,
-					'parent' => $parent,
-					'endImport' => 0
-			);
-		}
+		$filemtime = ($directinput) ? time() : filemtime($entryname);
+		$this->allParsedFiles[$this->currentParsedFile] = array(
+				'filemtime' => $filemtime,
+				'position' => $pos,
+				'importedlines' => 0,
+				'parent' => $parent,
+				'endImport' => 0
+		);
 	}
 	public function findParsedFile($eq) {
 		$parsedfiles = $this->allParsedFiles();
