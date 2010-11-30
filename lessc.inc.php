@@ -45,17 +45,17 @@ class lessc {
 	static private $dtypes = array('expression', 'variable', 'function', 'negative'); // types with delayed computation
 	static private $units = array(
 		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc', 'ms', 's', 'deg', 'gr');
-    
-	public $endImport = array(0);
-	public $levelImport = 0; // level inside the different imported less files
+
 	public $importDisabled = false;
 	public $importDir = '';
-	public $currentParsedFile = false;
+	
+	// Options to make LessPHP work with FireLess
+	private $levelImport = 0; // level inside the different imported less files
+	public $currentParsedFile = false; // which of the less file is parsed
 	public $debug_info = false; // activate the debug mode with Fireless
 
 	// compile chunk off the head of buffer
 	function chunk() {
-
 		if (empty($this->buffer)) return false;
 		$s = $this->seek();
 		
@@ -822,7 +822,7 @@ class lessc {
 		if ($rtags == null) {
 			$out = $list;
 		} else {
-			$blockDecl = ($this->debug_info) ? "@media -less-debug-info{filename{font-family:'".addslashes($env['__file'])."';}line{font-family:'".$env['__tagsline']."';}}\n" : '';
+			$blockDecl = ($this->debug_info) ? "@media -less-debug-info{filename{font-family:'".preg_replace('/([^-\w])/', '\\\\\1', "file://{$env['__file']}")."';}line{font-family:'".$env['__tagsline']."';}}\n" : '';
 			$blockDecl .= implode(", ", $rtags).' {';
 
 			if ($props > 1)
@@ -1367,7 +1367,8 @@ class lessc {
 		
 		// we must define if it's a direct ouput or not to specify an original way to count lines in debug mode
 		if (count($this->allParsedFiles) == 0) {
-			$this->addParsedFile('direct_input', 0, true);
+			$input_name = str_replace($_SERVER['SCRIPT_NAME'], $_SERVER['REQUEST_URI'], $_SERVER['SCRIPT_FILENAME']);
+			$this->addParsedFile($input_name, 0, true);
 		}
 		
 		$this->line[$this->currentParsedFile] = 1;
