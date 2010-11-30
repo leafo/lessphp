@@ -51,7 +51,7 @@ class lessc {
 	public $importDisabled = false;
 	public $importDir = '';
 	public $currentParsedFile = false;
-	public $debug_info = true; // activate the debug mode with Fireless
+	public $debug_info = false; // activate the debug mode with Fireless
 
 	// compile chunk off the head of buffer
 	function chunk() {
@@ -59,26 +59,11 @@ class lessc {
 		if (empty($this->buffer)) return false;
 		$s = $this->seek();
 		
-		
-		//die();
-		
-		//echo 'position actuelle : ' .$this->currentParsedFile;
-		//echo ' - ';
-		if ($this->levelImport != 0 && $this->endImport[$this->levelImport] != 0 && $s >= $this->endImport[$this->levelImport]) {
+		if ($this->levelImport != 0 && $this->allParsedFiles[$this->currentParsedFile]['endImport'] != 0 && $s >= $this->allParsedFiles[$this->currentParsedFile]['endImport']) {
 			$this->levelImport--;
-			$this->prevBuffer = 0;
-			/*if (empty($this->allParsedFiles[$this->currentParsedFile]['parent'])) {
-				echo 'test';
-			}*/
 			$this->currentParsedFile = $this->allParsedFiles[$this->currentParsedFile]['parent'];
-			//print_r($this->allParsedFiles);
-			
-		} else {
-			//$this->allParsedFiles
 		}
-		
-		//echo 'position suivante : ' .$this->currentParsedFile;
-		//echo "\n";
+
 		// a property
 		if ($this->keyword($key) && $this->assign() && $this->propertyValue($value) && $this->end()) {
 			// look for important prefix
@@ -172,24 +157,17 @@ class lessc {
 
 		// opening css block
 		if ($this->tags($tags) && $this->literal('{')) {
-			if ($this->debug_info) {
-				if (!empty($this->allParsedFiles[$this->currentParsedFile])) {
-					// counts the selector line
-					$tagline = $this->line[$this->currentParsedFile] + substr_count(substr($this->buffer, 0+$this->allParsedFiles[$this->currentParsedFile]['position'], $s-$this->allParsedFiles[$this->currentParsedFile]['position']), "\n") - $this->allParsedFiles[$this->currentParsedFile]['importedlines'];
-				} else {
-				    throw new exception('You must specify whether it\'s a direct less entry in the parameters of the "parse" method or virtually add the file with the "addParsedFile" method.');
-				}
-			}
+			// counts the selector line
+			$tagline = $this->line[$this->currentParsedFile] + substr_count(substr($this->buffer, 0+$this->allParsedFiles[$this->currentParsedFile]['position'], $s-$this->allParsedFiles[$this->currentParsedFile]['position']), "\n") - $this->allParsedFiles[$this->currentParsedFile]['importedlines'];
+			
 			//  move @ tags out of variable namespace!
 			foreach ($tags as &$tag) {
 				if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
 			}
 			$this->push();
 			$this->set('__tags', $tags);
-			if ($this->debug_info) {
-				$this->set('__tagsline', $tagline);
-				$this->set('__file', $this->currentParsedFile);
-			}	
+			$this->set('__tagsline', $tagline);
+			$this->set('__file', $this->currentParsedFile);
 			return true;
 		} else {
 			$this->seek($s);
@@ -269,15 +247,18 @@ class lessc {
 					
 					$this->buffer = substr($this->buffer, 0, $this->count).$loaded.substr($this->buffer, $this->count);
 					
-					$this->endImport[$this->levelImport] = $this->count + strlen($loaded); // counts the return to previous level
+					$this->allParsedFiles[$this->currentParsedFile]['endImport'] = $this->count + strlen($loaded); // counts the return to previous level
 					
 					$totalLines = count(explode("\n", $loaded)) - 1; // counts lines of the imported file
 
+					$begin = $this->currentParsedFile; // init of the position before updating parents data
+					
 					// update the count & the line position of previous less files
-					for($i = $this->levelImport-1; $i >= 0; $i--) {
-						$prevfile = $this->findParsedFile($i);
-						$this->allParsedFiles[$prevfile]['importedlines'] += $totalLines;
-						$this->endImport[$i] += strlen($loaded); // redefines the return to a previous level for all levels
+					for($i = $this->levelImport; $i > 0; $i--) {
+						$parent = $this->allParsedFiles[$begin]['parent'];
+						$this->allParsedFiles[$parent]['importedlines'] += $totalLines;
+						$this->allParsedFiles[$parent]['endImport'] += strlen($loaded); // redefines the return to a previous level for all levels
+						$begin = $parent;
 					}
 					return true;
 				}
@@ -1386,7 +1367,7 @@ class lessc {
 		$this->count = 0;
 		
 		// we must define if it's a direct ouput or not to specify an original way to count lines in debug mode
-		if (count($this->allParsedFiles) == 0 && $this->debug_info) {
+		if (count($this->allParsedFiles) == 0) {
 			$this->addParsedFile('direct_input', 0, true);
 		}
 		
@@ -1508,14 +1489,16 @@ class lessc {
 					'filemtime' => time(),
 					'position' => $pos,
 					'importedlines' => 0,
-					'parent' => $parent
+					'parent' => $parent,
+					'endImport' => 0
 			);
 		} else {
 			$this->allParsedFiles[$this->currentParsedFile] = array(
 					'filemtime' => filemtime($entryname),
 					'position' => $pos,
 					'importedlines' => 0,
-					'parent' => $parent
+					'parent' => $parent,
+					'endImport' => 0
 			);
 		}
 	}
