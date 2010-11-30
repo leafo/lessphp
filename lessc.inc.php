@@ -239,20 +239,17 @@ class lessc {
 					$this->addParsedFile($file, $this->count);
 					$loaded = $this->removeComments(file_get_contents($file).";");
 					$this->line[$this->currentParsedFile] = 1;  // current line of the parsed less file
+					
 					// trim whitespace on head
 					if (preg_match('/^\s+/', $loaded, $m)) {
 						$this->line[$this->currentParsedFile] += substr_count($m[0], "\n");
 					}
 					$loaded = ltrim($loaded); // removes space
-					
 					$this->buffer = substr($this->buffer, 0, $this->count).$loaded.substr($this->buffer, $this->count);
-					
 					$this->allParsedFiles[$this->currentParsedFile]['endImport'] = $this->count + strlen($loaded); // counts the return to previous level
-					
 					$totalLines = count(explode("\n", $loaded)) - 1; // counts lines of the imported file
 
 					$begin = $this->currentParsedFile; // init of the position before updating parents data
-					
 					// update the count & the line position of previous less files
 					for($i = $this->levelImport; $i > 0; $i--) {
 						$parent = $this->allParsedFiles[$begin]['parent'];
