@@ -52,6 +52,7 @@ class lessc {
 	// Options to make LessPHP work with FireLess
 	private $levelImport = 0; // level inside the different imported less files
 	public $currentParsedFile = false; // which of the less file is parsed
+	public $currentLine = 0;
 	public $debug_info = false; // activate the debug mode with Fireless
 
 	// compile chunk off the head of buffer
@@ -64,6 +65,9 @@ class lessc {
 			$this->currentParsedFile = $this->allParsedFiles[$this->currentParsedFile]['parent'];
 		}
 
+		// counts the line
+		$this->currentLine = $this->line[$this->currentParsedFile] + substr_count(substr($this->buffer, 0+$this->allParsedFiles[$this->currentParsedFile]['position'], $s-$this->allParsedFiles[$this->currentParsedFile]['position']), "\n") - $this->allParsedFiles[$this->currentParsedFile]['importedlines'];
+			
 		// a property
 		if ($this->keyword($key) && $this->assign() && $this->propertyValue($value) && $this->end()) {
 			// look for important prefix
@@ -157,16 +161,13 @@ class lessc {
 
 		// opening css block
 		if ($this->tags($tags) && $this->literal('{')) {
-			// counts the selector line
-			$tagline = $this->line[$this->currentParsedFile] + substr_count(substr($this->buffer, 0+$this->allParsedFiles[$this->currentParsedFile]['position'], $s-$this->allParsedFiles[$this->currentParsedFile]['position']), "\n") - $this->allParsedFiles[$this->currentParsedFile]['importedlines'];
-			
 			//  move @ tags out of variable namespace!
 			foreach ($tags as &$tag) {
 				if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
 			}
 			$this->push();
 			$this->set('__tags', $tags);
-			$this->set('__tagsline', $tagline);
+			$this->set('__tagsline', $this->currentLine);
 			$this->set('__file', $this->currentParsedFile);
 			return true;
 		} else {
@@ -819,7 +820,8 @@ class lessc {
 		if ($rtags == null) {
 			$out = $list;
 		} else {
-			$blockDecl = ($this->debug_info) ? "@media -less-debug-info{filename{font-family:'".preg_replace('/([^-\w])/', '\\\\\1', "file://{$env['__file']}")."';}line{font-family:'".$env['__tagsline']."';}}\n" : '';
+		    $blockDecl = '';
+			$blockDecl .= ($this->debug_info && !empty($env['__tagsline']) && !empty($env['__file'])) ? "@media -less-debug-info{filename{font-family:'".preg_replace('/([^-\w])/', '\\\\\1', "file://{$env['__file']}")."';}line{font-family:'".$env['__tagsline']."';}}\n" : '';
 			$blockDecl .= implode(", ", $rtags).' {';
 
 			if ($props > 1)
@@ -1396,9 +1398,8 @@ class lessc {
 	}
 
 	function throwParseError($msg = 'parse error', $thisFile = 'default') {
-		$line = $this->line[$this->currentParsedFile] + substr_count(substr($this->buffer, 0, $this->count), "\n");
 		if ($this->peek("(.*?)(\n|$)", $m))
-			throw new exception($msg.': failed at `'.$m[1].'` line: '.$line);
+			throw new exception($msg.': failed at `'.$m[1].'` (line: '.$this->currentLine.' / file: '.$this->currentParsedFile.')');
 	}
 
 	function __construct($fname = null, $opts = null) {
