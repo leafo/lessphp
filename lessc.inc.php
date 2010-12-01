@@ -1397,7 +1397,7 @@ class lessc {
 		return $out;
 	}
 
-	function throwParseError($msg = 'parse error', $thisFile = 'default') {
+	function throwParseError($msg = 'parse error') {
 		if ($this->peek("(.*?)(\n|$)", $m))
 			throw new exception($msg.': failed at `'.$m[1].'` (line: '.$this->currentLine.' / file: '.$this->currentParsedFile.')');
 	}
