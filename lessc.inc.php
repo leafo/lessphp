@@ -48,6 +48,9 @@ class lessc {
 
 	public $importDisabled = false;
 	public $importDir = '';
+  
+	// Option to make LessPHP update Urls and keep them relative from compiled file.
+	public $updateUrls = true;
 	
 	// Options to make LessPHP work with FireLess
 	private $levelImport = 0; // level inside the different imported less files
@@ -239,6 +242,7 @@ class lessc {
 					$this->levelImport++; // enters a new level
 					$this->addParsedFile($file, $this->count);
 					$loaded = $this->removeComments(file_get_contents($file).";");
+					$loaded = $this->updateUrls($loaded, $url);
 					$this->line[$this->currentParsedFile] = 1;  // current line of the parsed less file
 					
 					// trim whitespace on head
@@ -319,7 +323,18 @@ class lessc {
 
 		return false; // couldn't match anything, throw error
 	}
-
+  
+	function updateUrls($string, $url)
+	{
+		if($this->updateUrlsDisabled) return $string;
+		
+		$replacement = sprintf('url(\'%s/${2}\')', dirname($url));
+		
+		$string = preg_replace('/url\((\'|")?(.*?)(\'|")?\)/', $replacement, $string);
+		
+		return $string;
+	}
+  
 	function fileExists($name) {
 		// sym link workaround
 		return file_exists($name) || file_exists(realpath(preg_replace('/\w+\/\.\.\//', '', $name)));
@@ -1478,7 +1493,7 @@ class lessc {
 		return $out.$text;
 	}
 
-	public function allParsedFiles() { return $this->allParsedFiles; }
+	public function allParsedFiles(){ return $this->allParsedFiles; }
 	public function addParsedFile($entryname, $pos = 0, $directinput = false) {
 		$parent = $this->currentParsedFile;
 		$this->currentParsedFile = ($directinput) ? $entryname : realpath($entryname);
