@@ -767,7 +767,6 @@ class lessc {
 			} elseif ($this->isBlock($name, $value)) {
 				if (isset($visitedMixins[$name])) continue;
 
-
 				$new_tags = array();
 				// multiply tags
 				foreach ((is_null($rtags) ? array('') : $rtags) as $outerTag) {
@@ -1255,12 +1254,14 @@ class lessc {
 	}
 	
 	function isProperty($name, $value, $isConcrete = true) {
-		return is_array($value) && array_key_exists(0, $value) && substr($name, 0,2) != '__' &&
+		return is_array($value) && array_key_exists(0, $value) &&
+			substr($name, 0,2) != '__' &&
 			(!$isConcrete || $name{0} != $this->vPrefix);
 	}
 
 	function isBlock($name, $value, $isConcrete = true) {
 		return is_array($value) && !array_key_exists(0, $value) &&
+			substr($name, 0, 2) != '__' &&
 			(!$isConcrete || $name{0} != $this->mPrefix);
 	}
 
