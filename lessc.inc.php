@@ -42,7 +42,7 @@ class lessc {
 	);
 	static private $operatorString; // regex string to match any of the operators
 
-	static private $dtypes = array('expression', 'variable', 'function', 'negative'); // types with delayed computation
+	static private $dtypes = array('expression', 'variable', 'function', 'negative', 'list'); // types with delayed computation
 	static private $units = array(
 		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc', 'ms', 's', 'deg', 'gr');
     
@@ -177,17 +177,8 @@ class lessc {
 			$env = end($this->env);
 			$tags = $env['__tags'];
 
-			// insert the default arguments
-			if (isset($env['__args'])) {
-				foreach ($env['__args'] as $arg) {
-					if (isset($arg[1])) {
-						$this->prepend($this->vPrefix.$arg[0], $arg[1]);
-					}
-				}
-			}
-
 			try {
-				$block = $this->pop();
+				$block = $this->pop(); // $env with any modifications
 			} catch (exception $e) {
 				$this->seek($s);
 				$this->throwParseError($e->getMessage());
@@ -236,11 +227,7 @@ class lessc {
 			$env = $this->getEnv($tags);
 			if ($env == null) return true;
 
-			// if we have arguments then insert them before their respective env values
-			// TODO: this is silly, because it makes it so the arguments are also mixed
-			// into the new scope. Keeping it for now though otherwise sub-blocks won't see
-			// arguments. -- change to making arg temp env and pushing and stack then recursively
-			// resolving all mixed in names.
+			$argEnv = array();
 			if (!empty($env['__args'])) {
 				foreach ($env['__args'] as $arg) {
 					$vname = $this->vPrefix.$arg[0];
@@ -249,30 +236,16 @@ class lessc {
 					if ($value == null && isset($arg[1]))
 						$value = $arg[1];
 
-					// if ($value == null) continue; // don't define so it can search up
-
-					// create new entry if var doesn't exist in scope
-					if (isset($env[$vname])) {
-						array_unshift($env[$vname], $value);
-					} else {
-						$env[$vname] = array($value);
-					}
+					$argEnv[$vname] = array($value);
 				}
 			}
+
+			unset($env['__args']);
+			$this->push($argEnv);
+			$env = $this->reduceBlock($env);
+			$this->pop();
 
 			$this->merge($env);
-
-			// reduce any immedate incoming values in order to prevent values changing
-			// due to namespace collision. This is to compensate for mixing in __args.
-			foreach ($env as $name => $value) {
-				if ($this->isProperty($name, $value)) {
-					$reduced = array();
-					foreach ($this->get($name) as $value) {
-						$reduced[] = $this->reduce($value);
-					}
-					$this->set($name, $reduced);
-				}
-			}
 
 			// render mixin contents if mixing into global scope
 			if ($this->level == 1) return $this->compileBlock(null, $env, false);
@@ -758,6 +731,14 @@ class lessc {
 		$visitedMixins = array(); // mixins to skip
 		$props = 0;
 
+		// insert default args -- does not exist for blocks already reduced
+		if (isset($env['__args'])) {
+			$this->push();
+			foreach ($env['__args'] as $arg) {
+				if (isset($arg[1])) $this->append($this->vPrefix.$arg[0], $arg[1]);
+			}
+		}
+
 		ob_start();
 		if ($bindEnv) $this->push($env);
 		foreach ($env as $name => $value) {
@@ -782,6 +763,9 @@ class lessc {
 			}
 		}
 		if ($bindEnv) $this->pop();
+
+		if (isset($env['__args'])) $this->pop();
+
 		$list = ob_get_clean();
 
 		if ($rtags == null) {
@@ -938,13 +922,47 @@ class lessc {
 		return $this->fixColor($components);
 	}
 
+	// reduce an entire block, removing any delayed types
+	// done before a mixin is mixed in
+	function reduceBlock($block) {
+		if (isset($block['__args'])) {
+			$this->push();
+			foreach ($block['__args'] as $arg) {
+				if (isset($arg[1])) $this->append($this->vPrefix.$arg[0], $arg[1]);
+			}
+		}
+
+		$this->push();
+		foreach ($block as $name => $value) {
+			if ($this->isProperty($name, $value, false)) {
+				foreach ($value as $v) {
+					$value = $this->reduce($v);
+					$this->append($name, $value);
+				}
+			} elseif ($this->isBlock($name, $value, false)) {
+				$this->set($name, $this->reduceBlock($value));
+			} else {
+				if ($name != '__args') $this->set($name, $value);
+			}
+		}
+
+		$out = $this->pop();
+		if (isset($block['__args'])) {
+			$this->pop();
+		}
+		return $out;
+	}
+
 	// reduce a delayed type to its final value
 	// dereference variables and solve equations
 	function reduce($var, $defaultValue = array('number', 0)) {
 		$pushed = 0; // number of variable names pushed
 
 		while (in_array($var[0], self::$dtypes)) {
-			if ($var[0] == 'expression') {
+			if ($var[0] == 'list') {
+				foreach ($var[2] as &$value) $value = $this->reduce($value);
+				break;
+			} elseif ($var[0] == 'expression') {
 				$var = $this->evaluate($var[1], $var[2], $var[3]);
 			} elseif ($var[0] == 'variable') {
 				$var = $this->getVal($var[1], $this->pushName($var[1]), $defaultValue);
@@ -1139,7 +1157,8 @@ class lessc {
 		$this->env[count($this->env) - 1][$name][] = $value;
 	}
 
-	function append_all($name, $values) {
+	// append a list of values to name
+	function appendAll($name, $values) {
 		$top =& $this->env[count($this->env) - 1];
 		foreach ($values as $value) $top[$name][] = $value;
 	}
@@ -1151,7 +1170,7 @@ class lessc {
 		else $this->append($name, $value);
 	}
 
-	// get the highest occurrence of value
+	// get the highest occurence entry for a name
 	function get($name, $env_stack = null) {
 		if (empty($env_stack)) $env_stack = $this->env;
 
@@ -1161,9 +1180,9 @@ class lessc {
 		return null;
 	}
 
-	// get the most recent value of a variable
+	// get the highest occurence value for a name,
+	// while skipping $skip values from the top.
 	// return default if it isn't found
-	// $skip is number of vars to skip
 	function getVal($name, $skip = 0, $default = array('keyword', '')) {
 		$val = $this->get($name);
 		if ($val == null) return $default;
@@ -1209,6 +1228,7 @@ class lessc {
 	}
 
 	// merge $env into the environment on the top of the stack
+	// evaluates all the sub properties
 	function merge($env) {
 		// see if we have to rework __tags, mixing into some of bound blocks breaks them up
 		foreach ($env as $name => $value) {
@@ -1236,11 +1256,12 @@ class lessc {
 			}
 		}
 
+		$top =& $this->env[count($this->env) - 1];
+
 		foreach ($env as $name => $value) {
 			if ($this->isProperty($name, $value, false)) {
-				$this->append_all($name, $value);
+				$this->appendAll($name, $value);
 			} elseif ($this->isBlock($name, $value, false)) {
-				$top =& $this->env[count($this->env) - 1];
 				if (isset($top[$name])) {
 					// echo "merging $name\n";
 					$this->push($top[$name]);
