@@ -883,14 +883,12 @@ class lessc {
 			// [1] - function name
 			// [2] - some value representing arguments
 
-			// see if there is a library function for this func
-			$f = array($this, 'lib_'.$value[1]);
-			if (is_callable($f)) {
-				return call_user_func($f, $value[2]);
+			// see if function evaluates to something else
+			$value = $this->reduce($value);
+			if ($value[0] == 'function') {
+				return $value[1].'('.$this->compileValue($value[2]).')';
 			}
-
-			return $value[1].'('.$this->compileValue($value[2]).')';
-
+			else return $this->compileValue($value);
 		default: // assumed to be unit	
 			return $value[1].$value[0];
 		}
@@ -904,6 +902,16 @@ class lessc {
 		$out = $this->compileValue($arg);
 		if ($this->quoted($out)) $out = substr($out, 1, -1);
 		return $out;
+	}
+
+	function lib_floor($arg) {
+		$arg = $this->reduce($arg);
+		return floor($arg[1]);
+	}
+
+	function lib_round($arg) {
+		$arg = $this->reduce($arg);
+		return round($arg[1]);
 	}
 
 	// is a string surrounded in quotes? returns the quoting char if true
@@ -986,8 +994,18 @@ class lessc {
 				$var = $this->getVal($var[1], $this->pushName($var[1]), $defaultValue);
 				$pushed++;
 			} elseif ($var[0] == 'function') {
+
 				$color = $this->funcToColor($var);
 				if ($color) $var = $color;
+				else {
+					$f = array($this, 'lib_'.$var[1]);
+					if (is_callable($f)) {
+						list($_, $delim, $items) = $var[2];
+						$var = call_user_func($f, $this->compressList($items, $delim));
+						if (is_numeric($var)) $var = array('number', $var);
+						elseif (!is_array($var)) $var = array('keyword', $var);
+					}
+				}
 				break; // no where to go after a function
 			} elseif ($var[0] == 'negative') {
 				$value = $this->reduce($var[1]);
@@ -1400,7 +1418,6 @@ class lessc {
 		if (count($this->env) > 1)
 			throw new exception('parse error: unclosed block');
 
-		// print_r($this->env[0]);
 		return $this->compileBlock($this->env[0], null, false);
 	}
 
