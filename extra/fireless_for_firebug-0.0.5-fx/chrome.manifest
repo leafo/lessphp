@@ -1,0 +1,8 @@
+content     fireless    chrome/content/
+content     fireless    chrome/content/ contentaccessible=yes
+
+overlay chrome://firebug/content/firebugOverlay.xul chrome://fireless/content/fireless.xul
+
+locale  fireless      en-US   chrome/locale/en-US/
+
+skin    fireless      classic/1.0     skin/

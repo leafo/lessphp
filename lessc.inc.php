@@ -17,7 +17,7 @@
 class lessc {
 	protected $buffer;
 	protected $count;
-	protected $line;
+	protected $line = array();
 	protected $expandStack;
 	protected $media;
 	protected $indentLevel;
@@ -45,16 +45,33 @@ class lessc {
 	static protected $dtypes = array('expression', 'variable', 'function', 'negative', 'list'); // types with delayed computation
 	static protected $units = array(
 		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc', 'ms', 's', 'deg', 'gr');
-    
+
 	public $importDisabled = false;
 	public $importDir = '';
+  
+	// Option to make LessPHP update Urls and keep them relative from compiled file.
+	public $updateUrls = true;
+	
+	// Options to make LessPHP work with FireLess
+	private $levelImport = 0; // level inside the different imported less files
+	public $currentParsedFile = false; // which of the less file is parsed
+	public $currentLine = 0;
+	public $debug_info = false; // activate the debug mode with Fireless
 
 	// parse a chunk off the head of the buffer and compile if necessary
 	// return false when buffer is used up, true if there is more to parse
 	function parseChunk() {
 		if (empty($this->buffer)) return false;
 		$s = $this->seek();
+		
+		if ($this->levelImport != 0 && $this->allParsedFiles[$this->currentParsedFile]['endImport'] != 0 && $s >= $this->allParsedFiles[$this->currentParsedFile]['endImport']) {
+			$this->levelImport--;
+			$this->currentParsedFile = $this->allParsedFiles[$this->currentParsedFile]['parent'];
+		}
 
+		// counts the line
+		$this->currentLine = $this->line[$this->currentParsedFile] + substr_count(substr($this->buffer, 0+$this->allParsedFiles[$this->currentParsedFile]['position'], $s-$this->allParsedFiles[$this->currentParsedFile]['position']), "\n") - $this->allParsedFiles[$this->currentParsedFile]['importedlines'];
+			
 		// a property
 		if ($this->keyword($key) && $this->assign() && $this->propertyValue($value) && $this->end()) {
 			// look for important prefix
@@ -113,7 +130,6 @@ class lessc {
 			}
 		}
 		
-
 		// see if can accept animation pseudo classes
 		$top = end($this->env);
 		if (isset($top['__special']) && $top['__special'] == 'keyframes') {
@@ -156,10 +172,10 @@ class lessc {
 			foreach ($tags as &$tag) {
 				if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
 			}
-
 			$this->push();
-			$this->set('__tags', $tags);	
-
+			$this->set('__tags', $tags);
+			$this->set('__tagline', $this->currentLine);
+			$this->set('__filename', $this->currentParsedFile);
 			return true;
 		} else {
 			$this->seek($s);
@@ -198,9 +214,29 @@ class lessc {
 			foreach ((array)$this->importDir as $dir) {
 				$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
 				if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
-					$this->addParsedFile($file);
-					$loaded = ltrim($this->removeComments(file_get_contents($file).";"));
+					$this->levelImport++; // enters a new level
+					$this->addParsedFile($file, $this->count);
+					$loaded = $this->removeComments(file_get_contents($file).";");
+					$loaded = $this->updateUrls($loaded, $url);
+					$this->line[$this->currentParsedFile] = 1;  // current line of the parsed less file
+					
+					// trim whitespace on head
+					if (preg_match('/^\s+/', $loaded, $m)) {
+						$this->line[$this->currentParsedFile] += substr_count($m[0], "\n");
+					}
+					$loaded = ltrim($loaded); // removes space
 					$this->buffer = substr($this->buffer, 0, $this->count).$loaded.substr($this->buffer, $this->count);
+					$this->allParsedFiles[$this->currentParsedFile]['endImport'] = $this->count + strlen($loaded); // counts the return to previous level
+					$totalLines = count(explode("\n", $loaded)) - 1; // counts lines of the imported file
+
+					$begin = $this->currentParsedFile; // init of the position before updating parents data
+					// update the count & the line position of previous less files
+					for($i = $this->levelImport; $i > 0; $i--) {
+						$parent = $this->allParsedFiles[$begin]['parent'];
+						$this->allParsedFiles[$parent]['importedlines'] += $totalLines;
+						$this->allParsedFiles[$parent]['endImport'] += strlen($loaded); // redefines the return to a previous level for all levels
+						$begin = $parent;
+					}
 					return true;
 				}
 			}
@@ -222,8 +258,7 @@ class lessc {
 					// copy default value if there isn't one supplied
 					if ($value == null && isset($arg[1]))
 						$value = $arg[1];
-
-					$argEnv[$vname] = array($value);
+                    $argEnv[$vname] = array($value);
 				}
 			}
 
@@ -244,7 +279,18 @@ class lessc {
 
 		return false; // couldn't match anything, throw error
 	}
-
+  
+	function updateUrls($string, $url)
+	{
+		if(!$this->updateUrls) return $string;
+		
+		$replacement = sprintf('url(\'%s/${2}\')', dirname($url));
+		
+		$string = preg_replace('/url\((\'|")?(.*?)(\'|")?\)/', $replacement, $string);
+		
+		return $string;
+	}
+  
 	function fileExists($name) {
 		// sym link workaround
 		return file_exists($name) || file_exists(realpath(preg_replace('/\w+\/\.\.\//', '', $name)));
@@ -729,18 +775,21 @@ class lessc {
 		} else {
 			$tags = $parentTags;
 		}
-
+		
 		// insert default args -- does not exist for blocks already reduced
 		if (isset($block['__args'])) {
-			$this->push();
-			foreach ($block['__args'] as $arg) {
-				if (isset($arg[1])) $this->append($this->vPrefix.$arg[0], $arg[1]);
-			}
-		}
-
+            $this->push();
+            foreach ($block['__args'] as $arg) {
+                if (isset($arg[1])) $this->append($this->vPrefix.$arg[0], $arg[1]);
+            }
+        }
+            
 		ob_start();
 		if ($bindEnv) $this->push($block);
 		foreach ($block as $name => $value) {
+		    // reserved name
+		    if (in_array($name, array('__filename', '__tagline'))) continue;
+		    
 			if ($this->isProperty($name, $value)) {
 				echo $this->compileProperty($name, $value, is_null($tags) ? 0 : 1)."\n";
 				$props += count($value);
@@ -750,7 +799,7 @@ class lessc {
 				foreach ($value['__tags'] as $tag) {
 					$visitedMixins[$tag] = true;
 				}
-
+				
 				$child = $this->compileBlock($value, is_null($tags) ? array('') : $tags);
 				if (is_null($tags)) echo $child;
 				else $children[] = $child;
@@ -781,15 +830,17 @@ class lessc {
 			}
 		}
 		if ($bindEnv) $this->pop();
-
+		
 		if (isset($block['__args'])) $this->pop();
-
+		
 		$list = ob_get_clean();
 
 		if ($tags == null) {
 			$out = $list;
 		} else {
-			$blockDecl = implode(", ", $tags).' {';
+		    $blockDecl = '';
+			$blockDecl .= ($this->debug_info && !empty($block['__tagline']) && !empty($block['__filename'])) ? "@media -less-debug-info{filename{font-family:'".preg_replace('/([^-\w])/', '\\\\\1', "file://{$block['__filename']}")."';}line{font-family:'".$block['__tagline']."';}}\n" : '';
+			$blockDecl .= implode(", ", $tags).' {';
 
 			if ($props > 1)
 				$out = $this->indent($blockDecl).$list.$this->indent('}');
@@ -814,7 +865,6 @@ class lessc {
 		foreach ($value as $v)
 			$props[] = str_repeat('  ', $level).
 				$name.':'.$this->compileValue($v).';';
-
 		return implode("\n", $props);
 	}
 
@@ -908,7 +958,7 @@ class lessc {
 		$arg = $this->reduce($arg);
 		return floor($arg[1]);
 	}
-
+	
 	function lib_round($arg) {
 		$arg = $this->reduce($arg);
 		return round($arg[1]);
@@ -947,7 +997,7 @@ class lessc {
 		array_unshift($components, 'color');
 		return $this->fixColor($components);
 	}
-
+    
 	// reduce an entire block, removing any delayed types
 	// done before a mixin is mixed in
 	function reduceBlock($block) {
@@ -978,7 +1028,7 @@ class lessc {
 		}
 		return $out;
 	}
-
+	    
 	// reduce a delayed type to its final value
 	// dereference variables and solve equations
 	function reduce($var, $defaultValue = array('number', 0)) {
@@ -986,8 +1036,8 @@ class lessc {
 
 		while (in_array($var[0], self::$dtypes)) {
 			if ($var[0] == 'list') {
-				foreach ($var[2] as &$value) $value = $this->reduce($value);
-				break;
+			    foreach ($var[2] as &$value) $value = $this->reduce($value);
+			        break;
 			} elseif ($var[0] == 'expression') {
 				$var = $this->evaluate($var[1], $var[2], $var[3]);
 			} elseif ($var[0] == 'variable') {
@@ -1187,7 +1237,7 @@ class lessc {
 	function set($name, $value) {
 		$this->env[count($this->env) - 1][$name] = $value;
 	}
-
+	
 	// set some literal value at the end of the parse
 	function setLiteral($value) {
 		$top =& $this->env[count($this->env) - 1];
@@ -1198,7 +1248,7 @@ class lessc {
 	function append($name, $value) {
 		$this->env[count($this->env) - 1][$name][] = $value;
 	}
-
+    
 	// append a list of values to name
 	function appendAll($name, $values) {
 		$top =& $this->env[count($this->env) - 1];
@@ -1221,7 +1271,7 @@ class lessc {
 
 		return null;
 	}
-
+	
 	var $tester = 0;
 
 	// get the highest occurence value for a name,
@@ -1271,7 +1321,6 @@ class lessc {
 		return $env;
 	}
 
-	// merge $env into the environment on the top of the stack
 	// evaluates all the sub properties
 	function merge($env) {
 		// see if we have to rework __tags, mixing into some of bound blocks breaks them up
@@ -1299,7 +1348,7 @@ class lessc {
 				}
 			}
 		}
-
+		
 		$top =& $this->env[count($this->env) - 1];
 
 		foreach ($env as $name => $value) {
@@ -1320,13 +1369,13 @@ class lessc {
 	
 	function isProperty($name, $value, $isConcrete = true) {
 		return is_array($value) && array_key_exists(0, $value) &&
-			substr($name, 0,2) != '__' &&
+		substr($name, 0,2) != '__' &&
 			(!$isConcrete || $name{0} != $this->vPrefix);
 	}
 
 	function isBlock($name, $value, $isConcrete = true) {
 		return is_array($value) && !array_key_exists(0, $value) &&
-			substr($name, 0, 2) != '__' &&
+		    substr($name, 0, 2) != '__' &&
 			(!$isConcrete || $name{0} != $this->mPrefix);
 	}
 
@@ -1385,7 +1434,7 @@ class lessc {
 		else $this->count = $where;
 		return true;
 	}
-
+	
 	/**
 	 * Initialize state for a fresh parse
 	 */
@@ -1395,15 +1444,23 @@ class lessc {
 		$this->indentLevel = 0;
 		$this->media = null;
 		$this->count = 0;
-		$this->line = 1;
+		
+		// we must define if it's a direct ouput or not to specify an original way to count lines in debug mode
+		if (count($this->allParsedFiles) == 0) {
+			$input_name = str_replace($_SERVER['SCRIPT_NAME'], $_SERVER['REQUEST_URI'], $_SERVER['SCRIPT_FILENAME']);
+			$this->addParsedFile($input_name, 0, true);
+		}
+		
+		$this->line[$this->currentParsedFile] = 1;
 		$this->level = 0;
 
+		
 		$this->buffer = $this->removeComments($buff);
 		$this->push(); // set up global scope
-
+			
 		// trim whitespace on head
 		if (preg_match('/^\s+/', $this->buffer, $m)) {
-			$this->line  += substr_count($m[0], "\n");
+			$this->line[$this->currentParsedFile]  += substr_count($m[0], "\n");
 			$this->buffer = ltrim($this->buffer);
 		}
 	}
@@ -1422,9 +1479,8 @@ class lessc {
 	}
 
 	function throwParseError($msg = 'parse error') {
-		$line = $this->line + substr_count(substr($this->buffer, 0, $this->count), "\n");
 		if ($this->peek("(.*?)(\n|$)", $m))
-			throw new exception($msg.': failed at `'.$m[1].'` line: '.$line);
+			throw new exception($msg.': failed at `'.$m[1].'` (line: '.$this->currentLine.' / file: '.$this->currentParsedFile.')');
 	}
 
 	/**
@@ -1506,9 +1562,29 @@ class lessc {
 		return $out.$text;
 	}
 
-	public function allParsedFiles() { return $this->allParsedFiles; }
-	protected function addParsedFile($file) {
-		$this->allParsedFiles[realpath($file)] = filemtime($file);
+	public function allParsedFiles(){ return $this->allParsedFiles; }
+	public function addParsedFile($entryname, $pos = 0, $directinput = false) {
+		$parent = $this->currentParsedFile;
+		$this->currentParsedFile = ($directinput) ? $entryname : realpath($entryname);
+		$filemtime = ($directinput) ? time() : filemtime($entryname);
+		$this->allParsedFiles[$this->currentParsedFile] = array(
+				'filemtime' => $filemtime,
+				'position' => $pos,
+				'importedlines' => 0,
+				'parent' => $parent,
+				'endImport' => 0
+		);
+	}
+	public function findParsedFile($eq) {
+		$parsedfiles = $this->allParsedFiles();
+		$i = 0;
+		foreach($parsedfiles as $key=>$value) {
+			if ($i == $eq) {
+				return $key;
+			}
+			$i++;
+		}
+		return false;
 	}
 
 
@@ -1590,4 +1666,3 @@ class lessc {
 
 	}
 }
-
