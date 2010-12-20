@@ -43,8 +43,17 @@ class lessc {
 	static protected $operatorString; // regex string to match any of the operators
 
 	static protected $dtypes = array('expression', 'variable', 'function', 'negative', 'list'); // types with delayed computation
-	static protected $units = array(
-		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc', 'ms', 's', 'deg', 'gr');
+	/**
+	 * @link http://www.w3.org/TR/css3-values/
+	 */
+	static protected $units=array(
+			'em', 'ex', 'px', 'gd', 'rem', 'vw', 'vh', 'vm', 'ch', // Relative length units
+			'in', 'cm', 'mm', 'pt', 'pc', // Absolute length units
+			'%', // Percentages
+			'deg', 'grad', 'rad', 'turn', // Angles
+			'ms', 's', // Times
+			'Hz', 'kHz', //Frequencies
+	);
 
 	public $importDisabled = false;
 	public $importDir = '';
