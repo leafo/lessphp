@@ -25,6 +25,7 @@ class lessc {
 	protected $inAnimations;
 
 	public $indentLevel;
+	public $indentChar = '  ';
 
 	protected $env = null;
 
@@ -818,14 +819,14 @@ class lessc {
 	// write a line a the proper indent
 	function indent($str, $level = null) {
 		if (is_null($level)) $level = $this->indentLevel;
-		return str_repeat('  ', $level).$str."\n";
+		return str_repeat($this->indentChar, $level).$str."\n";
 	}
 
 	function compileProperty($name, $value, $level = 0) {
 		$level = $this->indentLevel + $level;
 		// output all repeated properties
 		foreach ($value as $v)
-			$props[] = str_repeat('  ', $level).
+			$props[] = str_repeat($this->indentChar, $level).
 				$name.':'.$this->compileValue($v).';';
 
 		return implode("\n", $props);
