@@ -894,6 +894,16 @@ class lessc {
 		}
 	}
 
+	function lib_rgbahex($arg) {
+		$color = $this->reduce($arg);
+		if ($color[0] != 'color')
+			throw new exception("color expected for rgbahex");
+
+		return sprintf("#%02x%02x%02x%02x",
+			isset($color[4]) ? $color[4]*255 : 0,
+			$color[1],$color[2], $color[3]);
+	}
+
 	function lib_quote($arg) {
 		return '"'.$this->compileValue($arg).'"';
 	}
