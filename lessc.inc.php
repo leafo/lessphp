@@ -1,7 +1,7 @@
 <?php
 
 /**
- * lessphp v0.2.0
+ * lessphp v0.2.1
  * http://leafo.net/lessphp
  *
  * LESS css compiler, adapted from http://lesscss.org/docs.html
@@ -10,19 +10,33 @@
  * Licensed under MIT or GPLv3, see LICENSE
  */
 
-//
-// fix the alpha value with color when using a percent
-// store the line user function is called on so compile can error on right line
-//
 
+/**
+ * The less compiler and parser.
+ *
+ * Converting LESS to CSS is a two stage process. First the incoming document
+ * must be parsed. Parsing creates a tree in memory that represents the 
+ * structure of the document. Then, the tree of the document is recursively
+ * compiled into the CSS text. The compile step has an implicit step called
+ * reduction, where values are brought to their lowest form before being
+ * turned to text, eg. mathematical equations are solved, and variables are
+ * dereferenced.
+ *
+ * The parsing stage produces the final structure of the document, for this
+ * reason mixins are mixed in and attribute accessors are referenced during
+ * the parse step. A reduction is done on the mixed in block as it is mixed in.
+ *
+ *  See the following:
+ *    - entry point for parsing and compiling: lessc::parse()
+ *    - parsing: lessc::parseChunk()
+ *    - compiling: lessc::compileBlock()
+ *
+ */
 class lessc {
 	protected $buffer;
 	protected $count;
 	protected $line;
 	protected $expandStack;
-	protected $media;
-	protected $level;
-	protected $inAnimations;
 
 	public $indentLevel;
 	public $indentChar = '  ';
@@ -31,9 +45,9 @@ class lessc {
 
 	protected $allParsedFiles = array();
 
-	public $vPrefix = '@';
-	public $mPrefix = '$';
-	public $imPrefix = '!';
+	public $vPrefix = '@'; // prefix of abstract properties
+	public $mPrefix = '$'; // prefix of abstract blocks
+	public $imPrefix = '!'; // special character to add !important
 	public $selfSelector = '&';
 
 	static protected $precedence = array(
@@ -45,24 +59,72 @@ class lessc {
 	);
 	static protected $operatorString; // regex string to match any of the operators
 
-	static protected $dtypes = array('expression', 'variable', 'function', 'negative', 'list'); // types with delayed computation
+	// types that have delayed computation
+	static protected $dtypes = array('expression', 'variable',
+		'function', 'negative', 'list');
+
 	/**
 	 * @link http://www.w3.org/TR/css3-values/
 	 */
 	static protected $units=array(
-			'em', 'ex', 'px', 'gd', 'rem', 'vw', 'vh', 'vm', 'ch', // Relative length units
-			'in', 'cm', 'mm', 'pt', 'pc', // Absolute length units
-			'%', // Percentages
-			'deg', 'grad', 'rad', 'turn', // Angles
-			'ms', 's', // Times
-			'Hz', 'kHz', //Frequencies
-			);
+		'em', 'ex', 'px', 'gd', 'rem', 'vw', 'vh', 'vm', 'ch', // Relative length units
+		'in', 'cm', 'mm', 'pt', 'pc', // Absolute length units
+		'%', // Percentages
+		'deg', 'grad', 'rad', 'turn', // Angles
+		'ms', 's', // Times
+		'Hz', 'kHz', //Frequencies
+	);
     
 	public $importDisabled = false;
 	public $importDir = '';
 
-	// parse a chunk off the head of the buffer and compile if necessary
-	// return false when buffer is used up, true if there is more to parse
+	/**
+	 * Parse a single chunk off the head of the buffer and place it.
+	 * @return false when the buffer is empty, or there is an error
+	 *
+	 * This functions is called repeatedly until the entire document is
+	 * parsed.
+	 *
+	 * This parser is most similar to a recursive descent parser. Single
+	 * functions represent discrete grammatical rules for the language, and
+	 * they are able to capture the text that represents those rules.
+	 *
+	 * Consider the function lessc::keyword(). (all parse functions are
+	 * structured the same)
+	 *
+	 * The function takes a single reference argument. When calling the the
+	 * function it will attempt to match a keyword on the head of the buffer.
+	 * If it is successful, it will place the keyword in the referenced
+	 * argument, advance the position in the buffer, and return true. If it
+	 * fails then it won't advance the buffer and it will return false.
+	 *
+	 * All of these parse functions are powered by lessc::match(), which behaves
+	 * the same way, but takes a literal regular expression. Sometimes it is
+	 * more convenient to use match instead of creating a new function.
+	 *
+	 * Because of the format of the functions, to parse an entire string of
+	 * grammatical rules, you can chain them together using &&.
+	 *
+	 * But, if some of the rules in the chain succeed before one fails, then
+	 * then buffer position will be left at an invalid state. In order to 
+	 * avoid this, lessc::seek() is used to remember and set buffer positions.
+	 *
+	 * Before doing a chain, use $s = $this->seek() to remember the current
+	 * position into $s. Then if a chain fails, use $this->seek($s) to 
+	 * go back where we started.
+	 *
+	 * When something is successfully parsed, depending on what it is, it is
+	 * placed in the document's tree by being put in the recursive structure
+	 * lessc::$env. $env is an anonymous object with a $store and a $parent. 
+	 * $store is an associative array of all the objects held, and $parent is
+	 * the $env object one level above.
+	 *
+	 * When parsing is complete on a valid document, there is only one $env 
+	 * left and the $store member contains the block of the entire structure
+	 * of the document. This block can then be passed to compile block to 
+	 * generate the CSS.
+	 *
+	 */
 	function parseChunk() {
 		if (empty($this->buffer)) return false;
 		$s = $this->seek();
@@ -294,7 +356,7 @@ class lessc {
 		return true;
 	}
 
-	// resursively parse infix equation with $lhs at precedence $minP
+	// recursively parse infix equation with $lhs at precedence $minP
 	function expHelper($lhs, $minP, $needWhite = true) {
 		$ss = $this->seek();
 		// try to find a valid operator
@@ -725,6 +787,42 @@ class lessc {
 		else return array('list', $delim, $items);
 	}
 
+	/**
+	 * Recursively compiles a block. 
+	 * @param $block the block
+	 * @param $parentTags the tags of the block that contained this one
+	 * @param $bindEnv true if we should bind the block before compiling
+	 *
+	 * A block is analogous to a CSS block in most cases. A single less document
+	 * is encapsulated in a block when parsed, but it does not have parent tags
+	 * so all of it's children appear on the root level when compiled.
+	 *
+	 * A block is stored in a PHP array(). Each entry in the array represents
+	 * some structure. The key is the name, and the value is the value of the
+	 * structure.  Some structures do not have names, they are prefixed with
+	 * either __literal or __special in order to be differentiated. Some
+	 * additional meta-data which is not to be printed is also stored in a
+	 * block, their names begining with __. (eg. __tags, __args)
+	 *
+	 * Because in less, CSS blocks can be described by nesting, compileBlock
+	 * must be aware of where it came from. The argument $parentTags stores the
+	 * selector tags of where the block was defined, null represents no parents.
+	 *
+	 * The __tags meta-data in the block stores the actual selector tags the
+	 * block has. (We can't just use the key in the array because sometimes a
+	 * block can have multiple selector tags separated by ,) The parent tags
+	 * are "multiplied" against the __tags in order to get all the real
+	 * selectors that describe the block. (This value is also recursively
+	 * passed to compileBlock when compiling sub blocks).
+	 *
+	 * After that, if the block has any arguments with default values they are
+	 * inserted as an environment so their values can be accessed when reducing
+	 * any variables.
+	 *
+	 * The block is then iterated on, compiling each component individually. If
+	 * another block is found, then it is recursively compiled.
+	 *
+	 */
 	function compileBlock($block, $parentTags = null, $bindEnv = true) {
 		$children = array();
 		$visitedMixins = array(); // mixins to skip
@@ -832,6 +930,19 @@ class lessc {
 		return implode("\n", $props);
 	}
 
+	/**
+	 * Compiles a typed value into a CSS string.
+	 * @param $value the value to compile
+	 *
+	 * Values in lessphp are typed by being wrapped in arrays, their format is
+	 * typically:
+	 *
+	 * 	array(type, contents [, additional_contents]*)
+	 *
+	 * By switching on the type, we can run the respective compile function.
+	 * Some values are recursively compiled. This function is safe to run on
+	 * any value, it will reduce values that don't have a concrete value yet.
+	 */
 	function compileValue($value) {
 		switch ($value[0]) {
 		case 'list':
@@ -1196,7 +1307,6 @@ class lessc {
 		$env->store = is_null($base) ? array() : $base;
 
 		$this->env = $env;
-		$this->level++;
 	}
 
 	// pop environment off the stack
@@ -1204,7 +1314,6 @@ class lessc {
 		if (is_null($this->env->parent))
 			throw new exception('parse error: unexpected end of block');
 
-		$this->level--;
 		$old = $this->env;
 		$this->env = $this->env->parent;
 		return $old->store;
@@ -1245,7 +1354,7 @@ class lessc {
 		return $failValue;
 	}
 
-	// get the highest occurence entry for a name
+	// get the highest occurrence entry for a name
 	// optionally start at environment $top
 	function get($name, $top = null) {
 		$current = is_null($top) ? $this->env : $top;
@@ -1260,7 +1369,7 @@ class lessc {
 		return null;
 	}
 
-	// get the highest occurence value for a name,
+	// get the highest occurrence value for a name,
 	// while skipping $skip values from the top.
 	// return default if it isn't found
 	function getVal($name, $skip = 0, $default = array('keyword', '')) {
@@ -1306,7 +1415,23 @@ class lessc {
 		return $block;
 	}
 
-	// merge $block into current environment
+	/**
+	 * Merge a block into the current environment.
+	 * @param $block the block to merge
+	 *
+	 * In order to reduce redundant blocks from being created, existing blocks
+	 * with the same selectors are searched. If they exist, merge will attempt
+	 * to recursively merge all their children.
+	 *
+	 * This is done at the expense of duplicating properties in the output.
+	 *
+	 * The selector tags from the block to be merged, and the conflicting block
+	 * are broken into three sets: $shared, the tags that are common between the
+	 * two; $broken, the unique tags the existing block has; $split, the 
+	 * unique tags that the block being merged has. The __tags meta-data can be
+	 * set to their new values respectively and the merge can take place as
+	 * intended.
+	 */
 	function merge($block) {
 		// see if we have to rework __tags, mixing into some of bound blocks breaks them up
 		foreach ($block as $name => $value) {
@@ -1424,10 +1549,8 @@ class lessc {
 		$this->env = null;
 		$this->expandStack = array();
 		$this->indentLevel = 0;
-		$this->media = null;
 		$this->count = 0;
 		$this->line = 1;
-		$this->level = 0;
 
 		$this->buffer = $this->removeComments($buff);
 		$this->push(); // set up global scope
