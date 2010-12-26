@@ -1125,7 +1125,6 @@ class lessc {
 				$var = $this->getVal($var[1], $this->pushName($var[1]), $defaultValue);
 				$pushed++;
 			} elseif ($var[0] == 'function') {
-
 				$color = $this->funcToColor($var);
 				if ($color) $var = $color;
 				else {
@@ -1135,6 +1134,9 @@ class lessc {
 						$var = call_user_func($f, $this->compressList($items, $delim));
 						if (is_numeric($var)) $var = array('number', $var);
 						elseif (!is_array($var)) $var = array('keyword', $var);
+					} else {
+						// plain function, reduce args
+						$var[2] = $this->reduce($var[2]);
 					}
 				}
 				break; // no where to go after a function
