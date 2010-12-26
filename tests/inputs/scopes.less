@@ -22,7 +22,6 @@ body {
 
 @some;
 
-// this is broken
 .test(@x: 10) {
 	height: @x;	
 	.test(@y: 11) {
@@ -31,5 +30,9 @@ body {
 			height: @z;	
 		}
 	}
+}
+
+pre {
+	.test;
 }
 

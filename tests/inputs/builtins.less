@@ -1,0 +1,28 @@
+// builtin
+
+@something: "hello world";
+@color: #112233;
+@color2: rgba(44,55,66, .6);
+
+body {
+	color: @something;
+	color: unquote(@something);
+
+	strings: unquote("this is a color {@color} and here is my string {@something}");
+	quoted: quote(@color) quote(a list of keywords becomes a string);
+
+	border: quote(@color) + 5px; // addition on a string turns into keyword list
+
+	@num: 7 / 6;
+	height: @num + 4;
+	height: floor(@num) + 4px;
+
+	@num2: 2 / 3;
+	width: @num2;
+	width: round(@num2);
+	width: floor(@num2);
+
+	color: rgbahex(@color);
+	color: rgbahex(@color2);
+}
+

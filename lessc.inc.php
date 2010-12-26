@@ -4,7 +4,7 @@
  * lessphp v0.2.0
  * http://leafo.net/lessphp
  *
- * LESS Css compiler, adapted from http://lesscss.org/docs.html
+ * LESS css compiler, adapted from http://lesscss.org/docs.html
  *
  * Copyright 2010, Leaf Corcoran <leafot@gmail.com>
  * Licensed under MIT or GPLv3, see LICENSE
@@ -12,46 +12,59 @@
 
 //
 // fix the alpha value with color when using a percent
+// store the line user function is called on so compile can error on right line
 //
 
 class lessc {
-	private $buffer;
-	private $count;
-	private $line;
-	private $expandStack;
-	private $media;
-	private $indentLevel;
-	private $level;
-	private $inAnimations;
+	protected $buffer;
+	protected $count;
+	protected $line;
+	protected $expandStack;
+	protected $media;
+	protected $level;
+	protected $inAnimations;
 
-	private $env = array();
+	public $indentLevel;
+	public $indentChar = '  ';
 
-	private $allParsedFiles = array();
+	protected $env = null;
+
+	protected $allParsedFiles = array();
 
 	public $vPrefix = '@';
 	public $mPrefix = '$';
 	public $imPrefix = '!';
 	public $selfSelector = '&';
 
-	static private $precedence = array(
+	static protected $precedence = array(
 		'+' => 0,
 		'-' => 0,
 		'*' => 1,
 		'/' => 1,
 		'%' => 1,
 	);
-	static private $operatorString; // regex string to match any of the operators
+	static protected $operatorString; // regex string to match any of the operators
 
-	static private $dtypes = array('expression', 'variable', 'function', 'negative'); // types with delayed computation
-	static private $units = array(
-		'px', '%', 'in', 'cm', 'mm', 'em', 'ex', 'pt', 'pc', 'ms', 's', 'deg', 'gr');
+	static protected $dtypes = array('expression', 'variable', 'function', 'negative', 'list'); // types with delayed computation
+	/**
+	 * @link http://www.w3.org/TR/css3-values/
+	 */
+	static protected $units=array(
+			'em', 'ex', 'px', 'gd', 'rem', 'vw', 'vh', 'vm', 'ch', // Relative length units
+			'in', 'cm', 'mm', 'pt', 'pc', // Absolute length units
+			'%', // Percentages
+			'deg', 'grad', 'rad', 'turn', // Angles
+			'ms', 's', // Times
+			'Hz', 'kHz', //Frequencies
+			);
     
 	public $ignoreNonExistantLessImports = false;
 	public $importDisabled = false;
 	public $importDir = '';
 
-	// compile chunk off the head of buffer
-	function chunk() {
+	// parse a chunk off the head of the buffer and compile if necessary
+	// return false when buffer is used up, true if there is more to parse
+	function parseChunk() {
 		if (empty($this->buffer)) return false;
 		$s = $this->seek();
 
@@ -67,22 +80,18 @@ class lessc {
 				}
 			}
 			$this->append($key, $value);
-
-			if (count($this->env) == 1)
-				return $this->compileProperty($key, array($value))."\n";
-			else
-				return true;
+			return true;
 		} else {
 			$this->seek($s);
 		}
 
 		// look for special css @ directives
-		if (count($this->env) == 1 && $this->count < strlen($this->buffer) && $this->buffer[$this->count] == '@') {
+		if ($this->env->parent == null && $this->literal('@', false)) {
+			$this->count--; // give back @
+
 			// a font-face block
 			if ($this->literal('@font-face') && $this->literal('{')) {
-				$this->push();
-				$this->set('__tags', array('@font-face'));
-				$this->set('__dontsave', true);
+				$this->push(array( '__special' => 'font-face',));
 				return true;
 			} else {
 				$this->seek($s);
@@ -90,37 +99,45 @@ class lessc {
 
 			// charset
 			if ($this->literal('@charset') && $this->propertyValue($value) && $this->end()) {
-				return $this->indent('@charset '.$this->compileValue($value).';');
+				$this->setLiteral('@charset '.$this->compileValue($value).';');
+				return true;
 			} else {
 				$this->seek($s);
 			}
 
 			// media
 			if ($this->literal('@media') && $this->mediaTypes($types, $rest) && $this->literal('{')) {
-				$this->media = $types;
-				$this->indentLevel++;
-				return "@media ".join(', ', $types).(!empty($rest) ? " $rest" : '' )." {\n";
+				$this->push(array(
+					'__special' => 'media',
+					'__media' => array($types, $rest),
+				));
+				return true;
 			} else {
 				$this->seek($s);
 			}
 			
 			// css animations
 			if ($this->match('(@(-[a-z]+-)?keyframes)', $m) && $this->propertyValue($value) && $this->literal('{')) {
-				$this->indentLevel++;
-				$this->inAnimations = true;
-				return $m[0].$this->compileValue($value)." {\n";
+				$this->push(array(
+					'__special' => 'keyframes',
+					'__keyframes' => array($m[0], $value),
+				));
+				return true;
 			} else {
 				$this->seek($s);
 			}
 		}
 		
-		// see if we're in animations and handle pseudo classes
-		if ($this->inAnimations && $this->match("(to|from|[0-9]+%)", $m) && $this->literal('{')) {
-			$this->push();
-			$this->set('__tags', array($m[1]));
-			return true;
-		} else {
-			$this->seek($s);
+		// see if can accept animation pseudo classes
+		if ($this->getRaw('__special') == 'keyframes') {
+			if ($this->match("(to|from|[0-9]+%)", $m) && $this->literal('{')) {
+				$this->push(array(
+					'__tags' => array($m[1])
+				));
+				return true;
+			} else {
+				$this->seek($s);
+			}
 		}
 
 		// setting variable
@@ -133,12 +150,13 @@ class lessc {
 
 		// opening abstract block
 		if ($this->tag($tag, true) && $this->argumentDef($args) && $this->literal('{')) {
-			$this->push();
-
-			// move out of variable scope
+			// move out of variable namespace
 			if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
 
-			$this->set('__tags', array($tag));
+			$this->push(array(
+				'__tags' => array($tag)
+			));
+
 			if (isset($args)) $this->set('__args', $args);
 
 			return true;
@@ -148,13 +166,14 @@ class lessc {
 
 		// opening css block
 		if ($this->tags($tags) && $this->literal('{')) {
-			//  move @ tags out of variable namespace!
+			//  move @ tags out of variable namespace
 			foreach ($tags as &$tag) {
 				if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
 			}
 
-			$this->push();
-			$this->set('__tags', $tags);	
+			$this->push(array(
+				'__tags' => $tags
+			));
 
 			return true;
 		} else {
@@ -163,30 +182,6 @@ class lessc {
 
 		// closing block
 		if ($this->literal('}')) {
-			if ($this->level == 1 && !is_null($this->media)) {
-				$this->indentLevel--;
-				$this->media = null;
-				return "}\n";
-			}
-			
-			if ($this->level == 1 && $this->inAnimations === true) {
-				$this->indentLevel--;
-				$this->inAnimations = false;
-				return "}\n";
-			}
-
-			$env = end($this->env);
-			$tags = $env['__tags'];
-
-			// insert the default arguments
-			if (isset($env['__args'])) {
-				foreach ($env['__args'] as $arg) {
-					if (isset($arg[1])) {
-						$this->prepend($this->vPrefix.$arg[0], $arg[1]);
-					}
-				}
-			}
-
 			try {
 				$block = $this->pop();
 			} catch (exception $e) {
@@ -194,95 +189,71 @@ class lessc {
 				$this->throwParseError($e->getMessage());
 			}
 
-			// show the compiled block if we have the whole thing and it is visisble
-			if ($this->level == 1) {
-				$concreteTags = array();
-				foreach ($tags as $tag) {
-					if ($tag{0} != $this->mPrefix) $concreteTags[] = $tag;
-				}
-
-				if (!empty($concreteTags)) {
-					$out = $this->compileBlock($concreteTags, $block);
-				}
+			if (isset($block['__special'])) {
+				$this->set('__special'.count($this->env->store), $block);
+				return true;
 			}
 
 			// make the block(s) available in the new current scope
-			if (!isset($env['__dontsave'])) {
-				$merge_env = array();
-				foreach ($tags as $t) $merge_env[$t] = $env;
-				$this->merge($merge_env);
-			}
+			$merge_env = array();
+			foreach ($block['__tags'] as $t) $merge_env[$t] = $block;
+			$this->merge($merge_env);
 
-			return isset($out) ? $out : true;
+			return true;
 		} 
 		
 		// import statement
 		if ($this->import($url, $media)) {
-			if ($this->importDisabled) return "/* import is disabled */\n";
+			if ($this->importDisabled) {
+				$this->setLiteral("/* import is disabled */");
+				return true;
+			}
 
 			foreach ((array)$this->importDir as $dir) {
 				$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
 				if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
 					$this->addParsedFile($file);
 					$loaded = ltrim($this->removeComments(file_get_contents($file).";"));
+
 					$this->buffer = substr($this->buffer, 0, $this->count).$loaded.substr($this->buffer, $this->count);
 					return true;
 				}
 			}
 			
 			if(strtolower(substr($url, -4)) == 'less' && $this->ignoreNonExistantLessImports) {
-				return "/* ignored import */\n";
+				$this->setLiteral("/* import ignored */");
 			}
-			
-			return $this->indent('@import url("'.$url.'")'.($media ? ' '.$media : '').';');
+
+			// import failed, just write literal
+			$this->setLiteral('@import url("'.$url.'")'.($media ? ' '.$media : '').';');
+			return true;
 		}
 
 		// mixin/function expand
 		if ($this->tags($tags, true, '>') && ($this->argumentValues($argv) || true) && $this->end()) {
-			$env = $this->getEnv($tags);
-			if ($env == null) return true;
+			$block = $this->getEnv($tags);
+			if (is_null($block)) return true;
 
-			// if we have arguments then insert them before their respective env values
-			// TODO: this is silly, because it makes it so the arguments are also mixed
-			// into the new scope. Keeping it for now though otherwise sub-blocks won't see
-			// arguments. -- change to making arg temp env and pushing and stack then recursively
-			// resolving all mixed in names.
-			if (!empty($env['__args'])) {
-				foreach ($env['__args'] as $arg) {
+			$argEnv = array();
+			if (!empty($block['__args'])) {
+				foreach ($block['__args'] as $arg) {
 					$vname = $this->vPrefix.$arg[0];
 					$value = is_array($argv) ? array_shift($argv) : null;
 					// copy default value if there isn't one supplied
 					if ($value == null && isset($arg[1]))
 						$value = $arg[1];
 
-					// if ($value == null) continue; // don't define so it can search up
-
-					// create new entry if var doesn't exist in scope
-					if (isset($env[$vname])) {
-						array_unshift($env[$vname], $value);
-					} else {
-						$env[$vname] = array($value);
-					}
+					$argEnv[$vname] = array($value);
 				}
 			}
 
-			$this->merge($env);
+			unset($block['__args']);
+			$this->push($argEnv);
+			$block = $this->reduceBlock($block);
+			$this->pop();
 
-			// reduce any immedate incoming values in order to prevent values changing
-			// due to namespace collision. This is to compensate for mixing in __args.
-			foreach ($env as $name => $value) {
-				if ($this->isProperty($name, $value)) {
-					$reduced = array();
-					foreach ($this->get($name) as $value) {
-						$reduced[] = $this->reduce($value);
-					}
-					$this->set($name, $reduced);
-				}
-			}
-
-			// render mixin contents if mixing into global scope
-			if ($this->level == 1) return $this->compileBlock(null, $env, false);
-			else return true;
+			$this->merge($block);
+			return true;
 		} else {
 			$this->seek($s);
 		}
@@ -608,7 +579,8 @@ class lessc {
 		return true;
 	}
 
-	// consume an argument definition list surrounded by (), each argument is a variable name with optional value
+	// consume an argument definition list surrounded by ()
+	// each argument is a variable name with optional value
 	function argumentDef(&$args, $delim = ';') {
 		$s = $this->seek();
 		if (!$this->literal('(')) return false;
@@ -759,42 +731,85 @@ class lessc {
 		else return array('list', $delim, $items);
 	}
 
-	function compileBlock($rtags, $env, $bindEnv = true) {
+	function compileBlock($block, $parentTags = null, $bindEnv = true) {
 		$children = array();
 		$visitedMixins = array(); // mixins to skip
 		$props = 0;
 
+		// multiply tags
+		if (isset($block['__tags'])) {
+			$tags = array();
+			foreach ($parentTags as $outerTag) {
+				foreach ($block['__tags'] as $innerTag) {
+					$tags[] = trim($outerTag.
+						($innerTag{0} == $this->selfSelector || $innerTag{0} == ':'
+							? ltrim($innerTag, $this->selfSelector) : ' '.$innerTag));
+				}
+			}
+		} else {
+			$tags = $parentTags;
+		}
+
+		// insert default args -- does not exist for blocks already reduced
+		if (isset($block['__args'])) {
+			$this->push();
+			foreach ($block['__args'] as $arg) {
+				if (isset($arg[1])) $this->append($this->vPrefix.$arg[0], $arg[1]);
+			}
+		}
+
 		ob_start();
-		if ($bindEnv) $this->push($env);
-		foreach ($env as $name => $value) {
+		if ($bindEnv) $this->push($block);
+		foreach ($block as $name => $value) {
 			if ($this->isProperty($name, $value)) {
-				echo $this->compileProperty($name, $value, is_null($rtags) ? 0 : 1)."\n";
+				echo $this->compileProperty($name, $value, is_null($tags) ? 0 : 1)."\n";
 				$props += count($value);
 			} elseif ($this->isBlock($name, $value)) {
 				if (isset($visitedMixins[$name])) continue;
 
-
-				$new_tags = array();
-				// multiply tags
-				foreach ((is_null($rtags) ? array('') : $rtags) as $outerTag) {
-					foreach ($value['__tags'] as $innerTag) {
-						$visitedMixins[$innerTag] = true; // prevent rendering this block multiple times
-						$new_tags[] = trim($outerTag.
-							($innerTag{0} == $this->selfSelector || $innerTag{0} == ':'
-								? ltrim($innerTag, $this->selfSelector) : ' '.$innerTag));
-					}
+				foreach ($value['__tags'] as $tag) {
+					$visitedMixins[$tag] = true;
 				}
-				$children[] = $this->compileBlock($new_tags, $value);
 
+				$child = $this->compileBlock($value, is_null($tags) ? array('') : $tags);
+				if (is_null($tags)) echo $child;
+				else $children[] = $child;
+			} else {
+				if ($name == '__special') continue;
+
+				if (is_string($value)) {
+					echo $this->indent($value);
+				} elseif (isset($value['__special'])) {
+					$this->indentLevel++;
+					switch ($value['__special']) {
+					case 'media':
+						list($types, $rest) = $value['__media'];
+						echo "@media ".join(', ', $types).(!empty($rest) ? " $rest" : '' )." {\n";
+						break;
+					case 'font-face':
+						echo "@font-face {\n";
+						break;
+					case 'keyframes':
+						list($prefix, $typeValue) = $value['__keyframes'];
+						echo $prefix.$this->compileValue($typeValue)." {\n";
+						break;
+					}
+					echo $this->compileBlock($value);
+					echo "}\n";
+					$this->indentLevel--;
+				}
 			}
 		}
 		if ($bindEnv) $this->pop();
+
+		if (isset($block['__args'])) $this->pop();
+
 		$list = ob_get_clean();
 
-		if ($rtags == null) {
+		if ($tags == null) {
 			$out = $list;
 		} else {
-			$blockDecl = implode(", ", $rtags).' {';
+			$blockDecl = implode(", ", $tags).' {';
 
 			if ($props > 1)
 				$out = $this->indent($blockDecl).$list.$this->indent('}');
@@ -810,14 +825,14 @@ class lessc {
 	// write a line a the proper indent
 	function indent($str, $level = null) {
 		if (is_null($level)) $level = $this->indentLevel;
-		return str_repeat('  ', $level).$str."\n";
+		return str_repeat($this->indentChar, $level).$str."\n";
 	}
 
 	function compileProperty($name, $value, $level = 0) {
 		$level = $this->indentLevel + $level;
 		// output all repeated properties
 		foreach ($value as $v)
-			$props[] = str_repeat('  ', $level).
+			$props[] = str_repeat($this->indentChar, $level).
 				$name.':'.$this->compileValue($v).';';
 
 		return implode("\n", $props);
@@ -868,11 +883,7 @@ class lessc {
 			if (count($value) == 5) { // rgba
 				return 'rgba('.$value[1].','.$value[2].','.$value[3].','.$value[4].')';
 			}
-
-			$out = '#';
-			foreach (range(1,3) as $i)
-				$out .= ($value[$i] < 16 ? '0' : '').dechex($value[$i]);
-			return $out;
+			return sprintf("#%02x%02x%02x", $value[1], $value[2], $value[3]);
 		case 'variable':
 			// [1] - the name of the variable including @
 			$tmp = $this->compileValue(
@@ -888,17 +899,25 @@ class lessc {
 			// [1] - function name
 			// [2] - some value representing arguments
 
-			// see if there is a library function for this func
-			$f = array($this, 'lib_'.$value[1]);
-			if (is_callable($f)) {
-				return call_user_func($f, $value[2]);
+			// see if function evaluates to something else
+			$value = $this->reduce($value);
+			if ($value[0] == 'function') {
+				return $value[1].'('.$this->compileValue($value[2]).')';
 			}
-
-			return $value[1].'('.$this->compileValue($value[2]).')';
-
+			else return $this->compileValue($value);
 		default: // assumed to be unit	
 			return $value[1].$value[0];
 		}
+	}
+
+	function lib_rgbahex($arg) {
+		$color = $this->reduce($arg);
+		if ($color[0] != 'color')
+			throw new exception("color expected for rgbahex");
+
+		return sprintf("#%02x%02x%02x%02x",
+			isset($color[4]) ? $color[4]*255 : 0,
+			$color[1],$color[2], $color[3]);
 	}
 
 	function lib_quote($arg) {
@@ -909,6 +928,16 @@ class lessc {
 		$out = $this->compileValue($arg);
 		if ($this->quoted($out)) $out = substr($out, 1, -1);
 		return $out;
+	}
+
+	function lib_floor($arg) {
+		$arg = $this->reduce($arg);
+		return floor($arg[1]);
+	}
+
+	function lib_round($arg) {
+		$arg = $this->reduce($arg);
+		return round($arg[1]);
 	}
 
 	// is a string surrounded in quotes? returns the quoting char if true
@@ -945,20 +974,64 @@ class lessc {
 		return $this->fixColor($components);
 	}
 
+	// reduce an entire block, removing any delayed types
+	// done before a mixin is mixed in
+	function reduceBlock($block) {
+		if (isset($block['__args'])) {
+			$this->push();
+			foreach ($block['__args'] as $arg) {
+				if (isset($arg[1])) $this->append($this->vPrefix.$arg[0], $arg[1]);
+			}
+		}
+
+		$this->push();
+		foreach ($block as $name => $value) {
+			if ($this->isProperty($name, $value, false)) {
+				foreach ($value as $v) {
+					$value = $this->reduce($v);
+					$this->append($name, $value);
+				}
+			} elseif ($this->isBlock($name, $value, false)) {
+				$this->set($name, $this->reduceBlock($value));
+			} else {
+				if ($name != '__args') $this->set($name, $value);
+			}
+		}
+
+		$out = $this->pop();
+		if (isset($block['__args'])) {
+			$this->pop();
+		}
+		return $out;
+	}
+
 	// reduce a delayed type to its final value
 	// dereference variables and solve equations
 	function reduce($var, $defaultValue = array('number', 0)) {
 		$pushed = 0; // number of variable names pushed
 
 		while (in_array($var[0], self::$dtypes)) {
-			if ($var[0] == 'expression') {
+			if ($var[0] == 'list') {
+				foreach ($var[2] as &$value) $value = $this->reduce($value);
+				break;
+			} elseif ($var[0] == 'expression') {
 				$var = $this->evaluate($var[1], $var[2], $var[3]);
 			} elseif ($var[0] == 'variable') {
 				$var = $this->getVal($var[1], $this->pushName($var[1]), $defaultValue);
 				$pushed++;
 			} elseif ($var[0] == 'function') {
+
 				$color = $this->funcToColor($var);
 				if ($color) $var = $color;
+				else {
+					$f = array($this, 'lib_'.$var[1]);
+					if (is_callable($f)) {
+						list($_, $delim, $items) = $var[2];
+						$var = call_user_func($f, $this->compressList($items, $delim));
+						if (is_numeric($var)) $var = array('number', $var);
+						elseif (!is_array($var)) $var = array('keyword', $var);
+					}
+				}
 				break; // no where to go after a function
 			} elseif ($var[0] == 'negative') {
 				$value = $this->reduce($var[1]);
@@ -1122,109 +1195,133 @@ class lessc {
 	}
 
 	// push a new environment
+	// $base is initial store
 	function push($base = null) {
+		$env = new stdclass;
+		$env->parent = $this->env;
+		$env->store = is_null($base) ? array() : $base;
+
+		$this->env = $env;
 		$this->level++;
-		$this->env[] = is_null($base) ? array() : $base;
 	}
 
 	// pop environment off the stack
 	function pop() {
-		if ($this->level == 1)
+		if (is_null($this->env->parent))
 			throw new exception('parse error: unexpected end of block');
 
 		$this->level--;
-		return array_pop($this->env);
+		$old = $this->env;
+		$this->env = $this->env->parent;
+		return $old->store;
 	}
 
 	// set something in the current env
 	function set($name, $value) {
-		$this->env[count($this->env) - 1][$name] = $value;
+		$this->env->store[$name] = $value;
+	}
+
+	// set some literal value at the end of the parse
+	function setLiteral($value) {
+		$this->env->store['__literal'.count($this->env->store)] = $value;
 	}
 
 	// append to array in the current env
 	function append($name, $value) {
-		$this->env[count($this->env) - 1][$name][] = $value;
+		$this->env->store[$name][] = $value;
 	}
 
-	function append_all($name, $values) {
-		$top =& $this->env[count($this->env) - 1];
-		foreach ($values as $value) $top[$name][] = $value;
+	// append a list of values to name
+	function appendAll($name, $values) {
+		foreach ($values as $value)
+			$this->env->store[$name][] = $value;
 	}
 
 	// put on the front of the value
 	function prepend($name, $value) {
-		if (isset($this->env[count($this->env) - 1][$name]))
-			array_unshift($this->env[count($this->env) - 1][$name], $value);
+		if (isset($this->env->store[$name]))
+			array_unshift($this->env->store[$name], $value);
 		else $this->append($name, $value);
 	}
 
-	// get the highest occurrence of value
-	function get($name, $env_stack = null) {
-		if (empty($env_stack)) $env_stack = $this->env;
+	function getRaw($name, $failValue = false) {
+		if (isset($this->env->store[$name])) {
+			return $this->env->store[$name];
+		}
+		return $failValue;
+	}
 
-		for ($i = count($env_stack) - 1; $i >= 0; $i--)
-			if (isset($env_stack[$i][$name])) return $env_stack[$i][$name];
+	// get the highest occurence entry for a name
+	// optionally start at environment $top
+	function get($name, $top = null) {
+		$current = is_null($top) ? $this->env : $top;
+
+		while ($current) {
+			if (isset($current->store[$name]))
+				return $current->store[$name];
+			else
+				$current = $current->parent;
+		}
 
 		return null;
 	}
 
-	// get the most recent value of a variable
+	// get the highest occurence value for a name,
+	// while skipping $skip values from the top.
 	// return default if it isn't found
-	// $skip is number of vars to skip
 	function getVal($name, $skip = 0, $default = array('keyword', '')) {
-		$val = $this->get($name);
-		if ($val == null) return $default;
+		$values = $this->get($name);
+		if (is_null($values)) return $default;
 
-		$tmp = $this->env;
-		while (!isset($tmp[count($tmp) - 1][$name])) array_pop($tmp);
+		$current = $this->env;
 		while ($skip > 0) {
 			$skip--;
 
-			if (!empty($val)) {
-				array_pop($val);
+			if (!empty($values)) {
+				array_pop($values);
 			}
 
-			if (empty($val)) {
-				array_pop($tmp);
-				$val = $this->get($name, $tmp);
+			if (empty($values) && !is_null($current->parent)) {
+				$current = $current->parent;
+				$values = $this->get($name, $current);
 			}
 
-			if (empty($val)) return $default;
+			if (empty($values)) return $default;
 		}
 
-		return end($val);
+		return end($values);
 	}
 
-	// get the environment described by path, an array of env names
+	// follow path of names from current env to get entry value
+	// should be called getBlock or something (this is not getting an environment!)
 	function getEnv($path) {
 		if (!is_array($path)) $path = array($path);
 
 		//  move @ tags out of variable namespace
-		foreach ($path as &$tag)
-			if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
-
-		$env = $this->get(array_shift($path));
-		while ($sub = array_shift($path)) {
-			if (isset($env[$sub]))  // todo add a type check for environment
-				$env = $env[$sub];
-			else {
-				$env = null;
-				break;
-			}
+		foreach ($path as &$_tag) {
+			if ($_tag{0} == $this->vPrefix) $_tag[0] = $this->mPrefix;
 		}
-		return $env;
+
+		$block = $this->get(array_shift($path));
+		foreach ($path as $tag) {
+			if (is_array($block) && isset($block[$tag])) {
+				$block = $block[$tag];
+			} else return null;
+		}
+
+		return $block;
 	}
 
-	// merge $env into the environment on the top of the stack
-	function merge($env) {
+	// merge $block into current environment
+	function merge($block) {
 		// see if we have to rework __tags, mixing into some of bound blocks breaks them up
-		foreach ($env as $name => $value) {
+		foreach ($block as $name => $value) {
 			if (!$this->isBlock($name, $value, false)) continue;
 
-			$top =& $this->env[count($this->env) - 1];
-			if (isset($top[$name]) && $top[$name]['__tags'] != $value['__tags']) {
+			$other = $this->getRaw($name);
+			if ($other && $other['__tags'] != $value['__tags']) {
 
-				$source = $top[$name]['__tags'];
+				$source = $this->env->store[$name]['__tags'];
 				$dest = $value['__tags'];
 
 				$shared = array_values(array_intersect($source, $dest));
@@ -1232,25 +1329,24 @@ class lessc {
 				$broken = array_values(array_diff($source, $dest));
 				$split = array_values(array_diff($dest, $source));
 
-				$top[$name]['__tags'] = $shared;
+				$this->env->store[$name]['__tags'] = $shared;
 				foreach ($broken as $brokenName) {
-					$top[$brokenName]['__tags'] = $broken;
+					$this->env->store[$brokenName]['__tags'] = $broken;
 				}
 
 				foreach ($split as $splitName) {
-					$env[$splitName]['__tags'] = $split;
+					$block[$splitName]['__tags'] = $split;
 				}
 			}
 		}
 
-		foreach ($env as $name => $value) {
+		foreach ($block as $name => $value) {
 			if ($this->isProperty($name, $value, false)) {
-				$this->append_all($name, $value);
+				$this->appendAll($name, $value);
 			} elseif ($this->isBlock($name, $value, false)) {
-				$top =& $this->env[count($this->env) - 1];
-				if (isset($top[$name])) {
+				if ($subBlock = $this->getRaw($name)) {
 					// echo "merging $name\n";
-					$this->push($top[$name]);
+					$this->push($subBlock);
 					$this->merge($value);
 					$this->set($name, $this->pop());
 				} else {
@@ -1261,12 +1357,14 @@ class lessc {
 	}
 	
 	function isProperty($name, $value, $isConcrete = true) {
-		return is_array($value) && array_key_exists(0, $value) && substr($name, 0,2) != '__' &&
+		return is_array($value) && array_key_exists(0, $value) &&
+			substr($name, 0,2) != '__' &&
 			(!$isConcrete || $name{0} != $this->vPrefix);
 	}
 
 	function isBlock($name, $value, $isConcrete = true) {
 		return is_array($value) && !array_key_exists(0, $value) &&
+			substr($name, 0, 2) != '__' &&
 			(!$isConcrete || $name{0} != $this->mPrefix);
 	}
 
@@ -1310,7 +1408,6 @@ class lessc {
 		return false;
 	}
 
-
 	// match something without consuming it
 	function peek($regex, &$out = null) {
 		$r = '/'.$regex.'/Ais';
@@ -1325,12 +1422,12 @@ class lessc {
 		else $this->count = $where;
 		return true;
 	}
-	
-	// parse and compile buffer
-	function parse($str = null) {
-		if ($str) $this->buffer = $str;		
 
-		$this->env = array();
+	/**
+	 * Initialize state for a fresh parse
+	 */
+	protected function prepareParser($buff) {
+		$this->env = null;
 		$this->expandStack = array();
 		$this->indentLevel = 0;
 		$this->media = null;
@@ -1338,28 +1435,27 @@ class lessc {
 		$this->line = 1;
 		$this->level = 0;
 
-		$this->buffer = $this->removeComments($this->buffer);
+		$this->buffer = $this->removeComments($buff);
 		$this->push(); // set up global scope
-		$this->set('__tags', array('')); // equivalent to 1 in tag multiplication
 
 		// trim whitespace on head
 		if (preg_match('/^\s+/', $this->buffer, $m)) {
 			$this->line  += substr_count($m[0], "\n");
 			$this->buffer = ltrim($this->buffer);
 		}
-
-		$out = '';
-		while (false !== ($compiled = $this->chunk())) {
-			if (is_string($compiled)) $out .= $compiled;
-		}
+	}
+	
+	// parse and compile buffer
+	function parse($str = null) {
+		$this->prepareParser($str ? $str : $this->buffer);
+		while (false !== $this->parseChunk());
 
 		if ($this->count != strlen($this->buffer)) $this->throwParseError();
 
-		if (count($this->env) > 1)
+		if (!is_null($this->env->parent))
 			throw new exception('parse error: unclosed block');
 
-		// print_r($this->env[0]);
-		return $out;
+		return $this->compileBlock($this->env->store, null, false);
 	}
 
 	function throwParseError($msg = 'parse error') {
@@ -1368,6 +1464,9 @@ class lessc {
 			throw new exception($msg.': failed at `'.$m[1].'` line: '.$line);
 	}
 
+	/**
+	 * Initialize any static state, can initialize parser for a file
+	 */
 	function __construct($fname = null, $opts = null) {
 		if (!self::$operatorString) {
 			self::$operatorString = 

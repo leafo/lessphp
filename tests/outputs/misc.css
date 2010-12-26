@@ -2,3 +2,13 @@
 .topbar { background:url(/assets/images/test/topbar.png); }
 .hello { test:empty-function("/assets/images/test/",40%,to(#ffffff)); }
 .css3 { background-image:-webkit-gradient(linear,0% 0%,0% 90%,from(#e9a000),to(#a37000)); }
+.test, .world {
+  border:1px solid red;
+  color:url(http://mage-page.com);
+  string:"hello /* this is not a comment */";
+  string:'hello /* this is not a comment */';
+  world:"// neither is this";
+  world:'// neither is this';
+  what-ever:100px;
+  background:url(/*no comment here*/);
+}
