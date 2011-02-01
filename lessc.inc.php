@@ -275,6 +275,10 @@ class lessc {
 			foreach ((array)$this->importDir as $dir) {
 				$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
 				if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
+					if(array_key_exists(realpath($file), $this->allParsedFiles())) {
+						return true;
+					}
+					
 					$this->addParsedFile($file);
 					$loaded = ltrim($this->removeComments(file_get_contents($file).";"));
 
@@ -285,6 +289,7 @@ class lessc {
 			
 			if(strtolower(substr($url, -4)) == 'less' && $this->ignoreNonExistantLessImports) {
 				$this->setLiteral("/* import ignored */");
+				return true;
 			}
 
 			// import failed, just write literal
