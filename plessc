@@ -6,9 +6,18 @@
 $VERSION = "v0.2.1";
 
 error_reporting(E_ALL);
-$path  = realpath(dirname(__FILE__)).'/';
 
-require $path."lessc.inc.php";
+try {
+	if (class_exists('Phar',false)) {
+		Phar::mapPhar('plessc.phar');
+		require "phar://plessc.phar/lessc.inc.php";
+	}
+} catch (Exception $ex) {}
+if (!class_exists('lessc',false)) {
+	$path  = realpath(dirname(__FILE__)).'/';
+
+	require $path."lessc.inc.php";
+}
 
 $fa = "Fatal Error: ";
 function err($msg) {
@@ -152,4 +161,4 @@ try {
 }
 
 
-?>
+__HALT_COMPILER(); ?>
