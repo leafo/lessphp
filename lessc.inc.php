@@ -718,7 +718,7 @@ class lessc {
 			$fname = $m[1];
 			if ($fname == 'url') {
 				$this->to(')', $content, true);
-				$args = array('string', $content);
+				$args = array('list', ',', array(array('string', $content)));
 			} else {
 				$args = array();
 				while (true) {
