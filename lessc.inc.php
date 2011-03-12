@@ -1128,10 +1128,15 @@ class lessc {
 				$color = $this->funcToColor($var);
 				if ($color) $var = $color;
 				else {
-					$f = array($this, 'lib_'.$var[1]);
+					list($_, $name, $args) = $var;
+					$f = array($this, 'lib_'.$name);
 					if (is_callable($f)) {
-						list($_, $delim, $items) = $var[2];
-						$var = call_user_func($f, $this->compressList($items, $delim));
+						if ($args[0] == 'list')
+							$args = $this->compressList($args[2], $args[1]);
+
+						$var = call_user_func($f, $args);
+
+						// convet to a typed value if the result is a php primitive
 						if (is_numeric($var)) $var = array('number', $var);
 						elseif (!is_array($var)) $var = array('keyword', $var);
 					} else {
@@ -1139,7 +1144,7 @@ class lessc {
 						$var[2] = $this->reduce($var[2]);
 					}
 				}
-				break; // no where to go after a function
+				break; // done reducing after a function
 			} elseif ($var[0] == 'negative') {
 				$value = $this->reduce($var[1]);
 				if (is_numeric($value[1])) {
