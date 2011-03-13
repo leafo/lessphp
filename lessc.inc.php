@@ -1035,6 +1035,11 @@ class lessc {
 		return $out;
 	}
 
+	// alias for unquote
+	function lib_e($arg) {
+		return $this->lib_unquote($arg);
+	}
+
 	function lib_floor($arg) {
 		$arg = $this->reduce($arg);
 		return floor($arg[1]);
