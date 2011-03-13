@@ -3,7 +3,7 @@
 //
 // command line utility to compile less to stdout
 // leaf corcoran <leafo.net>
-$VERSION = "v0.1.6";
+$VERSION = "v0.2.1";
 
 error_reporting(E_ALL);
 $path  = realpath(dirname(__FILE__)).'/';

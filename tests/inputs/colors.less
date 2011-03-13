@@ -1,0 +1,65 @@
+
+body {
+	color: hsl(34, 50%, 40%);
+	color: hsla(34, 50%, 40%, 0.3);
+
+	lighten: lighten(#efefef, 10%);
+	lighten: lighten(rgb(23, 53, 231), 22%);
+	lighten: lighten(rgba(212, 103, 88, 0.5), 10%);
+
+	darken: darken(#efefef, 10%);
+	darken: darken(rgb(23, 53, 231), 22%);
+	darken: darken(rgba(23, 53, 231, 0.5), 10%);
+
+	saturate: saturate(#efefef, 10%);
+	saturate: saturate(rgb(23, 53, 231), 22%);
+	saturate: saturate(rgba(23, 53, 231, 0.5), 10%);
+
+	desaturate: desaturate(#efefef, 10%);
+	desaturate: desaturate(rgb(23, 53, 231), 22%);
+	desaturate: desaturate(rgba(23, 53, 231, 0.5), 10%);
+
+	spin: spin(#efefef, 12);
+	spin: spin(rgb(23, 53, 231), 15);
+	spin: spin(rgba(23, 53, 231, 0.5), 19);
+
+	spin: spin(#efefef, -12);
+	spin: spin(rgb(23, 53, 231), -15);
+	spin: spin(rgba(23, 53, 231, 0.5), -19);
+
+	one: fadein(#abcdef, 10%);
+	one: fadeout(#abcdef, -10%);
+
+	two: fadeout(#029f23, 10%);
+	two: fadein(#029f23, -10%);
+
+
+	three: fadein(rgba(1,2,3, 0.5), 10%);
+	three: fadeout(rgba(1,2,3, 0.5), -10%);
+
+	four: fadeout(rgba(1,2,3, 0), 10%);
+	four: fadein(rgba(1,2,3, 0), -10%);
+
+	hue: hue(rgb(34,20,40));
+	sat: saturation(rgb(34,20,40));
+	lit: lightness(rgb(34,20,40));
+
+	@old: #34fa03;
+	@new: hsl(hue(@old), 45%, 90%);
+	what: @new;
+
+	zero: saturate(#123456, -100%);
+	zero: saturate(#123456, 100%);
+	zero: saturate(#000000, 100%);
+	zero: saturate(#ffffff, 100%);
+
+	zero: lighten(#123456, -100%);
+	zero: lighten(#123456, 100%);
+	zero: lighten(#000000, 100%);
+	zero: lighten(#ffffff, 100%);
+
+	zero: spin(#123456, -100);
+	zero: spin(#123456, 100);
+	zero: spin(#000000, 100);
+	zero: spin(#ffffff, 100);
+}
