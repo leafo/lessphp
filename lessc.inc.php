@@ -1104,31 +1104,225 @@ class lessc {
 		else return false;
 	}
 
-	// convert rgb, rgba into color type suitable for math
-	// todo: add hsl
+	/**
+	 * Helper function to get argurments for color functions
+	 * accepts invalid input, non colors interpreted to black
+	 */
+	function colorArgs($args) {
+		$args = $this->reduce($args);
+		if ($args[0] != 'list' || count($args[2]) < 2) {
+			return array(array('color', 0, 0, 0));
+		}
+		list($color, $delta) = $args[2];
+		if ($color[0] != 'color')
+			$color = array('color', 0, 0, 0);
+
+		$delta = floatval($delta[1]);
+
+		return array($color, $delta);
+	}
+
+	function lib_darken($args) {
+		list($color, $delta) = $this->colorArgs($args);
+
+		$hsl = $this->toHSL($color);
+		$hsl[3] = $this->clamp($hsl[3] - $delta, 100);
+		return $this->toRGB($hsl);
+	}
+
+	function lib_lighten($args) {
+		list($color, $delta) = $this->colorArgs($args);
+
+		$hsl = $this->toHSL($color);
+		$hsl[3] = $this->clamp($hsl[3] + $delta, 100);
+		return $this->toRGB($hsl);
+	}
+
+	function lib_saturate($args) {
+		list($color, $delta) = $this->colorArgs($args);
+
+		$hsl = $this->toHSL($color);
+		$hsl[2] = $this->clamp($hsl[2] + $delta, 100);
+		return $this->toRGB($hsl);
+	}
+
+	function lib_desaturate($args) {
+		list($color, $delta) = $this->colorArgs($args);
+
+		$hsl = $this->toHSL($color);
+		$hsl[2] = $this->clamp($hsl[2] - $delta, 100);
+		return $this->toRGB($hsl);
+	}
+
+	function lib_spin($args) {
+		list($color, $delta) = $this->colorArgs($args);
+
+		$hsl = $this->toHSL($color);
+		$hsl[1] = $this->clamp($hsl[1] + $delta, 360);
+		return $this->toRGB($hsl);
+	}
+
+	function lib_fadeout($args) {
+		list($color, $delta) = $this->colorArgs($args);
+		$color[4] = $this->clamp((isset($color[4]) ? $color[4] : 1) - $delta/100);
+		return $color;
+	}
+
+	function lib_fadein($args) {
+		list($color, $delta) = $this->colorArgs($args);
+		$color[4] = $this->clamp((isset($color[4]) ? $color[4] : 1) + $delta/100);
+		return $color;
+	}
+
+	function lib_hue($color) {
+		$color = $this->reduce($color);
+		if ($color[0] != 'color') return 0;
+		$hsl = $this->toHSL($color);
+		return round($hsl[1]);
+	}
+
+	function lib_saturation($color) {
+		$color = $this->reduce($color);
+		if ($color[0] != 'color') return 0;
+		$hsl = $this->toHSL($color);
+		return round($hsl[2]);
+	}
+
+	function lib_lightness($color) {
+		$color = $this->reduce($color);
+		if ($color[0] != 'color') return 0;
+		$hsl = $this->toHSL($color);
+		return round($hsl[3]);
+	}
+
+	function toHSL($color) {
+		if ($color[0] == 'hsl') return $color;
+
+		$r = $color[1] / 255;
+		$g = $color[2] / 255;
+		$b = $color[3] / 255;
+
+		$min = min($r, $g, $b);
+		$max = max($r, $g, $b);
+
+		$L = ($min + $max) / 2;
+		if ($min == $max) {
+			$S = $H = 0;
+		} else {
+			if ($L < 0.5)
+				$S = ($max - $min)/($max + $min);
+			else
+				$S = ($max - $min)/(2.0 - $max - $min);
+
+			if ($r == $max) $H = ($g - $b)/($max - $min);
+			elseif ($g == $max) $H = 2.0 + ($b - $r)/($max - $min);
+			elseif ($b == $max) $H = 4.0 + ($r - $g)/($max - $min);
+
+		}
+
+		$out = array('hsl',
+			($H < 0 ? $H + 6 : $H)*60,
+			$S*100,
+			$L*100,
+		);
+
+		if (count($color) > 4) $out[] = $color[4]; // copy alpha
+		return $out;
+	}
+
+	function toRGB_helper($comp, $temp1, $temp2) {
+		if ($comp < 0) $comp += 1.0;
+		elseif ($comp > 1) $comp -= 1.0;
+
+		if (6 * $comp < 1) return $temp1 + ($temp2 - $temp1) * 6 * $comp;
+		if (2 * $comp < 1) return $temp2;
+		if (3 * $comp < 2) return $temp1 + ($temp2 - $temp1)*((2/3) - $comp) * 6;
+
+		return $temp1;
+	}
+
+	/**
+	 * Converts an hsl array into a color value in rgb.
+	 * Expects H to be in range of 0 to 360, S and L in 0 to 100
+	 */
+	function toRGB($color) {
+		if ($color == 'color') return $color;
+
+		$H = $color[1] / 360;
+		$S = $color[2] / 100;
+		$L = $color[3] / 100;
+
+		if ($S == 0) {
+			$r = $g = $b = $L;
+		} else {
+			$temp2 = $L < 0.5 ?
+				$L*(1.0 + $S) :
+				$L + $S - $L * $S;
+
+			$temp1 = 2.0 * $L - $temp2;
+
+			$r = $this->toRGB_helper($H + 1/3, $temp1, $temp2);
+			$g = $this->toRGB_helper($H, $temp1, $temp2);
+			$b = $this->toRGB_helper($H - 1/3, $temp1, $temp2);
+		}
+
+		$out = array('color', round($r*255), round($g*255), round($b*255));
+		if (count($color) > 4) $out[] = $color[4]; // copy alpha
+		return $out;
+	}
+
+	function clamp($v, $max = 1, $min = 0) {
+		return min($max, max($min, $v));
+	}
+
+	/**
+	 * Convert the rgb, rgba, hsl color literals of function type
+	 * as returned by the parser into values of color type.
+	 */
 	function funcToColor($func) {
 		$fname = $func[1];
-		if (!preg_match('/^(rgb|rgba)$/', $fname)) return false;
 		if ($func[2][0] != 'list') return false; // need a list of arguments
+		$rawComponents = $func[2][2];
 
-		$components = array();
-		$i = 1;
-		foreach	($func[2][2] as $c) {
-			$c = $this->reduce($c);
-			if ($i < 4) {
-				if ($c[0] == '%') $components[] = 255 * ($c[1] / 100);
-				else $components[] = floatval($c[1]); 
-			} elseif ($i == 4) {
-				if ($c[0] == '%') $components[] = 1.0 * ($c[1] / 100);
-				else $components[] = floatval($c[1]);
-			} else break;
+		if ($fname == 'hsl' || $fname == 'hsla') {
+			$hsl = array('hsl');
+			$i = 0;
+			foreach ($rawComponents as $c) {
+				$val = $this->reduce($c);
+				$val = isset($val[1]) ? floatval($val[1]) : 0;
 
-			$i++;
+				if ($i == 0) $clamp = 360;
+				elseif ($i < 4) $clamp = 100;
+				else $clamp = 1;
+
+				$hsl[] = $this->clamp($val, $clamp);
+				$i++;
+			}
+
+			while (count($hsl) < 4) $hsl[] = 0;
+			return $this->toRGB($hsl);
+
+		} elseif ($fname == 'rgb' || $fname == 'rgba') {
+			$components = array();
+			$i = 1;
+			foreach	($rawComponents as $c) {
+				$c = $this->reduce($c);
+				if ($i < 4) {
+					if ($c[0] == '%') $components[] = 255 * ($c[1] / 100);
+					else $components[] = floatval($c[1]); 
+				} elseif ($i == 4) {
+					if ($c[0] == '%') $components[] = 1.0 * ($c[1] / 100);
+					else $components[] = floatval($c[1]);
+				} else break;
+
+				$i++;
+			}
+			while (count($components) < 3) $components[] = 0;
+			array_unshift($components, 'color');
+			return $this->fixColor($components);
 		}
-		while (count($components) < 3) $components[] = 0;
 
-		array_unshift($components, 'color');
-		return $this->fixColor($components);
+		return false;
 	}
 
 	// reduce an entire block, removing any delayed types
