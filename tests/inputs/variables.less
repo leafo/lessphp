@@ -35,30 +35,4 @@
   padding: @nonexistant + 4px;
 }
 
-// some math tests & considerations
-division: 10px / 2;
-division: 10px/ 2;
-//division: 10px /2; // doesn't work, probably should support this
-
-// consideratins for subtraction:
-// something-something is a single keyword
-// @something-@something should be subtraction? eg.
-@test-: 10;
-@west: "hello";
-subtract: @test-@west; // this will compile but the output will be: 10 "hello"
-
-subtract: 2-2; // this will give you: 2 -2, similar to above
-
-// addition: 5+5; // doesn't work
-// addition: 5 +5; // doesn't work, similar to broken division above
-addition: 5+ 5;
-addition: 5 + 5;
-
-
-// conclusion:
-// probably best to enforce space around both sides of every operator
-// (except when touching a paren)
-math: (5 + 5)*(2 / 1); // this already works
-
-
 

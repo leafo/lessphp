@@ -78,6 +78,25 @@ class lessc {
 	public $importDisabled = false;
 	public $importDir = '';
 
+	public $compat = false; // lessjs compatibility mode, does nothing right now
+	protected $currentProperty; // current property being parsed, needed for lessjs compat
+
+	/**
+	 * if we are in an expression then we don't need to worry about parsing font shorthand
+	 * $inExp becomes true after the first value in an expression, or if we enter parens
+	 */
+	protected $inExp = false;
+
+	/**
+	 * if we are in parens we can be more liberal with whitespace around operators because 
+	 * it must evaluate to a single value and thus is less ambiguous.
+	 *
+	 * Consider:
+	 *     property1: 10 -5; // is two numbers, 10 and -5
+	 *     property2: (10 -5); // should evaluate to 5
+	 */
+	protected $inParens = false;
+
 	/**
 	 * Parse a single chunk off the head of the buffer and place it.
 	 * @return false when the buffer is empty, or there is an error
@@ -128,9 +147,10 @@ class lessc {
 	function parseChunk() {
 		if (empty($this->buffer)) return false;
 		$s = $this->seek();
+		$this->currentProperty = null;
 
 		// a property
-		if ($this->keyword($key) && $this->assign() && $this->propertyValue($value) && $this->end()) {
+		if ($this->keyword($key) && $this->assign($key) && $this->propertyValue($value) && $this->end()) {
 			// look for important prefix
 			if ($key{0} == $this->imPrefix && strlen($key) > 1) {
 				$key = substr($key, 1);
@@ -145,6 +165,7 @@ class lessc {
 		} else {
 			$this->seek($s);
 		}
+
 
 		// look for special css @ directives
 		if ($this->env->parent == null && $this->literal('@', false)) {
@@ -339,37 +360,58 @@ class lessc {
 		return true;
 	}
 
-	// a single expression
+	/**
+	 * Attempt to consume an expression.
+	 * @link http://en.wikipedia.org/wiki/Operator-precedence_parser#Pseudo-code
+	 */
 	function expression(&$out) {
 		$s = $this->seek();
-		$needWhite = true;
-		if ($this->literal('(') && $this->expression($exp) && $this->literal(')')) {
+		if ($this->literal('(') && ($this->inExp = $this->inParens = true) &&$this->expression($exp) && $this->literal(')')) {
 			$lhs = $exp;
-			$needWhite = false;
 		} elseif ($this->seek($s) && $this->value($val)) {
 			$lhs = $val;
 		} else {
+			$this->inParens = $this->inExp = false;
+			$this->seek($s);
 			return false;
 		}
 
-		$out = $this->expHelper($lhs, 0, $needWhite);
+		$out = $this->expHelper($lhs, 0);
+		$this->inParens = $this->inExp = false;
 		return true;
 	}
 
-	// recursively parse infix equation with $lhs at precedence $minP
-	function expHelper($lhs, $minP, $needWhite = true) {
+	/**
+	 * recursively parse infix equation with $lhs at precedence $minP
+	 */
+	function expHelper($lhs, $minP) {
+		$this->inExp = true;
 		$ss = $this->seek();
-		// try to find a valid operator
-		while ($this->match(self::$operatorString.($needWhite ? '\s+' : ''), $m) && self::$precedence[$m[1]] >= $minP) {
+
+		// if the if there was whitespace before the operator, then we require whitespace after
+		// the operator for it to be a mathematical operator.
+
+		$needWhite = false;
+		if (!$this->inParens && preg_match('/\s/', $this->buffer{$this->count - 1})) {
 			$needWhite = true;
+		}
+
+		// try to find a valid operator
+		while ($this->match(self::$operatorString.($needWhite ? '\s' : ''), $m) && self::$precedence[$m[1]] >= $minP) {
 			// get rhs
 			$s = $this->seek();
-			if ($this->literal('(') && $this->expression($exp) && $this->literal(')')) {
-				$needWhite = false;
+			$p = $this->inParens;
+			if ($this->literal('(') && ($this->inParens = true) && $this->expression($exp) && $this->literal(')')) {
+				$this->inParens = $p;
 				$rhs = $exp;
-			} elseif ($this->seek($s) && $this->value($val)) {
-				$rhs = $val;
-			} else break;
+			} else {
+				$this->inParens = $p;
+				if ($this->seek($s) && $this->value($val)) {
+					$rhs = $val;
+				} else {
+					break;
+				}
+			}
 
 			// peek for next operator to see what to do with rhs
 			if ($this->peek(self::$operatorString, $next) && self::$precedence[$next[1]] > $minP) {
@@ -383,6 +425,11 @@ class lessc {
 				$lhs = $this->evaluate($m[1], $lhs, $rhs);
 
 			$ss = $this->seek();
+
+			$needWhite = false;
+			if (!$this->inParens && preg_match('/\s/', $this->buffer{$this->count - 1})) {
+				$needWhite = true;
+			}
 		}
 		$this->seek($ss);
 
@@ -556,7 +603,11 @@ class lessc {
 		return true;
 	}
 
-	// a numerical unit
+	/**
+	 * Consume a number and optionally a unit.
+	 * Can also consume a font shorthand if it is a simple case.
+	 * $allowed restricts the types that are matched.
+	 */
 	function unit(&$unit, $allowed = null) {
 		$simpleCase = $allowed == null;
 		if (!$allowed) $allowed = self::$units;
@@ -568,7 +619,7 @@ class lessc {
 			// check for size/height font unit.. should this even be here?
 			if ($simpleCase) {
 				$s = $this->seek();
-				if ($this->literal('/', false) && $this->unit($right, self::$units)) {
+				if (!$this->inExp && $this->literal('/', false) && $this->unit($right, self::$units)) {
 					$unit = array('keyword', $this->compileValue($unit).'/'.$this->compileValue($right));
 				} else {
 					// get rid of whitespace
@@ -757,8 +808,12 @@ class lessc {
 		return false;
 	}
 
-	// consume an assignment operator
-	function assign() {
+	/**
+	 * Consume an assignment operator
+	 * Can optionally take a name that will be set to the current property name
+	 */
+	function assign($name = null) {
+		if ($name) $this->currentProperty = $name;
 		return $this->literal(':') || $this->literal('=');
 	}
 
