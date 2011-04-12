@@ -15,7 +15,7 @@ function err($msg) {
 	fwrite(STDERR, $msg."\n");
 }
 
-if (php_sapi_name() != "cli") { 
+if (php_sapi_name() != "cli") {
 	err($fa.$argv[0]." must be run in the command line.");
 	exit(1);
 }
@@ -79,7 +79,7 @@ if (has("r", $loc)) {
 
 if (has("w")) {
 	// need two files
-	if (!is_file($in = array_shift($argv)) || 
+	if (!is_file($in = array_shift($argv)) ||
 		null == $out = array_shift($argv))
 	{
 		err($fa.$exe." -w infile outfile");
@@ -98,6 +98,7 @@ if (has("w")) {
 		// check if anything has changed since last fail
 		$updated = false;
 		if (is_array($cache)) {
+			clearstatcache();
 			foreach ($cache['files'] as $fname=>$_) {
 				if (filemtime($fname) > $fail_time) {
 					$updated = true;
@@ -111,7 +112,7 @@ if (has("w")) {
 			$cache = lessc::cexecute($cache);
 			if ($cache['updated'] > $last_build) {
 				$last_build = $cache['updated'];
-				echo "Writing updated file: ".$out."\n";	
+				echo "Writing updated file: ".$out."\n";
 				if (!file_put_contents($out, $cache['compiled'])) {
 					err($fa."Could not write to file ".$out);
 					exit(1);
@@ -121,7 +122,7 @@ if (has("w")) {
 			echo "\nFatal Error:\n".str_repeat('=', 20)."\n".$ex->getMessage()."\n\n";
 			$fail_time = time();
 
-			if (has("n")) { 
+			if (has("n")) {
 				`notify-send -u critical "compile failed" "{$ex->getMessage()}"`;
 			}
 		}
