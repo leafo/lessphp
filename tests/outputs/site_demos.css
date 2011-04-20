@@ -50,7 +50,6 @@ namespaces #header a {
   background-color:grey;
 }
 namespaces #header a:hover { background-color:white; }
-mixin-functions .class { padding:200px; }
 mixin-functions body {
   padding:2.0em;
   color:red;

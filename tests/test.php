@@ -6,7 +6,7 @@ error_reporting(E_ALL);
  * and compile them, then compare them to paired file in
  * output directory.
  */
-$difftool = 'diff';
+$difftool = 'meld';
 $input = array(
 	'dir' => 'inputs',
 	'glob' => '*.less',

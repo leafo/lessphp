@@ -913,6 +913,7 @@ class lessc {
 				$props += count($value);
 			} elseif ($this->isBlock($name, $value)) {
 				if (isset($visitedMixins[$name])) continue;
+				if (isset($value['__args'])) continue;
 
 				foreach ($value['__tags'] as $tag) {
 					$visitedMixins[$tag] = true;
