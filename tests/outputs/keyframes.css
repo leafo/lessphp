@@ -15,7 +15,9 @@
     top:75px;
     animation-timing-function:ease-in;
   }
-  to { top:100px; }
+  to {
+    top:100px;
+  }
 }
 div {
   animation-name:'diagonal-slide';

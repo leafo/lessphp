@@ -1,5 +1,7 @@
 body div other world { height:50; }
 div other world { height:50; }
-pre { height:10; }
-pre .test { height:11; }
-pre .test .test { height:12; }
+pre {
+  height:10;
+  height:11;
+  height:12;
+}
