@@ -973,7 +973,7 @@ class lessc {
 
 			$mixin = $this->findBlock($block, $path);
 			if (is_null($mixin)) {
-				echo "failed to find block: ".implode(" > ", $path)."\n";
+				// echo "failed to find block: ".implode(" > ", $path)."\n";
 				break; // throw error here??
 			}
 
@@ -1771,7 +1771,9 @@ class lessc {
 					$count += strlen($m[0]) - 1;
 				break;
 			case '//':
-				$skip = strpos($text, "\n", $count) - $count;
+				$skip = strpos($text, "\n", $count);
+				if ($skip === false) $skip = strlen($text) - $count;
+				else $skip -= $count;
 				break;
 			case '/*': 
 				if (preg_match('/\/\*.*?\*\//s', $text, $m, 0, $count)) {
