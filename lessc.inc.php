@@ -821,7 +821,7 @@ class lessc {
 	 *
 	 * Blocks are made up of props and children.
 	 *
-	 * Props are property instructions, array tuples which desicibe an action
+	 * Props are property instructions, array tuples which describe an action
 	 * to be taken, eg. write a property, set a variable, mixin a block.
 	 *
 	 * The children of a block are just all the blocks that are defined within.
@@ -1692,8 +1692,12 @@ class lessc {
 	
 	// parse and compile buffer
 	function parse($str = null) {
+		$locale = setlocale(LC_NUMERIC, NULL);
+		setlocale(LC_NUMERIC, "C");
 		$root = $this->parseTree($str);
-		return $this->compileBlock($root);
+		$out = $this->compileBlock($root);
+		setlocale(LC_NUMERIC, $locale);
+		return $out;
 	}
 
 	function throwParseError($msg = 'parse error') {
