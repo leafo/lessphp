@@ -833,7 +833,7 @@ class lessc {
 	 *
 	 */
 	function compileBlock($block, $parent_tags = null) {
-		$isRoot = $this->env == null;
+		$isRoot = $parent_tags == null && $block->tags == null;
 
 		$indent = str_repeat($this->indentChar, $this->indentLevel);
 
@@ -1689,12 +1689,30 @@ class lessc {
 		$this->env = null;
 		return $root;
 	}
+
+	// inject array of unparsed strings into environment as variables
+	protected function injectVariables($args) {
+		$this->pushEnv();
+		$parser = new lessc();
+		foreach ($args as $name => $str_value) {
+			if ($name{0} != '@') $name = '@'.$name;
+			$parser->count = 0;
+			$parser->buffer = (string)$str_value;
+			if (!$parser->propertyValue($value)) {
+				throw new Exception("failed to parse passed in variable $name: $str_value");
+			}
+
+			$this->set($name, $value);
+		}
+	}
 	
 	// parse and compile buffer
-	function parse($str = null) {
-		$locale = setlocale(LC_NUMERIC, NULL);
+	function parse($str = null, $initial_variables = null) {
+		$locale = setlocale(LC_NUMERIC, 0);
 		setlocale(LC_NUMERIC, "C");
 		$root = $this->parseTree($str);
+
+		if ($initial_variables) $this->injectVariables($initial_variables);
 		$out = $this->compileBlock($root);
 		setlocale(LC_NUMERIC, $locale);
 		return $out;
