@@ -1720,7 +1720,7 @@ class lessc {
 
 	function throwParseError($msg = 'parse error') {
 		$line = $this->line + substr_count(substr($this->buffer, 0, $this->count), "\n");
-		if ($this->fileName) {
+		if (isset($this->fileName)) {
 			$loc = $this->fileName.' on line '.$line;
 		} else {
 			$loc = "line: ".$line;
