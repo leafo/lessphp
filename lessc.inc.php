@@ -1823,11 +1823,28 @@ class lessc {
 	public static function ccompile($in, $out) {
 		if (!is_file($out) || filemtime($in) > filemtime($out)) {
 			$less = new lessc($in);
+			self::createPath($out);
 			file_put_contents($out, $less->parse());
 			return true;
 		}
 
 		return false;
+	}
+
+	// ensures that a path exists (creates it if not)
+	// ignores a file at the end if there is one - only creates directories
+	private static function createPath($path) {
+		$parts = explode('/',$path);
+		$dirs = array_slice($parts, 0, count($parts)-1);
+
+		$curdir = '';
+		foreach($dirs as $dir) {
+			$curdir .= $dir.'/';
+
+			if(!file_exists($curdir)) {
+				mkdir($curdir);
+			}
+		}
 	}
 
 	/**
