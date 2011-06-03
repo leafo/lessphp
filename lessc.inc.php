@@ -1676,7 +1676,7 @@ class lessc {
 	}
 
 	protected function parseTree($str = null) {
-		$this->prepareParser($str ? $str : $this->buffer);
+		$this->prepareParser(is_null($str) ? $this->buffer : $str);
 		while (false !== $this->parseChunk());
 
 		if ($this->count != strlen($this->buffer))
