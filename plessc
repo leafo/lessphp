@@ -98,6 +98,7 @@ if (has("w")) {
 		// check if anything has changed since last fail
 		$updated = false;
 		if (is_array($cache)) {
+			clearstatcache();
 			foreach ($cache['files'] as $fname=>$_) {
 				if (filemtime($fname) > $fail_time) {
 					$updated = true;
