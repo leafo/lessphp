@@ -1658,6 +1658,17 @@ class lessc {
 
 		$this->buffer = $this->removeComments($buff);
 		$this->pushBlock(null); // set up global scope
+		
+		// prepend user defined variables at the top of the buffer
+		if(!empty($this->lessVariables)) {
+			$bufferPrepend = '';
+			
+			foreach($this->lessVariables as $key => $value) {
+				$bufferPrepend .= $this->vPrefix.$key.':'.$value.";\n";
+			}
+			
+			$this->buffer = $bufferPrepend.$this->buffer;
+		}
 
 		// trim whitespace on head
 		if (preg_match('/^\s+/', $this->buffer, $m)) {
