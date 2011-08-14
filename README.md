@@ -57,3 +57,10 @@ compile as needed to the output file
 Errors from watch mode are written to standard out.
 
 
+### A recursive command line version has been hacked. Its usage is:
+
+	~> plessc_recurse input-file-or-dir output-file-or-dir
+
+It takes only .less files and writes them into the output directory at the
+same relative path.  Use at your own risk.  Be aware that at the very least, 
+IT WILL overwrite .css files without warning.
