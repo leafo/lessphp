@@ -39,7 +39,15 @@ elseif (!is_dir($input) && !is_file($input))
    exit(4);
 }
 
-// Compile the file from $src to $dest.
+/** Compile the file from $src to $dest.
+ *  Compile the file based on its file extension:
+ *      .less  - Compile it to the dest renaming .less -> .css
+ *      .css   - Copy it where a .less file of the same name does not exist.
+ *      others - Skip the file.
+ *
+ *  \param src \string Source file.
+ *  \param dest \string Destination file (before any renaming).
+ */
 function compile($src, $dest)
 {
    try
@@ -51,6 +59,33 @@ function compile($src, $dest)
 	 echo "Compiling " . $src . " to " . $dest . "\n";
       
 	 lessc::ccompile($src, $dest);
+      }
+      else if (substr_compare($src, '.css', -4, 4, true) === 0)
+      {
+	 // Straight CSS should just be copied.
+	 if ($dest === $src)
+	 {
+	    echo 'Skipping: ' . $src . "\n";
+	 }
+	 else
+	 {
+	    // Check for a less file of the same name that we should prefer.
+	    $lessEquivalent = preg_replace("/\.css$/", ".less", $src);
+	    
+	    if (is_file($lessEquivalent))
+	    {
+	       echo 'Ignoring CSS file: ' . $src . ', LESS file: ' .
+		  $lessEquivalent . ' overrides it.' . "\n";
+	    }
+	    elseif (!copy($src, $dest))
+	    {
+	       echo 'Error copying CSS from: ' . $src . ' to: ' . $dest . "\n";
+	    }
+	    else
+	    {
+	       echo 'Copied CSS from: ' . $src . ' to: ' . $dest . "\n";
+	    }
+	 }
       }
       else
       {
@@ -69,13 +104,15 @@ function compile($src, $dest)
 // Octal numbers are preceded by 0.
 $mode = 0750;
 
+// Allow single file compilation.
 if (!is_dir($input))
 {
    compile($input, $output);
 }
 else
 {
-   // Make the directory - recursively creating the path required.
+   // Recurse through the directory and its subdirectories, copying the
+   // directory structure and compiling everything else.
    if (!is_dir($output) && !mkdir($output, $mode, true))
    {
       echo 'Unable to make destination directory: ' . var_export($output, true);
