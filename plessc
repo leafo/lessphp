@@ -47,16 +47,14 @@ foreach ($argv as $loc => $a) {
 	}
 }
 
-function has($o, &$loc = null)
-{
+function has($o, &$loc = null) {
 	global $opts;
 	if (!isset($opts[$o])) return false;
 	$loc = $opts[$o];
 	return true;
 }
 
-function hasValue($o, &$value = null)
-{
+function hasValue($o, &$value = null) {
 	global $argv;
 	if (!has($o,$loc)) return false;
 	if (!isset($argv[$loc+1])) return false;
@@ -136,9 +134,44 @@ if (!$fname = array_shift($argv)) {
 	exit(1);
 }
 
+function dumpValue($node, $depth = 0) {
+	if (is_object($node)) {
+		$indent = str_repeat("  ", $depth);
+		$out = array();
+		foreach ($node->props as $prop) {
+			$out[] = $indent . dumpValue($prop, $depth + 1);
+		}
+		$out = implode("\n", $out);
+		if (!empty($node->tags)) {
+			$out = "+ ".implode(", ", $node->tags)."\n".$out;
+		}
+		return $out;
+	} elseif (is_array($node)) {
+		$type = $node[0];
+		if ($type == "block")
+			return dumpValue($node[1], $depth);
+
+		$out = array();
+		foreach ($node as $value) {
+			$out[] = dumpValue($value, $depth);
+		}
+		return "{ ".implode(", ", $out)." }";
+	} else {
+		if (is_string($node) && preg_match("/[\s,]/", $node)) {
+			return '"'.$node.'"';
+		}
+		return $node; // normal value
+	}
+}
+
 try {
 	$l = new lessc($fname);
-	$out =  $l->parse();
+	if (has("T")) {
+		$t = $l->parseTree();
+		$out = dumpValue($t)."\n";
+	} else {
+		$out = $l->parse();
+	}
 
 	if (!$fout = array_shift($argv)) {
 		echo $out;

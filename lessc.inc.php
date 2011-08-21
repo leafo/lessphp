@@ -1675,7 +1675,8 @@ class lessc {
 		return $less;
 	}
 
-	protected function parseTree($str = null) {
+	// parse code and return intermediate tree
+	public function parseTree($str = null) {
 		$this->prepareParser(is_null($str) ? $this->buffer : $str);
 		while (false !== $this->parseChunk());
 
