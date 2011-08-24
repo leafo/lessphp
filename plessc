@@ -169,6 +169,8 @@ try {
 	if (has("T")) {
 		$t = $l->parseTree();
 		$out = dumpValue($t)."\n";
+	} elseif (has("X")) {
+		$out = print_r($l->parseTree(), true);
 	} else {
 		$out = $l->parse();
 	}

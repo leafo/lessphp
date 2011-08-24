@@ -1706,6 +1706,14 @@ class lessc {
 			$this->set($name, $value);
 		}
 	}
+
+	function compile($root) {
+		$locale = setlocale(LC_NUMERIC, 0);
+		setlocale(LC_NUMERIC, "C");
+		$out = $this->compileBlock($root);
+		setlocale(LC_NUMERIC, $locale);
+		return $out;
+	}
 	
 	// parse and compile buffer
 	function parse($str = null, $initial_variables = null) {

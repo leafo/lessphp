@@ -1,0 +1,32 @@
+#!/usr/bin/php
+<?php
+
+
+require_once "less.lex.php";
+
+array_shift($argv);
+$name = array_pop($argv);
+
+if (!$name) exit("./parse [options] file-name\n");
+
+function has($flag) {
+	global $argv;
+	foreach ($argv as $a) {
+		if ("-".$flag == $a) return true;
+	}
+	return false;
+}
+
+
+$lex = less_lex::from_file($name);
+$tokens = array();
+while (($token = $lex->next_token()) != $lex::EOF) {
+	$tokens[] = $token;
+	$lex->print_token($token);
+	echo PHP_EOL;
+}
+echo PHP_EOL;
+
+new less_parse($tokens);
+
+
