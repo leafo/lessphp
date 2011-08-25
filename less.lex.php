@@ -125,37 +125,6 @@ class parslet {
 
 	function parse($stream=null) {
 		$stream = $this->get_stream($stream);
-
-		/*
-		$accepted = array();
-		foreach ($this->pattern as $item) {
-			if ($item instanceof parslet) {
-				$result = $item->parse($stream);
-				if ($result === false) return false;
-				$accepted[] = $result;
-			} else {
-				$next = $stream->next_token();
-				$found_match = false;
-				if (is_array($item)) {
-					// todo: allow pattern here
-					foreach ($item as $tok_name) {
-						if ($tok_name == $next[0]) {
-							$accepted[] = $next;
-							$found_match = true;
-							break;
-						}
-					}
-					if (!$found_match) return false;
-				} else {
-					if ($item != $next[0]) return false;
-					$accepted[] = $next;
-				}
-			}
-		}
-
-		$stream->accept();
-		*/
-
 		$result = $this->match_every($stream, $this->pattern);
 		if ($result !== false) {
 			$stream->accept();
@@ -319,37 +288,55 @@ class less_parse {
 
 		// accept color here and convert to id
 		$tag_id = $this->p("tag_id", array("color", "id"));
-		$simple_tag = $this->p("simple_tag", array("word", $tag_id));
+		$simple_tag = $this->p("simple_tag", array("word", "class", $tag_id));
 
-		// $mixin_func = $this->p("mixin_func", )
+		$arg_def = $this->p("arg_def", "variable",
+			$this->p(2, ":", $value_list)->_optional());
 
-		$tag = $simple_tag;
+		$arg_def = $arg_def->_list(array(",", ";"))->_optional("default");
 
-		$terminator = $this->p("ignore", ";");
+		$mixin_name = "class";
+		$mixin_func = $this->p("mixin_func_decl", $mixin_name, "(", $arg_def, ")");
 
-		$line_end = $terminator->_or($this->p("ignore", "}")->_noconsume());
+		$tags = $this->p(1, array($mixin_func, $simple_tag->_list(',', 'wrap_tags')));
+
+		$terminator = $this->p(1, ";");
+		$inner_end = $this->p(1, array(
+			$terminator,
+			$this->p(1, "}")->_noconsume()
+		));
 
 		$assign = $this->p("assign", array("word", "variable"), ":", $property_value);
-		$block_assign = $this->p(1, $assign, $line_end);
+		$block_assign = $this->p(1, $assign, $inner_end);
+
+		$arg_values = $value_list->_list(array(',', ';'))->_optional("default");
+		$mixin_invoke_args = $this->p(2, "(", $arg_values, ")")->_optional("default");
+
+		$mixin_invoke = $this->p("mixin_invoke", $mixin_name, $mixin_invoke_args, $inner_end);
 
 		$outer_end = $terminator->_or(new parslet_end($this));
 		$root_assign = $this->p(1, $assign, $outer_end);
 
 		$block = $this->p("block");
-		$block_inner = $block_assign->_or($block)->_list()->_optional("default_block");
+
+		$block_entry = $this->p(1, array(
+			$block_assign,
+			$mixin_invoke,
+			$block,
+		));
+
+		$block_inner = $block_entry->_list()->_optional("default");
 
 		$block = $this->p($block,
-			$tag->_list(","), "{", $block_inner, "}");
+			$tags, "{", $block_inner, "}");
 
 		$root = $this->p("root", $root_assign->_or($block)->_list());
 
-		// print_r($block->parse());
-		// print_r($simple_tag->parse());
 		// print_r($root->parse());
 
-		$root = $this->link_block($root->parse());
+		$root_node = $this->link_block($root->parse());
 		$less = new lessc();
-		echo $less->compile($root);
+		echo $less->compile($root_node);
 
 		// print_r($assign->parse());
 		// print_r($block->parse());
@@ -360,15 +347,20 @@ class less_parse {
 
 	function link_block($block, $parent=null) {
 		$block->parent = $parent;
+		$filtered_props = array();
 		$block->children = array();
 		foreach ($block->props as $prop) {
 			if ($prop[0] == "block") {
 				$child = $prop[1];
-				// foreach tag...
-				// $block->children[$tag_name] = $child;
+				foreach ($child->tags as $tag) {
+					$block->children[$tag] = $child;
+				}
 				$this->link_block($child, $block);
+				if (isset($child->args)) continue;
 			}
+			$filtered_props[] = $prop;
 		}
+		$block->props = $filtered_props;
 		return $block;
 	}
 
@@ -435,10 +427,36 @@ class less_parse {
 		return array("list", ",", $values);
 	}
 
+	function node_mixin_func_decl($toks) {
+		return array("mixin_func", $toks[0][1], $toks[2]);
+	}
+
+	function node_wrap_tags($tags) {
+		return array("tags", $tags);
+	}
+
+	function node_arg_def($tok) {
+		$out = array(substr($tok[0][1], 1)); // strip @
+		if ($tok[1] !== true) { // this is how we handle optional
+			$out[] = $tok[1];
+		}
+		return $out;
+	}
+
+	function node_mixin_invoke($toks) {
+		return array("mixin", array($toks[0][1]), $toks[1]);
+	}
+
 	function node_block($toks) {
 		list($tags, $_, $body, $_) = $toks;
 		$block = new stdclass;
-		$block->tags = $tags;
+		if ($tags[0] == "mixin_func") {
+			$block->tags = array($tags[1]);
+			$block->args = $tags[2];
+		} else {
+			$block->tags = $tags[1];
+		}
+
 		$block->props = $body;
 		return array("block", $block);
 	}
@@ -450,7 +468,7 @@ class less_parse {
 		return $root;
 	}
 
-	function node_default_block() {
+	function node_default() {
 		return array();
 	}
 
