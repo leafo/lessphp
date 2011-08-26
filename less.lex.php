@@ -8,7 +8,7 @@ require_once "lessc.inc.php";
 class less_lex extends parallel_lex {
 	var $opts = 'is';
 
-	var $skip = '(?:[ \r\n\t]+|\/\/[^\n]*|\/\*.*?\*\/)';
+	var $skip = '(?:\/\/[^\n]*|\/\*.*?\*\/)';
 
 	var $lit = array(
 		'@charset',
@@ -23,6 +23,7 @@ class less_lex extends parallel_lex {
 		'>', '&', ','
 	);
 	var $exp = array(
+		'white' => '\s+',
 		'word' => '[_a-z-][_a-z0-9-]+|[_a-z]',
 		'unit' => '(?:[0-9]*\.)?[0-9]+[a-z%]+',
 		'num' => '(?:[0-9]*\.)?[0-9]+',
@@ -48,11 +49,18 @@ class snapshot {
 		$this->tokens = $parent->tokens;
 	}
 
-	function next_token() {
+	function _next_token() {
 		if ($this->pos >= count($this->tokens))
 			return less_lex::EOF;
 
 		return $this->tokens[$this->pos++];
+	}
+
+	function next_token() {
+		while (true) {
+			$token = $this->_next_token();
+			if ($token[0] != "white") return $token;
+		}
 	}
 
 	// advance the parent's position
@@ -151,6 +159,19 @@ class parslet {
 		// return new parslet($this->parser, "ignore", array($items));
 	}
 
+	function _dispatch($name) {
+		return $this->parser->p($name, $this);
+	}
+
+	// consome up to and including the ned
+	function _until($end_token, $consume_end=false, $include_white=false) {
+		$until = new parslet_until($this->parser, $end_token);
+		$until->consume_end = $consume_end;
+		$until->include_white = $include_white;
+
+		return $this->parser->p(2, $this, $until);
+	}
+
 	function _optional($missing_dispatch=null) {
 		return new parslet_optional($this, $missing_dispatch);
 	}
@@ -190,7 +211,9 @@ class parslet_rep extends parslet {
 
 		// we always eat extra delim right now, might not be good
 		$results = array();
-		while ($value = $this->plet->parse($stream)) {
+		while (true) {
+			$value = $this->plet->parse($stream);
+			if ($value === false) break;
 			$results[] = $value;
 			if (!is_null($this->delim)) {
 				if (!$this->delim->parse($stream)) break;
@@ -260,7 +283,6 @@ class parslet_optional extends parslet {
 	}
 
 	function parse($stream=null) {
-		// $stream = $this->get_stream($stream);
 		$result = $this->plet->parse($stream);
 		if ($result === false) {
 			$result = is_null($this->missing_dispatch) ? true :
@@ -268,6 +290,84 @@ class parslet_optional extends parslet {
 		}
 
 		return $result;
+	}
+}
+
+// match everything until end (pattern or token)
+class parslet_until extends parslet {
+	function __construct($parser, $end) {
+		parent::__construct($parser, "until");
+		$this->end = $end;
+		$this->consume_end = false;
+		$this->include_white = false;
+	}
+
+	function parse($stream=null) {
+		$stream = $this->get_stream($stream);
+
+		$results = array();
+		$is_parslet = $this->end instanceof parslet;
+		if ($is_parslet) throw new exception("add parslet support here");
+
+		while (true) {
+			$tmp = $stream->snap(); // lookahead
+			$next = $tmp->next_token();
+			if ($next == less_lex::EOF) return false;
+
+			if ($next[0] == $this->end) {
+				if ($this->consume_end) $tmp->accept();
+				break;
+			}
+
+			if ($this->include_white) {
+				$put_white = false;
+				while (true) {
+					$tok = $stream->_next_token();
+					if ($tok[0] != 'white') break;
+					if ($put_white) continue;
+					$put_white = true;
+					$results[] = $tok;
+				}
+				$results[] = $tok;
+			} else {
+				$results[] = $stream->next_token();
+			}
+		}
+
+		$stream->accept();
+		return $results;
+	}
+}
+
+// used for tags
+class parslet_whitespace_list extends parslet {
+	function __construct($plet) {
+		parent::__construct($plet->parser, "ignore");
+		$this->plet = $plet;
+	}
+
+	function parse($stream=null) {
+		$stream = $this->get_stream($stream);
+		$results = array();
+
+		while (true) {
+			$value = $this->plet->parse($stream);
+			if ($value === false) break;
+			$results[] = $value;
+			$white = $stream->snap()->_next_token();
+			if ($white[0] == "white") {
+				$results[] = $white;
+			}
+		}
+
+		$end = end($results);
+		if (is_array($end) && $end[0] == "white") {
+			array_pop($results);
+		}
+
+		if (count($results) == 0) return false;
+		$stream->accept();
+		return $results;
 	}
 }
 
@@ -288,17 +388,22 @@ class less_parse {
 
 		// accept color here and convert to id
 		$tag_id = $this->p("tag_id", array("color", "id"));
-		$simple_tag = $this->p("simple_tag", array("word", "class", $tag_id));
+		$tag_item = new parslet_whitespace_list($this->p(1, array(
+			"word", "class", $tag_id,
+			$this->p(1, "[")->_until("]", true, true)->_dispatch("boxed_selector")
+		)));
 
 		$arg_def = $this->p("arg_def", "variable",
 			$this->p(2, ":", $value_list)->_optional());
 
 		$arg_def = $arg_def->_list(array(",", ";"))->_optional("default");
 
-		$mixin_name = "class";
-		$mixin_func = $this->p("mixin_func_decl", $mixin_name, "(", $arg_def, ")");
+		$pre_block = $this->p(1, "{")->_noconsume();
+		$mixin_name = "class"; // things that can be used as name of mixin
+		$mixin_func = $this->p("mixin_func_decl", $mixin_name, "(", $arg_def, ")", $pre_block);
 
-		$tags = $this->p(1, array($mixin_func, $simple_tag->_list(',', 'wrap_tags')));
+
+		$tags = $this->p(1, array($mixin_func, $tag_item->_list(',', 'wrap_tags')));
 
 		$terminator = $this->p(1, ";");
 		$inner_end = $this->p(1, array(
@@ -332,14 +437,15 @@ class less_parse {
 
 		$root = $this->p("root", $root_assign->_or($block)->_list());
 
-		// print_r($root->parse());
+		print_r($root->parse());
+		// print_r($boxed->parse());
 
-		$root_node = $this->link_block($root->parse());
-		$less = new lessc();
-		echo $less->compile($root_node);
+		// $p = new parslet_whitespace_list($this->p(1, 'class'));
+		// print_r($p->parse());
 
-		// print_r($assign->parse());
-		// print_r($block->parse());
+		// $root_node = $this->link_block($root->parse());
+		// $less = new lessc();
+		// echo $less->compile($root_node);
 
 		// $s = new snapshot($this);
 		// $s->show();
@@ -363,6 +469,22 @@ class less_parse {
 		$block->props = $filtered_props;
 		return $block;
 	}
+
+	function flatten_tokens($toks) {
+		$out = array();
+		foreach ($toks as $piece) {
+			if (is_string($piece)) {
+				$out[] = $piece;
+			} elseif (count($piece) > 1) {
+				if ($piece[0] == "white") $out[] = " ";
+				else $out[] = $piece[1];
+			} else {
+				$out[] = $piece[0];
+			}
+		}
+		return implode($out);
+	}
+
 
 	function node_value($toks) {
 		$value = $toks[0];
@@ -413,10 +535,6 @@ class less_parse {
 		return $id;
 	}
 
-	function node_simple_tag($tok) {
-		return $tok[0][1];
-	}
-
 	function node_value_list($values) {
 		if (count($values) == 1) return $values[0];
 		return array("list", " ", $values);
@@ -432,7 +550,12 @@ class less_parse {
 	}
 
 	function node_wrap_tags($tags) {
+		$tags = array_map(array($this, 'flatten_tokens'), $tags);
 		return array("tags", $tags);
+	}
+
+	function node_boxed_selector($toks) {
+		return "[".$this->flatten_tokens($toks[0])."]";
 	}
 
 	function node_arg_def($tok) {
