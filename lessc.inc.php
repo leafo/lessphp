@@ -631,13 +631,13 @@ class lessc {
 	}
 
 	// consume a list of property values delimited by ; and wrapped in ()
-	function argumentValues(&$args, $delim = ';') {
+	function argumentValues(&$args, $delim = ',') {
 		$s = $this->seek();
 		if (!$this->literal('(')) return false;
 
 		$values = array();
 		while (true) {
-			if ($this->propertyValue($value)) $values[] = $value;
+			if ($this->expressionList($value)) $values[] = $value;
 			if (!$this->literal($delim)) break;
 			else {
 				if ($value == null) $values[] = null;
@@ -656,14 +656,14 @@ class lessc {
 
 	// consume an argument definition list surrounded by ()
 	// each argument is a variable name with optional value
-	function argumentDef(&$args, $delim = ';') {
+	function argumentDef(&$args, $delim = ',') {
 		$s = $this->seek();
 		if (!$this->literal('(')) return false;
 
 		$values = array();
 		while ($this->variable($vname)) {
 			$arg = array($vname);
-			if ($this->assign() && $this->propertyValue($value)) {
+			if ($this->assign() && $this->expressionList($value)) {
 				$arg[] = $value;
 				// let the : slide if there is no value
 			}
