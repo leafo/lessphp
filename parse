@@ -23,12 +23,10 @@ $tokens = array();
 while (($token = $lex->next_token()) != $lex::EOF) {
 	$tokens[] = $token;
 	if ($token[0] != "white") {
-		$lex->print_token($token);
-		echo PHP_EOL;
+		// echo $lex->format_token($token)."\n";
 	}
 }
-echo PHP_EOL;
-exit();
+// echo PHP_EOL;
 
 $p = new less_parse();
 $tree = $p->parse($tokens);
@@ -37,8 +35,6 @@ if (has("X")) {
 	print_r($tree);
 } else {
 	$less = new lessc();
-	echo $less->compile($tree);
+	echo $less->compile($p->link_block($tree));
 }
-
-
 

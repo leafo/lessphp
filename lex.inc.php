@@ -71,10 +71,11 @@ class parallel_lex {
 		$this->error();
 	}
 
-	function print_token($t) {
-		if ($t == self::EOF) print '$EOF';
+	static function format_token($t) {
+		if ($t == self::EOF) return '$EOF';
 		else {
-			echo "{".$t[0].(isset($t[1]) ? ', '.$t[1] : '')."}";
+			if ($t[0] == "white") unset($t[1]);
+			return '{'.$t[0].(isset($t[1]) ? ', '.$t[1] : '').'}';
 		}
 	}
 

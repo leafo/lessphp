@@ -36,6 +36,8 @@ class less_lex extends parallel_lex {
 }
 
 class snapshot {
+	static $max = 0;
+
 	function __construct($parent) {
 		$this->parent = $parent;
 		$this->pos = $parent->pos;
@@ -45,6 +47,10 @@ class snapshot {
 	function _next_token() {
 		if ($this->pos >= count($this->tokens))
 			return less_lex::EOF;
+
+		if ($this->pos > self::$max) {
+			self::$max = $this->pos;
+		}
 
 		return $this->tokens[$this->pos++];
 	}
@@ -65,8 +71,12 @@ class snapshot {
 		return new snapshot($this);
 	}
 
-	function show() {
-		print_r(array_slice($this->tokens, $this->pos, 5));
+	function show($pos=null) {
+		$pos = is_null($pos) ? $this->pos : $pos;
+
+		$toks = array_slice($this->tokens, $pos, 10);
+		echo " -> ";
+		echo implode(" ", array_map(array('parallel_lex', 'format_token'), $toks))."\n";
 	}
 }
 
@@ -369,18 +379,26 @@ class less_parse {
 		$exp = $this->p("exp");
 		$parens	= $this->p("parens", "(", $exp, ")");
 
-		// need accessor, function, and negation
-		$value = $this->p("value", array("string", "num",
-			"unit", "word", "variable", "color", "url"));
-
+		$value = $this->p("value");
 		$value_list = $value->_list(null, "value_list");
 		$property_value = $value_list->_list(",", "property_value");
+
+		$func_arg = $value_list->_list("=", "flatten_func_args")->_list(",", "property_value");
+
+		$func_value = $this->p("func", "word", "(",
+			$func_arg->_optional("default"), ")");
+		
+		$important = $this->p("flatten", "!", "word");
+
+		// need accessor, function, and negation
+		$this->p($value, array($func_value, $important, "string", "num",
+			"unit", "word", "variable", "color", "url", "percent"));
 
 		// accept color here and convert to id
 		$tag_id = $this->p("tag_id", array("color", "id"));
 		$tag_item = new parslet_whitespace_list($this->p(1, array(
 			"word", "class", $tag_id,
-			":", "*",
+			":", "*", ">", "+",  "~",
 			$this->p(1, "[")->_until("]", true, true)->_dispatch("boxed_selector"),
 			$this->p(1, "(")->_until(")", true, true)->_dispatch("parens_selector")
 		)));
@@ -393,7 +411,6 @@ class less_parse {
 		$pre_block = $this->p(1, "{")->_noconsume();
 		$mixin_name = "class"; // things that can be used as name of mixin
 		$mixin_func = $this->p("mixin_func_decl", $mixin_name, "(", $arg_def, ")", $pre_block);
-
 
 		$tags = $this->p(1, array($mixin_func, $tag_item->_list(',', 'wrap_tags')));
 
@@ -446,11 +463,17 @@ class less_parse {
 		$this->tokens = $tokens;
 		$tree = $this->root->parse();
 
+		$end = new snapshot($this);
+		if ($end->next_token() != less_lex::EOF) {
+			$s = new snapshot($this);
+			$s->show(snapshot::$max);
+			throw new exception("failed to parse entire document");
+		}
+
 		// $s = new snapshot($this);
 		// $s->show();
 
 		return $tree;
-		return $this->link_block($tree);
 	}
 
 	function link_block($block, $parent=null) {
@@ -498,11 +521,12 @@ class less_parse {
 		case "word":
 			$value[0] = "keyword";
 			break;
-
+		case "percent":
+			$value = array("%", substr($value[1], 0, -1));
+			break;
 		case "url":
 			$value[0] = "keyword";
 			break;
-
 		case "unit":
 			if (preg_match('/^([0-9]+)(.+)$/', $value[1], $m)) {
 				$value = array($m[2], $m[1]);
@@ -530,6 +554,10 @@ class less_parse {
 		return $value;
 	}
 
+	function node_func($toks) {
+		return array("function", $toks[0][1], $toks[2]);
+	}
+
 	function node_assign($toks) {
 		list($name, $_, $value) = $toks;
 		return array("assign", $name[1], $value);
@@ -549,6 +577,11 @@ class less_parse {
 	function node_property_value($values) {
 		if (count($values) == 1) return $values[0];
 		return array("list", ",", $values);
+	}
+
+	function node_flatten_func_args($values) {
+		if (count($values) == 1) return $values[0];
+		return array("list", "=", $values);
 	}
 
 	function node_mixin_func_decl($toks) {
@@ -603,6 +636,10 @@ class less_parse {
 
 	function node_default() {
 		return array();
+	}
+
+	function node_flatten($toks) {
+		return array("keyword", $this->flatten_tokens($toks));
 	}
 
 	function p($name) {
