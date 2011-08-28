@@ -1,7 +1,5 @@
 <?php
 
-// well this is complicated
-
 require_once "lex.inc.php";
 require_once "lessc.inc.php";
 
@@ -10,36 +8,31 @@ class less_lex extends parallel_lex {
 
 	var $skip = '(?:\/\/[^\n]*|\/\*.*?\*\/)';
 
-	var $lit = array(
+	var $grammar = array(
 		'@charset',
 		'@import',
 		'@page',
 		'@media',
+
+		'white' => '\s+',
+		'url' => 'url\([^)]*?\)',
+		'word' => '[-_a-z][-\w]*',
+		'unit' => '(?:[0-9]*\.)?[0-9]+[a-z]+',
+		'percent' => '(?:[0-9]*\.)?[0-9]+%',
+		'num' => '(?:[0-9]*\.)?[0-9]+',
+		'string' => '"(?:\\\\"|[^"])*?"|\'[^\']*?\'',
+		'class' => '\.[_a-z][a-z0-9-]*',
+		'variable' => '@[_a-z0-9-]+',
+		'color' => '#(?:[0-9a-f]{3}|[0-9a-f]{6})',
+		'id' => '#[_a-z][_a-z0-9-]*',
+
 		'{', '}',
 		':', ';', '[', ']',
 		'+', '-', '*', '%', '/',
 		'(', ')', '!',
 		'=', '~', '^', '$', '|',
-		'>', '&', ','
+		'>', '&', ',', '?'
 	);
-	var $exp = array(
-		'white' => '\s+',
-		'word' => '[_a-z-][_a-z0-9-]+|[_a-z]',
-		'unit' => '(?:[0-9]*\.)?[0-9]+[a-z%]+',
-		'num' => '(?:[0-9]*\.)?[0-9]+',
-		'string' => '"(?:\\\\"|[^"])*?"|\'[^\']*?\'',
-		// 'string2' => '\'[^\']*?\'',
-		'class' => '\.[_a-z][a-z0-9-]*',
-		'variable' => '@[_a-z0-9-]+',
-		'color' => '#(?:[0-9a-f]{3}|[0-9a-f]{6})',
-		'id' => '#[_a-z][_a-z0-9-]*',
-	);
-
-	function __construct($input) {
-		$this->exp['percent'] = $this->exp['num'].'%';
-		parent::__construct($input);
-		// echo $this->regex.PHP_EOL;
-	}
 }
 
 class snapshot {
@@ -372,16 +365,13 @@ class parslet_whitespace_list extends parslet {
 }
 
 class less_parse {
-	function __construct($tokens) {
-		$this->pos = 0;
-		$this->tokens = $tokens;
-
+	function __construct() {
 		$exp = $this->p("exp");
 		$parens	= $this->p("parens", "(", $exp, ")");
 
 		// need accessor, function, and negation
 		$value = $this->p("value", array("string", "num",
-			"unit", "word", "variable", "color"));
+			"unit", "word", "variable", "color", "url"));
 
 		$value_list = $value->_list(null, "value_list");
 		$property_value = $value_list->_list(",", "property_value");
@@ -390,7 +380,9 @@ class less_parse {
 		$tag_id = $this->p("tag_id", array("color", "id"));
 		$tag_item = new parslet_whitespace_list($this->p(1, array(
 			"word", "class", $tag_id,
-			$this->p(1, "[")->_until("]", true, true)->_dispatch("boxed_selector")
+			":", "*",
+			$this->p(1, "[")->_until("]", true, true)->_dispatch("boxed_selector"),
+			$this->p(1, "(")->_until(")", true, true)->_dispatch("parens_selector")
 		)));
 
 		$arg_def = $this->p("arg_def", "variable",
@@ -437,8 +429,9 @@ class less_parse {
 
 		$root = $this->p("root", $root_assign->_or($block)->_list());
 
-		print_r($root->parse());
-		// print_r($boxed->parse());
+		$this->root = $root;
+
+		// print_r($root->parse());
 
 		// $p = new parslet_whitespace_list($this->p(1, 'class'));
 		// print_r($p->parse());
@@ -446,9 +439,18 @@ class less_parse {
 		// $root_node = $this->link_block($root->parse());
 		// $less = new lessc();
 		// echo $less->compile($root_node);
+	}
+
+	function parse($tokens) {
+		$this->pos = 0;
+		$this->tokens = $tokens;
+		$tree = $this->root->parse();
 
 		// $s = new snapshot($this);
 		// $s->show();
+
+		return $tree;
+		return $this->link_block($tree);
 	}
 
 	function link_block($block, $parent=null) {
@@ -494,6 +496,10 @@ class less_parse {
 			$value[0] = "number";
 			break;
 		case "word":
+			$value[0] = "keyword";
+			break;
+
+		case "url":
 			$value[0] = "keyword";
 			break;
 
@@ -556,6 +562,10 @@ class less_parse {
 
 	function node_boxed_selector($toks) {
 		return "[".$this->flatten_tokens($toks[0])."]";
+	}
+
+	function node_parens_selector($toks) {
+		return "(".$this->flatten_tokens($toks[0]).")";
 	}
 
 	function node_arg_def($tok) {

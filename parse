@@ -22,11 +22,23 @@ $lex = less_lex::from_file($name);
 $tokens = array();
 while (($token = $lex->next_token()) != $lex::EOF) {
 	$tokens[] = $token;
-	$lex->print_token($token);
-	echo PHP_EOL;
+	if ($token[0] != "white") {
+		$lex->print_token($token);
+		echo PHP_EOL;
+	}
 }
 echo PHP_EOL;
+exit();
 
-new less_parse($tokens);
+$p = new less_parse();
+$tree = $p->parse($tokens);
+
+if (has("X")) {
+	print_r($tree);
+} else {
+	$less = new lessc();
+	echo $less->compile($tree);
+}
+
 
 
