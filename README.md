@@ -6,11 +6,11 @@ For a complete description of the language see <http://leafo.net/lessphp/docs/>
 
 ### How to use in your php project
 
-Copy less.inc.php to your include directory and include it into your project.
+Copy lessc.inc.php to your include directory and include it into your project.
 
 There are a few ways to interface with the compiler. The easiest is to have it
 compile a LESS file when the page is requested. The static function 
-`less::ccompile`, checked compile, will compile the input LESS file only when it
+`lessc::ccompile`, checked compile, will compile the input LESS file only when it
 is newer than the output file.
 
 	try {
