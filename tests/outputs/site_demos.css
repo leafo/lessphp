@@ -32,6 +32,11 @@ nested-rules #header { color:black; }
 nested-rules #header .navigation { font-size:12px; }
 nested-rules #header .logo { width:300px; }
 nested-rules #header .logo:hover { text-decoration:none; }
+accessors .article { color:#294366; }
+accessors .comment {
+  width:960px;
+  color:#294366;
+}
 namespaces #bundle .button {
   display:block;
   border:1px solid black;
