@@ -265,28 +265,6 @@ browsers:
         .rounded-corners(14px);
     }
 
-Take note of the default argument, which makes specifying that argument optional.
-
-Because CSS values can contain `,`, the argument delimiter is a `;`.
-
-    .box-shadow(@props) {
-        box-shadow: @props;
-        -webkit-box-shadow: @props;
-        -moz-box-shadow: @props;
-    }
-
-    .size(@width; @height; @padding: 8px) {
-        width: @width - 2 * @padding;
-        height: @height - 2 * @padding;
-        padding: @padding;
-    }
-
-    .box {
-        .box-shadow(5px 5px 8px red, -4px -4px 8px blue); // all one argument
-        .size(400px;200px) // multiple argument:
-    }
-
-
 If you have a mixin that doesn't have any arguments, but you don't want it to
 show up in the output, give it a blank argument list:
 
