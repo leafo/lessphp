@@ -182,18 +182,14 @@ This will produce two blocks, a `ol.list li.special` and `ol.list li.plain`.
 Blocks can be nested as deep as required in order to build a hierarchy of
 relationships.
 
-Pseudo classes are automatically joined without spaces:
+The `&` prefix operator can be used in front of an inner block to join the two
+selectors together without a space. This snippet would create blocks `div
+.child-class` and `div.isa-class` in addition to `div #child-id` and
+`div#div-id`.
 
-    .navigation a {
-        :link { color: green; }
-        :visited { color: red; }
-        :hover { text-decoration: none; }
-    }
 
-This creates blocks `.navigation a:link`, `.navigation a:visited`, `.navigation
-a:hover`.
-
-We can control how the child blocks are joined:
+We can control how the child blocks are joined. Consider the differences
+between the following:
 
     div {
         .child-class {
@@ -204,7 +200,6 @@ We can control how the child blocks are joined:
             color: green;
         }
 
-        // it also works with id identifiers
         #child-id {
             height: 200px;
         }
@@ -212,11 +207,15 @@ We can control how the child blocks are joined:
         &#div-id {
             height: 400px;
         }
-    }
 
-The `&` prefix operator can be used to join the two selectors together without
-a space. This snippet would create blocks `div .child-class` and
-`div.isa-class` in addition to `div #child-id` and `div#div-id`.
+		&:hover {
+			color: red;
+		}
+
+		:link {
+			color: blue;
+		}
+    }
 
 
 <a name="mixins"></a>

@@ -911,7 +911,7 @@ class lessc {
 		foreach ($parents as $ptag) {
 			foreach ($current as $tag) {
 				$tags[] = trim($ptag.
-					($tag{0} == $this->selfSelector || $tag{0} == ':'
+					($tag{0} == $this->selfSelector
 						? ltrim($tag, $this->selfSelector) : ' '.$tag));
 			}
 		}
