@@ -709,6 +709,9 @@ class lessc {
 			$value = '['.$c.']';
 			// whitespace?
 			if ($this->match('', $_)) $value .= $_[0];
+
+			// escape parent selector
+			$value = str_replace($this->parentSelector, "&&", $value);
 			return true;
 		}
 
@@ -918,10 +921,19 @@ class lessc {
 		$tags = array();
 		foreach ($parents as $ptag) {
 			foreach ($current as $tag) {
-				// inject parent in place of parent selector
-				$injected = str_replace($this->parentSelector, $ptag, $tag, $count);
+				// inject parent in place of parent selector, ignoring escaped valuews
+				$count = 0;
+				$parts = explode("&&", $tag);
+
+				foreach ($parts as $i => $chunk) {
+					$parts[$i] = str_replace($this->parentSelector, $ptag, $chunk, $c);
+					$count += $c;
+				}
+				
+				$tag = implode("&", $parts);
+
 				if ($count > 0) {
-					$tags[] = trim($injected);
+					$tags[] = trim($tag);
 				} else {
 					$tags[] = trim($ptag . ' ' . $tag);
 				}

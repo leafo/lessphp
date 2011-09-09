@@ -13,3 +13,4 @@ b.something { color:blue; }
 .foo .bar .qux, .foo .baz .qux { display:block; }
 .qux .foo .bar, .qux .foo .baz { display:inline; }
 .qux .foo .bar .biz, .qux .foo .baz .biz { display:none; }
+b hello [x="&yeah"] { color:red; }
