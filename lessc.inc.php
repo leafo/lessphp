@@ -1062,18 +1062,18 @@ class lessc {
 			
 			// search for inline variables to replace
 			$replace = array();
-			if (preg_match_all('/{('.$this->preg_quote($this->vPrefix).'[\w-_][0-9\w-_]*?)}/', $value[1], $m)) {
+			if (preg_match_all('/'.$this->preg_quote($this->vPrefix).'\{([\w-_][0-9\w-_]*)\}/', $value[1], $m)) {
 				foreach ($m[1] as $name) {
 					if (!isset($replace[$name]))
-						$replace[$name] = $this->compileValue($this->reduce(array('variable', $name)));
+						$replace[$name] = $this->compileValue($this->reduce(array('variable', $this->vPrefix . $name)));
 				}
 			}
+
 			foreach ($replace as $var=>$val) {
-				// strip quotes
-				if (preg_match('/^(["\']).*?(\1)$/', $val)) {
+				if ($this->quoted($val)) {
 					$val = substr($val, 1, -1);
 				}
-				$value[1] = str_replace('{'.$var.'}', $val, $value[1]);
+				$value[1] = str_replace($this->vPrefix. '{'.$var.'}', $val, $value[1]);
 			}
 
 			return $value[1];

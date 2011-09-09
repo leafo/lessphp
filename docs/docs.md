@@ -137,7 +137,20 @@ the expression in parentheses:
 <a name="strings"></a>
 ### String Interpolation
 
-String interpolation lets us insert variables into strings using `{` and `}`.
+String interpolation is a convenient way to insert the value of a variable
+right into a string literal. Given some variable named `@var_name`, you just
+need to write it as `@{var_name}` from within the string to have its value
+inserted:
+
+    @symbol: ">";
+    h1:before {
+        content: "@{symbol}: ";
+    }
+
+    h2:before {
+        content: "@{symbol}@{symbol}: ";
+    }
+
 There are two kinds of strings, implicit and explicit strings. Explicit strings
 are wrapped by double quotes, `"hello I am a string"`, or single quotes `'I am
 another string'`. Implicit strings only appear when using `url()`. The text
@@ -146,16 +159,7 @@ possible:
 
     @path: "files/";
     body {
-        background: url({@path}my_background.png);
-    }
-
-    @symbol: ">";
-    h1:before {
-        content: "{@symbol}: ";
-    }
-
-    h2:before {
-        content: "{@symbol}{@symbol}: ";
+        background: url(@{path}my_background.png);
     }
 
 
@@ -267,7 +271,7 @@ All properties and child blocks are mixed in.
 
 Mixins can be made parametric, meaning they can take arguments, in order to
 enhance their utility. A parametric mixin all by itself is not outputted when
-compiled. It's properties will only appear when mixed into another block.
+compiled. Its properties will only appear when mixed into another block.
 
 The canonical example is to create a rounded corners mixin that works across
 browsers:
@@ -430,7 +434,7 @@ functions that will be exposed in LESS code during the compile. They can be a
 little tricky though because you need to work with the  **lessphp** type system.
 
 By sub-classing `lessc`, and creating specially named methods we can extend
-**lessphp**. In order for a function to be visible in LESS, it's name must
+**lessphp**. In order for a function to be visible in LESS, its name must
 start with `lib_`.
 
 Let's make a function that doubles any numeric argument.
