@@ -209,14 +209,31 @@ This will produce two blocks, a `ol.list li.special` and `ol.list li.plain`.
 Blocks can be nested as deep as required in order to build a hierarchy of
 relationships.
 
-The `&` prefix operator can be used in front of an inner block to join the two
-selectors together without a space. This snippet would create blocks `div
-.child-class` and `div.isa-class` in addition to `div #child-id` and
-`div#div-id`.
+The `&` operator can be used in a selector to represent its parent's selector.
+If the `&` operator is used, then the default action of appending the parent to
+the front of the child selector separated by space is not performed.
+
+    b {
+        // produces a b
+        a & {
+            color: red;
+        }
+
+        // the following produce the same result
+
+        & i {
+            color: blue;
+        }
+
+        i {
+            color: blue;
+        }
+    }
 
 
-We can control how the child blocks are joined. Consider the differences
-between the following:
+Because the `&` operator respects the whitespace around it, we can use it to
+control how the child blocks are joined. Consider the differences between the
+following:
 
     div {
         .child-class {
@@ -244,6 +261,17 @@ between the following:
 		}
     }
 
+The `&` operator also works with [mixins](#mixins), which produces interesting results:
+
+    .within_box_style() {
+        .box & {
+            color: blue;
+        }
+    }
+
+    #menu {
+        .within_box_style;
+    }
 
 <a name="mixins"></a>
 <a name="args"></a>

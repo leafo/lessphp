@@ -47,7 +47,7 @@ class lessc {
 	public $vPrefix = '@'; // prefix of abstract properties
 	public $mPrefix = '$'; // prefix of abstract blocks
 	public $imPrefix = '!'; // special character to add !important
-	public $selfSelector = '&';
+	public $parentSelector = '&';
 
 	static protected $precedence = array(
 		'+' => 0,
@@ -918,9 +918,13 @@ class lessc {
 		$tags = array();
 		foreach ($parents as $ptag) {
 			foreach ($current as $tag) {
-				$tags[] = trim($ptag.
-					($tag{0} == $this->selfSelector
-						? ltrim($tag, $this->selfSelector) : ' '.$tag));
+				// inject parent in place of parent selector
+				$injected = str_replace($this->parentSelector, $ptag, $tag, $count);
+				if ($count > 0) {
+					$tags[] = trim($injected);
+				} else {
+					$tags[] = trim($ptag . ' ' . $tag);
+				}
 			}
 		}
 
