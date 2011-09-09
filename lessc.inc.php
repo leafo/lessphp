@@ -472,6 +472,14 @@ class lessc {
 			return true;
 		}
 
+		// unquote string
+		if ($this->literal("~") && $this->string($value, $d)) {
+			$value = array("keyword", $value);
+			return true;
+		} else {
+			$this->seek($s);
+		}
+
 		return false;
 	}
 
@@ -1102,19 +1110,20 @@ class lessc {
 			$color[1],$color[2], $color[3]);
 	}
 
-	function lib_quote($arg) {
-		return '"'.$this->compileValue($arg).'"';
-	}
-
-	function lib_unquote($arg) {
-		$out = $this->compileValue($arg);
-		if ($this->quoted($out)) $out = substr($out, 1, -1);
-		return $out;
-	}
-
-	// alias for unquote
+	// utility func to unquote a string
 	function lib_e($arg) {
-		return $this->lib_unquote($arg);
+		switch ($arg[0]) {
+			case "list":
+				$items = $arg[2];
+				if (isset($items[0])) {
+					return $this->lib_e($items[0]);
+				}
+				return "";
+			case "string":
+				return substr($arg[1], 1, -1);
+			default:
+				return $this->compileValue($arg);
+		}
 	}
 
 	function lib_floor($arg) {

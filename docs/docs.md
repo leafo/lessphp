@@ -6,6 +6,7 @@
   * Variables
   * Expressions
   * String Interpolation
+  * String Unquoting
   * Nested Blocks
   * Mixins
   * Import
@@ -157,6 +158,28 @@ possible:
         content: "{@symbol}{@symbol}: ";
     }
 
+
+<a name="string-unquote"></a>
+### String Unquoting
+
+Sometimes you will need to write proprietary CSS syntax that is unable to be
+parsed. As a workaround you can place the code into a string and unquote it.
+Unquoting is the process of outputting a string without its surrounding quotes.
+There are two ways to unquote a string.
+
+The `~` operator in front of a string will unquote that string:
+
+    .class {
+         filter: ~"progid:DXImageTransform.Microsoft.AlphaImageLoader(src='image.png')";
+    }
+
+If you are working with other types, such as variables, there is a built in
+function that let's you unquote any value. It is called `e`.
+
+    @color: "red";
+    .class {
+        color: e(@color);
+    }
 
 <a name="nested"></a>
 <a name="ablocks"></a>
@@ -317,16 +340,8 @@ see [PHP Interface](#php-interface).
 
 **lessphp** has a collection of built in functions:
 
-* `e(str)` -- an alias for unquote
-* `unquote(str)` -- returns a string without the surrounding quotes.
-  
-  This is useful for outputting something that wouldn't normally be able to be
-  parsed. Some IE specific filters are notorious for causing trouble.
-
-      .something {
-          @size: 10px;
-          border: unquote("{@size} solid red");
-      }
+* `e(str)` -- returns a string without the surrounding quotes.
+  See [String Unquoting](#string-unquote)
 
 * `floor(number)` -- returns the floor of a numerical input
 * `round(number)` -- returns the rounded value of numerical input
@@ -350,12 +365,8 @@ see [PHP Interface](#php-interface).
        .class {
           @start: rgbahex(rgba(25, 34, 23, .5));
           @end: rgbahex(rgba(85, 74, 103, .6));
-          -ms-filter: unquote("progid:DXImageTransform.Microsoft.gradient(startColorStr={@start},EndColorStr={@end})");
+          -ms-filter: e("progid:DXImageTransform.Microsoft.gradient(startColorStr={@start},EndColorStr={@end})");
        }
-
-* `quote(str)` -- returns a string that contains all the arguments concatenated.
-
-
 
 <a name="php"></a>
 ## PHP Interface

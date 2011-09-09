@@ -6,12 +6,6 @@
 
 body {
 	color: @something;
-	color: unquote(@something);
-
-	strings: unquote("this is a color {@color} and here is my string {@something}");
-	quoted: quote(@color) quote(a list of keywords becomes a string);
-
-	border: quote(@color) + 5px; // addition on a string turns into keyword list
 
 	@num: 7 / 6;
 	height: @num + 4;
