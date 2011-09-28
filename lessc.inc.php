@@ -1,7 +1,7 @@
 <?php
 
 /**
- * lessphp v0.2.1
+ * lessphp v0.3.0
  * http://leafo.net/lessphp
  *
  * LESS css compiler, adapted from http://lesscss.org/docs.html
