@@ -7,5 +7,5 @@ body ul li div span, body ul li link {
 }
 body ul div, body ul p { border:1px; }
 body ul div.hello, body ul p.hello { color:green; }
-body ul div:what, body ul p:what { color:blue; }
+body ul div :what, body ul p :what { color:blue; }
 body ul a b { color:blue; }

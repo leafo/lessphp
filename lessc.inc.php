@@ -1,7 +1,7 @@
 <?php
 
 /**
- * lessphp v0.2.1
+ * lessphp v0.3.0
  * http://leafo.net/lessphp
  *
  * LESS css compiler, adapted from http://lesscss.org/docs.html
@@ -47,7 +47,7 @@ class lessc {
 	public $vPrefix = '@'; // prefix of abstract properties
 	public $mPrefix = '$'; // prefix of abstract blocks
 	public $imPrefix = '!'; // special character to add !important
-	public $selfSelector = '&';
+	public $parentSelector = '&';
 
 	static protected $precedence = array(
 		'+' => 0,
@@ -472,6 +472,14 @@ class lessc {
 			return true;
 		}
 
+		// unquote string
+		if ($this->literal("~") && $this->string($value, $d)) {
+			$value = array("keyword", $value);
+			return true;
+		} else {
+			$this->seek($s);
+		}
+
 		return false;
 	}
 
@@ -631,13 +639,13 @@ class lessc {
 	}
 
 	// consume a list of property values delimited by ; and wrapped in ()
-	function argumentValues(&$args, $delim = ';') {
+	function argumentValues(&$args, $delim = ',') {
 		$s = $this->seek();
 		if (!$this->literal('(')) return false;
 
 		$values = array();
 		while (true) {
-			if ($this->propertyValue($value)) $values[] = $value;
+			if ($this->expressionList($value)) $values[] = $value;
 			if (!$this->literal($delim)) break;
 			else {
 				if ($value == null) $values[] = null;
@@ -656,14 +664,14 @@ class lessc {
 
 	// consume an argument definition list surrounded by ()
 	// each argument is a variable name with optional value
-	function argumentDef(&$args, $delim = ';') {
+	function argumentDef(&$args, $delim = ',') {
 		$s = $this->seek();
 		if (!$this->literal('(')) return false;
 
 		$values = array();
 		while ($this->variable($vname)) {
 			$arg = array($vname);
-			if ($this->assign() && $this->propertyValue($value)) {
+			if ($this->assign() && $this->expressionList($value)) {
 				$arg[] = $value;
 				// let the : slide if there is no value
 			}
@@ -701,6 +709,9 @@ class lessc {
 			$value = '['.$c.']';
 			// whitespace?
 			if ($this->match('', $_)) $value .= $_[0];
+
+			// escape parent selector
+			$value = str_replace($this->parentSelector, "&&", $value);
 			return true;
 		}
 
@@ -910,9 +921,22 @@ class lessc {
 		$tags = array();
 		foreach ($parents as $ptag) {
 			foreach ($current as $tag) {
-				$tags[] = trim($ptag.
-					($tag{0} == $this->selfSelector || $tag{0} == ':'
-						? ltrim($tag, $this->selfSelector) : ' '.$tag));
+				// inject parent in place of parent selector, ignoring escaped valuews
+				$count = 0;
+				$parts = explode("&&", $tag);
+
+				foreach ($parts as $i => $chunk) {
+					$parts[$i] = str_replace($this->parentSelector, $ptag, $chunk, $c);
+					$count += $c;
+				}
+				
+				$tag = implode("&", $parts);
+
+				if ($count > 0) {
+					$tags[] = trim($tag);
+				} else {
+					$tags[] = trim($ptag . ' ' . $tag);
+				}
 			}
 		}
 
@@ -1054,18 +1078,18 @@ class lessc {
 			
 			// search for inline variables to replace
 			$replace = array();
-			if (preg_match_all('/{('.$this->preg_quote($this->vPrefix).'[\w-_][0-9\w-_]*?)}/', $value[1], $m)) {
+			if (preg_match_all('/'.$this->preg_quote($this->vPrefix).'\{([\w-_][0-9\w-_]*)\}/', $value[1], $m)) {
 				foreach ($m[1] as $name) {
 					if (!isset($replace[$name]))
-						$replace[$name] = $this->compileValue($this->reduce(array('variable', $name)));
+						$replace[$name] = $this->compileValue($this->reduce(array('variable', $this->vPrefix . $name)));
 				}
 			}
+
 			foreach ($replace as $var=>$val) {
-				// strip quotes
-				if (preg_match('/^(["\']).*?(\1)$/', $val)) {
+				if ($this->quoted($val)) {
 					$val = substr($val, 1, -1);
 				}
-				$value[1] = str_replace('{'.$var.'}', $val, $value[1]);
+				$value[1] = str_replace($this->vPrefix. '{'.$var.'}', $val, $value[1]);
 			}
 
 			return $value[1];
@@ -1102,19 +1126,20 @@ class lessc {
 			$color[1],$color[2], $color[3]);
 	}
 
-	function lib_quote($arg) {
-		return '"'.$this->compileValue($arg).'"';
-	}
-
-	function lib_unquote($arg) {
-		$out = $this->compileValue($arg);
-		if ($this->quoted($out)) $out = substr($out, 1, -1);
-		return $out;
-	}
-
-	// alias for unquote
+	// utility func to unquote a string
 	function lib_e($arg) {
-		return $this->lib_unquote($arg);
+		switch ($arg[0]) {
+			case "list":
+				$items = $arg[2];
+				if (isset($items[0])) {
+					return $this->lib_e($items[0]);
+				}
+				return "";
+			case "string":
+				return substr($arg[1], 1, -1);
+			default:
+				return $this->compileValue($arg);
+		}
 	}
 
 	function lib_floor($arg) {

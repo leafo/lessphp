@@ -6,6 +6,7 @@
   * Variables
   * Expressions
   * String Interpolation
+  * String Unquoting
   * Nested Blocks
   * Mixins
   * Import
@@ -136,7 +137,20 @@ the expression in parentheses:
 <a name="strings"></a>
 ### String Interpolation
 
-String interpolation lets us insert variables into strings using `{` and `}`.
+String interpolation is a convenient way to insert the value of a variable
+right into a string literal. Given some variable named `@var_name`, you just
+need to write it as `@{var_name}` from within the string to have its value
+inserted:
+
+    @symbol: ">";
+    h1:before {
+        content: "@{symbol}: ";
+    }
+
+    h2:before {
+        content: "@{symbol}@{symbol}: ";
+    }
+
 There are two kinds of strings, implicit and explicit strings. Explicit strings
 are wrapped by double quotes, `"hello I am a string"`, or single quotes `'I am
 another string'`. Implicit strings only appear when using `url()`. The text
@@ -145,18 +159,31 @@ possible:
 
     @path: "files/";
     body {
-        background: url({@path}my_background.png);
+        background: url(@{path}my_background.png);
     }
 
-    @symbol: ">";
-    h1:before {
-        content: "{@symbol}: ";
+
+<a name="string-unquote"></a>
+### String Unquoting
+
+Sometimes you will need to write proprietary CSS syntax that is unable to be
+parsed. As a workaround you can place the code into a string and unquote it.
+Unquoting is the process of outputting a string without its surrounding quotes.
+There are two ways to unquote a string.
+
+The `~` operator in front of a string will unquote that string:
+
+    .class {
+         filter: ~"progid:DXImageTransform.Microsoft.AlphaImageLoader(src='image.png')";
     }
 
-    h2:before {
-        content: "{@symbol}{@symbol}: ";
-    }
+If you are working with other types, such as variables, there is a built in
+function that let's you unquote any value. It is called `e`.
 
+    @color: "red";
+    .class {
+        color: e(@color);
+    }
 
 <a name="nested"></a>
 <a name="ablocks"></a>
@@ -182,18 +209,31 @@ This will produce two blocks, a `ol.list li.special` and `ol.list li.plain`.
 Blocks can be nested as deep as required in order to build a hierarchy of
 relationships.
 
-Pseudo classes are automatically joined without spaces:
+The `&` operator can be used in a selector to represent its parent's selector.
+If the `&` operator is used, then the default action of appending the parent to
+the front of the child selector separated by space is not performed.
 
-    .navigation a {
-        :link { color: green; }
-        :visited { color: red; }
-        :hover { text-decoration: none; }
+    b {
+        // produces a b
+        a & {
+            color: red;
+        }
+
+        // the following produce the same result
+
+        & i {
+            color: blue;
+        }
+
+        i {
+            color: blue;
+        }
     }
 
-This creates blocks `.navigation a:link`, `.navigation a:visited`, `.navigation
-a:hover`.
 
-We can control how the child blocks are joined:
+Because the `&` operator respects the whitespace around it, we can use it to
+control how the child blocks are joined. Consider the differences between the
+following:
 
     div {
         .child-class {
@@ -204,7 +244,6 @@ We can control how the child blocks are joined:
             color: green;
         }
 
-        // it also works with id identifiers
         #child-id {
             height: 200px;
         }
@@ -212,12 +251,27 @@ We can control how the child blocks are joined:
         &#div-id {
             height: 400px;
         }
+
+		&:hover {
+			color: red;
+		}
+
+		:link {
+			color: blue;
+		}
     }
 
-The `&` prefix operator can be used to join the two selectors together without
-a space. This snippet would create blocks `div .child-class` and
-`div.isa-class` in addition to `div #child-id` and `div#div-id`.
+The `&` operator also works with [mixins](#mixins), which produces interesting results:
 
+    .within_box_style() {
+        .box & {
+            color: blue;
+        }
+    }
+
+    #menu {
+        .within_box_style;
+    }
 
 <a name="mixins"></a>
 <a name="args"></a>
@@ -245,7 +299,7 @@ All properties and child blocks are mixed in.
 
 Mixins can be made parametric, meaning they can take arguments, in order to
 enhance their utility. A parametric mixin all by itself is not outputted when
-compiled. It's properties will only appear when mixed into another block.
+compiled. Its properties will only appear when mixed into another block.
 
 The canonical example is to create a rounded corners mixin that works across
 browsers:
@@ -264,28 +318,6 @@ browsers:
         background: red;
         .rounded-corners(14px);
     }
-
-Take note of the default argument, which makes specifying that argument optional.
-
-Because CSS values can contain `,`, the argument delimiter is a `;`.
-
-    .box-shadow(@props) {
-        box-shadow: @props;
-        -webkit-box-shadow: @props;
-        -moz-box-shadow: @props;
-    }
-
-    .size(@width; @height; @padding: 8px) {
-        width: @width - 2 * @padding;
-        height: @height - 2 * @padding;
-        padding: @padding;
-    }
-
-    .box {
-        .box-shadow(5px 5px 8px red, -4px -4px 8px blue); // all one argument
-        .size(400px;200px) // multiple argument:
-    }
-
 
 If you have a mixin that doesn't have any arguments, but you don't want it to
 show up in the output, give it a blank argument list:
@@ -340,16 +372,8 @@ see [PHP Interface](#php-interface).
 
 **lessphp** has a collection of built in functions:
 
-* `e(str)` -- an alias for unquote
-* `unquote(str)` -- returns a string without the surrounding quotes.
-  
-  This is useful for outputting something that wouldn't normally be able to be
-  parsed. Some IE specific filters are notorious for causing trouble.
-
-      .something {
-          @size: 10px;
-          border: unquote("{@size} solid red");
-      }
+* `e(str)` -- returns a string without the surrounding quotes.
+  See [String Unquoting](#string-unquote)
 
 * `floor(number)` -- returns the floor of a numerical input
 * `round(number)` -- returns the rounded value of numerical input
@@ -373,12 +397,8 @@ see [PHP Interface](#php-interface).
        .class {
           @start: rgbahex(rgba(25, 34, 23, .5));
           @end: rgbahex(rgba(85, 74, 103, .6));
-          -ms-filter: unquote("progid:DXImageTransform.Microsoft.gradient(startColorStr={@start},EndColorStr={@end})");
+          -ms-filter: e("progid:DXImageTransform.Microsoft.gradient(startColorStr={@start},EndColorStr={@end})");
        }
-
-* `quote(str)` -- returns a string that contains all the arguments concatenated.
-
-
 
 <a name="php"></a>
 ## PHP Interface
@@ -442,7 +462,7 @@ functions that will be exposed in LESS code during the compile. They can be a
 little tricky though because you need to work with the  **lessphp** type system.
 
 By sub-classing `lessc`, and creating specially named methods we can extend
-**lessphp**. In order for a function to be visible in LESS, it's name must
+**lessphp**. In order for a function to be visible in LESS, its name must
 start with `lib_`.
 
 Let's make a function that doubles any numeric argument.

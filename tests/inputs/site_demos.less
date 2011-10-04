@@ -18,7 +18,7 @@ default {
 	  }
 	  .logo {
 		width: 300px;
-		:hover { text-decoration: none }
+		&:hover { text-decoration: none }
 	  }
 	}
 }
@@ -70,22 +70,8 @@ nested-rules {
 	  }
 	  .logo {
 		width: 300px;
-		:hover { text-decoration: none }
+		&:hover { text-decoration: none }
 	  }
-	}
-}
-
-accessors {
-	#defaults {
-	  @width: 960px;
-	  @color: black;
-	}
-
-	.article { color: #294366; }
-
-	.comment {
-	  width: #defaults[@width];
-	  color: .article['color']; 
 	}
 }
 
@@ -95,7 +81,7 @@ namespaces {
 		display: block;
 		border: 1px solid black;
 		background-color: grey;
-		:hover { background-color: white }
+		&:hover { background-color: white }
 	  }
 	}
 	#header a {
@@ -106,7 +92,7 @@ namespaces {
 
 mixin-functions {
 	@outer: 10px;
-	@class(@var:22px; @car: 400px + @outer) {
+	@class(@var:22px, @car: 400px + @outer) {
 	  margin: @var;
 	  height: @car;
 	}
@@ -127,7 +113,7 @@ mixin-functions {
 	body {
 	  .class(2.0em);
 	  @group > @f(red);
-	  @class(10px; 10px + 2); 
+	  @class(10px, 10px + 2);
 	  @group > .cool;
 	}
 }
