@@ -75,7 +75,7 @@ class lessc {
 	);
     
 	public $importDisabled = false;
-	public $importDir = '';
+	public $importDir = array();
 
 	public $compat = false; // lessjs compatibility mode, does nothing right now
 
@@ -1669,7 +1669,7 @@ class lessc {
 	// create a child parser (for compiling an import)
 	protected function createChild($fname) {
 		$less = new lessc($fname);
-		$less->importDir = $this->importDir;
+		array_push($less->importDir, $this->importDir);
 		$less->indentChar = $this->indentChar;
 		$less->compat = $this->compat;
 		return $less;
@@ -1748,7 +1748,7 @@ class lessc {
 			$pi = pathinfo($fname);
 
 			$this->fileName = $fname;
-			$this->importDir = $pi['dirname'].'/';
+			$this->importDir = array($pi['dirname'].'/');
 			$this->buffer = file_get_contents($fname);
 
 			$this->addParsedFile($fname);
