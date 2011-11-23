@@ -1127,7 +1127,8 @@ class lessc {
 				}
 				return "";
 			case "string":
-				return substr($arg[1], 1, -1);
+				$str = $this->compileValue($arg);
+				return substr($str, 1, -1);
 			default:
 				return $this->compileValue($arg);
 		}
