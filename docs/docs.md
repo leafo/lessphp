@@ -333,6 +333,34 @@ show up in the output, give it a blank argument list:
 If the mixin doesn't need any arguments, you can leave off the parentheses when
 mixing it in, as seen above.
 
+You can also mixin a block that is nested inside other blocks. You can think of
+the outer block as a way of making a scope for your mixins. You just list the
+names of the mixins separated by spaces, which describes the path to the mixin
+you want to include. Optionally you can separate them by `>`.
+
+    .my_scope  {
+        .some_color {
+            color: red;
+            .inner_block {
+                text-decoration: underline;
+            }
+        }
+        .bold {
+            font-weight: bold;
+            color: blue;
+        }
+    }
+
+    .a_block {
+        .my_scope .some_color;
+        .my_scope .some_color .inner_block;
+    }
+
+    .another_block {
+        // the alternative syntax
+        .my_scope > .bold;
+    }
+
 <a name="import"></a>
 ### Import
 
