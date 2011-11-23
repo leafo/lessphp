@@ -16,3 +16,7 @@
 @media all and (min-width: 0) {
   body { line-height:1.2; }
 }
+@media screen and (min-width: 102.5em) and (max-width: 117.9375em),
+	screen and (min-width: 150em) {
+  body { color:blue; }
+}
