@@ -168,11 +168,11 @@ class lessc {
 
 
 			// media
-			if ($this->literal('@media') && $this->mediaTypes($types, $rest) &&
+			if ($this->literal('@media') && $this->mediaTypes($types) &&
 				$this->literal('{'))
 			{
 				$b = $this->pushSpecialBlock('@media');
-				$b->media = array($types, $rest);
+				$b->media = $types;
 				return true;
 			} else {
 				$this->seek($s);
@@ -513,20 +513,13 @@ class lessc {
 	}
 
 	// a list of media types, very lenient
-	function mediaTypes(&$types, &$rest) {
-		$s = $this->seek();
-		$types = array();
-		while ($this->match('([^,{\s]+)', $m)) {
-			$types[] = $m[1];
-			if (!$this->literal(',')) break;
-		}
-
-		// get everything else
+	function mediaTypes(&$types) {
 		if ($this->to('{', $rest, true, true)) {
-			$rest = trim($rest);
+			$types = trim($rest);
+			return true;
 		}
 
-		return count($types) > 0;
+		return false;
 	}
 
 	// a scoped value accessor
@@ -874,9 +867,7 @@ class lessc {
 		if ($special_block) {
 			$this->indentLevel--;
 			if (isset($block->media)) {
-				list($media_types, $media_rest) = $block->media;
-				echo "@media ".join(', ', $media_types).
-					(!empty($media_rest) ? " $media_rest" : '' );
+				echo "@media ".$block->media;
 			} elseif (isset($block->keyframes)) {
 				echo $block->tags[0]." ".
 					$this->compileValue($this->reduce($block->keyframes));
@@ -1639,7 +1630,7 @@ class lessc {
 	// advance counter to next occurrence of $what
 	// $until - don't include $what in advance
 	function to($what, &$out, $until = false, $allowNewline = false) {
-		$validChars = $allowNewline ? "[^\n]" : '.';
+		$validChars = $allowNewline ? "." : "[^\n]";
 		if (!$this->match('('.$validChars.'*?)'.$this->preg_quote($what), $m, !$until)) return false;
 		if ($until) $this->count -= strlen($what); // give back $what
 		$out = $m[1];
