@@ -275,7 +275,7 @@ class lessc {
 
 
 		// mixin 
-		if ($this->tags($tags, true, '>') &&
+		if ($this->mixinTags($tags) &&
 			($this->argumentValues($argv) || true) && $this->end())
 		{
 			$tags = $this->fixTags($tags);
@@ -690,6 +690,21 @@ class lessc {
 			$tags[] = $tt;
 			if (!$this->literal($delim)) break;
 		}
+		if (count($tags) == 0) return false;
+
+		return true;
+	}
+
+	// list of tags of specifying mixin path
+	// optionally separated by > (lazy, accepts extra >)
+	function mixinTags(&$tags) {
+		$s = $this->seek();
+		$tags = array();
+		while ($this->tag($tt, true)) {
+			$tags[] = $tt;
+			$this->literal(">");
+		}
+
 		if (count($tags) == 0) return false;
 
 		return true;

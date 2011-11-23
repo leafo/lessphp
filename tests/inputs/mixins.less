@@ -48,4 +48,21 @@ body {
 	div;
 }
 
+// not using > to list mixins
+
+.hello {
+  .world {
+    color: blue;
+  }
+}
+
+.foobar {
+  .hello .world;
+}
+
+
+.butter {
+	.this .one .isnt .found;
+}
+
 

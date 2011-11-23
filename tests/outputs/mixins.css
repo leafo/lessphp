@@ -31,3 +31,5 @@ body {
   hello:world;
 }
 body b { color:blue; }
+.hello .world { color:blue; }
+.foobar { color:blue; }
