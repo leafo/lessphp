@@ -8,3 +8,10 @@ body {
   color:#00112233;
   color:#992c3742;
 }
+format {
+  format:"rgb(32, 128, 64)";
+  format-string:"hello world";
+  format-multiple:"hello earth 2";
+  format-url-encode:'red is %A';
+  eformat:rgb(32, 128, 64);
+}
