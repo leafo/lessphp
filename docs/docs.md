@@ -18,7 +18,7 @@
 
 **lessphp** is a compiler that generates CSS from a superset language which
 adds a collection of convenient features often seen in other languages. All CSS
-is compatible with LESS, so to get started you don't need to rewrite your CSS.
+is compatible with LESS, so you can start using new features with your existing CSS.
 
 It is based off the original and defunct Ruby implementation
 in addition to the current JavaScript one, [less.js](http://lesscss.org).
@@ -162,6 +162,35 @@ possible:
         background: url(@{path}my_background.png);
     }
 
+
+### String Format Function
+
+The `%` function can be used to insert values into strings using a *format
+string*. It works similar to `printf` seen in other languages. It has the
+same purpose as string interpolation above, but gives explicit control over
+the output format.
+
+	@symbol: ">"
+	h1:before {
+		content: %("%s: ", @symbol);
+	}
+
+The `%` function takes as its first argument the format string, following any
+number of addition arguments that are inserted in place of the format
+directives.
+
+A format directive starts with a `%` and is followed by a single character that
+is either `a`, `d`, or `s`:
+
+	%("%a %d %d %d %s %a", hello, 1, 2, 3, 'hello', 'world');
+
+`%a` and `%d` format the value the same way: they compile the argument to its
+CSS value and insert it directly. When used with a string, the quotes are
+included in the output. This typically isn't what we want, so we have the `%s`
+format directive which strips quotes from strings before inserting them.
+
+The `%d` directive functions the same as `%a`, but is typically used for numbers
+assuming the output format of numbers might change in the future.
 
 <a name="string-unquote"></a>
 ### String Unquoting
