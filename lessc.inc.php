@@ -752,7 +752,7 @@ class lessc {
 	function func(&$func) {
 		$s = $this->seek();
 
-		if ($this->match('([\w\-_][\w\-_:\.]*)', $m) && $this->literal('(')) {
+		if ($this->match('(%|[\w\-_][\w\-_:\.]*)', $m) && $this->literal('(')) {
 			$fname = $m[1];
 			if ($fname == 'url') {
 				$this->to(')', $content, true);
@@ -1149,6 +1149,36 @@ class lessc {
 		}
 	}
 
+	function lib__sprintf($args) {
+		if ($args[0] != "list") return $args;
+		$values = $args[2];
+		$source = $this->reduce(array_shift($values));
+		if ($source[0] != "string") {
+			return $source;
+		}
+
+		$str = $source[1];
+		$i = 0;
+		if (preg_match_all('/%[dsa]/', $str, $m)) {
+			foreach ($m[0] as $match) {
+				$val = isset($values[$i]) ? $this->reduce($values[$i]) : array('keyword', '');
+				$i++;
+				switch ($match[1]) {
+				case "s":
+					if ($val[0] == "string") {
+						$rep = substr($val[1], 1, -1);
+						break;
+					}
+				default:
+					$rep = $this->compileValue($val);
+				}
+				$str = str_replace($match, $rep, $str);
+			}
+		}
+
+		return array('string', $str);
+	}
+
 	function lib_floor($arg) {
 		return floor($arg[1]);
 	}
@@ -1400,6 +1430,7 @@ class lessc {
 				if ($color) $var = $color;
 				else {
 					list($_, $name, $args) = $var;
+					if ($name == "%") $name = "_sprintf";
 					$f = array($this, 'lib_'.$name);
 					if (is_callable($f)) {
 						if ($args[0] == 'list')
