@@ -1175,7 +1175,7 @@ class lessc {
 				default:
 					$rep = $this->compileValue($val);
 				}
-				$str = str_replace($match, $rep, $str);
+				$str = preg_replace('/'.$this->preg_quote($match).'/', $rep, $str, 1);
 			}
 		}
 
