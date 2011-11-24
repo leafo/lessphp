@@ -480,6 +480,14 @@ class lessc {
 			$this->seek($s);
 		}
 
+		// css hack: \0
+		if ($this->literal('\\') && $this->match('([0-9]+)', $m)) {
+			$value = array('keyword', '\\'.$m[1]);
+			return true;
+		} else {
+			$this->seek($s);
+		}
+
 		return false;
 	}
 
