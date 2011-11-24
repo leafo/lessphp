@@ -1014,11 +1014,6 @@ class lessc {
 				$this->zipSetArgs($mixin->args, $args);
 			}
 
-			list($name) = $mixin->tags;
-			if ($name == "div") {
-				print_r($mixin->props);
-			}
-
 			$old_parent = $mixin->parent;
 			$mixin->parent = $block;
 
