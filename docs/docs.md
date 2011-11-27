@@ -1,29 +1,12 @@
 # Documentation - lessphp v0.3.0
 
-* Getting Started
-* The Language
-  * Line Comments
-  * Variables
-  * Expressions
-  * String Interpolation
-  * String Unquoting
-  * Nested Blocks
-  * Mixins
-  * Import
-  * Built In Functions
-* PHP Interface
-  * Setting Variables From PHP 
-  * Custom Functions
-* Command Line Interface
-
 **lessphp** is a compiler that generates CSS from a superset language which
 adds a collection of convenient features often seen in other languages. All CSS
 is compatible with LESS, so you can start using new features with your existing CSS.
 
-It is based off the original and defunct Ruby implementation
-in addition to the current JavaScript one, [less.js](http://lesscss.org).
+It is designed to be compatible with [less.js](http://lesscss.org), and suitable
+as a drop in replacement for PHP projects.
 
-<a name="start"></a> 
 ## Getting Started
 
 The homepage for **lessphp** can be found at
@@ -37,37 +20,38 @@ include file into your code base and running the appropriate compile method as
 described in the [PHP Interface](#php-interface).
 
 
-<a name="language"></a> 
 ## The Language
 
 **lessphp** is very easy to learn because it generally functions how you would
 expect it to. If you feel something is challenging or missing, feel free to
 open an issue on the [bug tracker](https://github.com/leafo/lessphp/issues).
 
-The following is an overview of the features provided.
+It is also easy to learn because any standards-compliant CSS code is valid LESS
+code. You are free to gradually enhance your existing CSS code base with LESS
+features without having to worry about rewriting anything.
 
-<a name="comments"></a> 
+The following is a description of the new languages features provided by LESS.
+
 ### Line Comments
 
 Simple but very useful; line comments are started with `//`:
 
     // this is a comment
     body {
-        color: red; // as is this
-        /* block comments still work also */
+      color: red; // as is this
+      /* block comments still work also */
     }
 
-<a name="vars"></a>
 ### Variables
 Variables are identified with a name that starts with `@`. To declare a
 variable, you create an appropriately named CSS property and assign it a value:
 
     @family: "verdana";
     body {
-        @mycolor: red;
-        font-family: @family;
-        color: @color;
-        border-bottom: 1px solid @color;
+      @mycolor: red;
+      font-family: @family;
+      color: @color;
+      border-bottom: 1px solid @color;
     }
 
 
@@ -78,25 +62,22 @@ appear. They can hold any CSS property value.
 Variables are only visible for use from their current scope, or any enclosed
 scopes.
 
-
-<a name="pvalues"></a>
-<a name="exps"></a>
 ### Expressions
 
 Expressions let you combine values and variables in meaningful ways. For
 example you can add to a color to make it a different shade. Or divide up the
 width of your layout logically. You can even concatenate strings.
 
-Use the mathematical operators to evalute an expression:
+Use the mathematical operators to evaluate an expression:
 
     @width: 960px;
     .nav {
-        width: @width / 3;
-		color: #001 + #abc; // evaluates to #aabdd
+      width: @width / 3;
+      color: #001 + #abc; // evaluates to #aabdd
     }
     .body {
-        width: 2 * @width / 3;
-        font-family: "hel" + "vetica"; // evaluates to "helloworld"
+      width: 2 * @width / 3;
+      font-family: "hel" + "vetica"; // evaluates to "helloworld"
     }
 
 Parentheses can be used to control the order of evaluation. They can also be
@@ -122,19 +103,18 @@ careful about how we place spaces. In the following example we are using font
 size and lineheight shorthand. No division should take place:
 
     .font {
-        font: 20px/80px "Times New Roman";
+      font: 20px/80px "Times New Roman";
     }
 
 In order to force division we can surround the `/` by spaces, or we can wrap
 the expression in parentheses:
 
     .font {
-        // these two will evaluate
-        font: 20px / 80px "Times New Roman";
-        font: (20px/80px) "Times New Roman";
+      // these two will evaluate
+      font: 20px / 80px "Times New Roman";
+      font: (20px/80px) "Times New Roman";
     }
 
-<a name="strings"></a>
 ### String Interpolation
 
 String interpolation is a convenient way to insert the value of a variable
@@ -144,11 +124,11 @@ inserted:
 
     @symbol: ">";
     h1:before {
-        content: "@{symbol}: ";
+      content: "@{symbol}: ";
     }
 
     h2:before {
-        content: "@{symbol}@{symbol}: ";
+      content: "@{symbol}@{symbol}: ";
     }
 
 There are two kinds of strings, implicit and explicit strings. Explicit strings
@@ -159,9 +139,8 @@ possible:
 
     @path: "files/";
     body {
-        background: url(@{path}my_background.png);
+      background: url(@{path}my_background.png);
     }
-
 
 ### String Format Function
 
@@ -170,10 +149,10 @@ string*. It works similar to `printf` seen in other languages. It has the
 same purpose as string interpolation above, but gives explicit control over
 the output format.
 
-	@symbol: ">"
-	h1:before {
-		content: %("%s: ", @symbol);
-	}
+    @symbol: ">"
+    h1:before {
+      content: %("%s: ", @symbol);
+    }
 
 The `%` function takes as its first argument the format string, following any
 number of addition arguments that are inserted in place of the format
@@ -182,7 +161,7 @@ directives.
 A format directive starts with a `%` and is followed by a single character that
 is either `a`, `d`, or `s`:
 
-	%("%a %d %d %d %s %a", hello, 1, 2, 3, 'hello', 'world');
+    strings: %("%a %d %d %d %s %a", hello, 1, 2, 3, 'hello', 'world');
 
 `%a` and `%d` format the value the same way: they compile the argument to its
 CSS value and insert it directly. When used with a string, the quotes are
@@ -192,7 +171,6 @@ format directive which strips quotes from strings before inserting them.
 The `%d` directive functions the same as `%a`, but is typically used for numbers
 assuming the output format of numbers might change in the future.
 
-<a name="string-unquote"></a>
 ### String Unquoting
 
 Sometimes you will need to write proprietary CSS syntax that is unable to be
@@ -203,7 +181,7 @@ There are two ways to unquote a string.
 The `~` operator in front of a string will unquote that string:
 
     .class {
-         filter: ~"progid:DXImageTransform.Microsoft.AlphaImageLoader(src='image.png')";
+      filter: ~"progid:DXImageTransform.Microsoft.AlphaImageLoader(src='image.png')";
     }
 
 If you are working with other types, such as variables, there is a built in
@@ -211,11 +189,9 @@ function that let's you unquote any value. It is called `e`.
 
     @color: "red";
     .class {
-        color: e(@color);
+      color: e(@color);
     }
 
-<a name="nested"></a>
-<a name="ablocks"></a>
 ### Nested Blocks
 
 By nesting blocks we can build up a chain of CSS selectors through scope
@@ -223,13 +199,13 @@ instead of repeating them. In addition to reducing repetition, this also helps
 logically organize the structure of our CSS.
 
     ol.list {
-        li.special {
-           border: 1px solid red; 
-        }
+      li.special {
+        border: 1px solid red; 
+      }
 
-        li.plain {
-            font-weight: bold;
-        }
+      li.plain {
+        font-weight: bold;
+      }
     }
 
 
@@ -243,20 +219,20 @@ If the `&` operator is used, then the default action of appending the parent to
 the front of the child selector separated by space is not performed.
 
     b {
-        // produces a b
-        a & {
-            color: red;
-        }
+      // produces a b
+      a & {
+        color: red;
+      }
 
-        // the following produce the same result
+      // the following produce the same result
 
-        & i {
-            color: blue;
-        }
+      & i {
+        color: blue;
+      }
 
-        i {
-            color: blue;
-        }
+      i {
+        color: blue;
+      }
     }
 
 
@@ -265,62 +241,60 @@ control how the child blocks are joined. Consider the differences between the
 following:
 
     div {
-        .child-class {
-            color: purple; 
-        }
+      .child-class {
+        color: purple;
+      }
 
-        &.isa-class {
-            color: green;
-        }
+      &.isa-class {
+        color: green;
+      }
 
-        #child-id {
-            height: 200px;
-        }
+      #child-id {
+        height: 200px;
+      }
 
-        &#div-id {
-            height: 400px;
-        }
+      &#div-id {
+        height: 400px;
+      }
 
-		&:hover {
-			color: red;
-		}
+      &:hover {
+        color: red;
+      }
 
-		:link {
-			color: blue;
-		}
+      :link {
+        color: blue;
+      }
     }
 
 The `&` operator also works with [mixins](#mixins), which produces interesting results:
 
     .within_box_style() {
-        .box & {
-            color: blue;
-        }
+      .box & {
+        color: blue;
+      }
     }
 
     #menu {
-        .within_box_style;
+      .within_box_style;
     }
 
-<a name="mixins"></a>
-<a name="args"></a>
 ### Mixins
 
 Any block can be mixed in just by naming it:
 
     .mymixin {
-        color: blue;
-        border: 1px solid red;
+      color: blue;
+      border: 1px solid red;
 
-        .special {
-            font-weight: bold;
-        }
+      .special {
+        font-weight: bold;
+      }
     }
 
 
     h1 {
-        font-size: 200px;
-        .mixin;
+      font-size: 200px;
+      .mixin;
     }
 
 
@@ -334,29 +308,29 @@ The canonical example is to create a rounded corners mixin that works across
 browsers:
     
     .rounded-corners (@radius: 5px) {
-        border-radius: @radius;
-        -webkit-border-radius: @radius;
-        -moz-border-radius: @radius;
+      border-radius: @radius;
+      -webkit-border-radius: @radius;
+      -moz-border-radius: @radius;
     }
 
     .header {
-        .rounded-corners();
+      .rounded-corners();
     }
 
     .info {
-        background: red;
-        .rounded-corners(14px);
+      background: red;
+      .rounded-corners(14px);
     }
 
 If you have a mixin that doesn't have any arguments, but you don't want it to
 show up in the output, give it a blank argument list:
 
     .secret() {
-        font-size: 6000px;
+      font-size: 6000px;
     }
     
     .div {
-        .secret;
+      .secret;
     }
 
 If the mixin doesn't need any arguments, you can leave off the parentheses when
@@ -368,29 +342,28 @@ names of the mixins separated by spaces, which describes the path to the mixin
 you want to include. Optionally you can separate them by `>`.
 
     .my_scope  {
-        .some_color {
-            color: red;
-            .inner_block {
-                text-decoration: underline;
-            }
+      .some_color {
+        color: red;
+        .inner_block {
+          text-decoration: underline;
         }
-        .bold {
-            font-weight: bold;
-            color: blue;
-        }
+      }
+      .bold {
+        font-weight: bold;
+        color: blue;
+      }
     }
 
     .a_block {
-        .my_scope .some_color;
-        .my_scope .some_color .inner_block;
+      .my_scope .some_color;
+      .my_scope .some_color .inner_block;
     }
 
     .another_block {
-        // the alternative syntax
-        .my_scope > .bold;
+      // the alternative syntax
+      .my_scope > .bold;
     }
 
-<a name="import"></a>
 ### Import
 
 Multiple LESS files can be compiled into a single CSS file by using the
@@ -401,7 +374,7 @@ is left alone and outputted directly:
 
     // my_file.less
     .some-mixin(@height) {
-        height: @height;
+      height: @height;
     }
 
     // main.less
@@ -409,7 +382,7 @@ is left alone and outputted directly:
     @import "main.css" // will be left alone
 
     body {
-        .some-mixin(400px);
+      .some-mixin(400px);
     }
 
 All of the following lines are valid ways to import the same file:
@@ -424,7 +397,6 @@ When importing, the `importDir` is searched for files. This can be configured,
 see [PHP Interface](#php-interface).
 
 
-<a name="bifs"></a>
 ### Built In Functions
 
 **lessphp** has a collection of built in functions:
@@ -457,7 +429,6 @@ see [PHP Interface](#php-interface).
           -ms-filter: e("progid:DXImageTransform.Microsoft.gradient(startColorStr={@start},EndColorStr={@end})");
        }
 
-<a name="php"></a>
 ## PHP Interface
 
 The PHP interface lets you control the compiler from your PHP scripts. There is
@@ -490,7 +461,6 @@ All of the following methods will throw an `Exception` if the parsing fails:
         echo "lessphp fatal error: ".$ex->getMessage();
     }
 
-<a name="php-vars"></a>
 ### Setting Variables From PHP 
 
 The `parse` function takes a second optional argument. If you want to
@@ -511,7 +481,6 @@ instead of the file:
     $less = new lessc("myfile.less");
     echo $less->parse(null, array('color' => 'blue'));
 
-<a name="php-funcs"></a>
 ### Custom Functions
 
 **lessphp** has a simple extension interface where you can implement user
@@ -553,7 +522,6 @@ while making sure that we preserve the type.
 All of the built in functions are implemented in this manner within the `lessc`
 class.
 
-<a name="cli"></a>
 ## Command Line Interface
 
 **lessphp** comes with a command line script written in PHP that can be used to
@@ -574,6 +542,6 @@ To compile code directly on the command line:
 
 To watch a file for changes, and compile it as needed, use the `-w` flag:
 
-	$ plessc -w input-file output-file
+    $ plessc -w input-file output-file
 
 Errors from watch mode are written to standard out.
