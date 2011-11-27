@@ -133,96 +133,6 @@ the expression in parentheses:
     }
     ```
 
-### String Interpolation
-
-String interpolation is a convenient way to insert the value of a variable
-right into a string literal. Given some variable named `@var_name`, you just
-need to write it as `@{var_name}` from within the string to have its value
-inserted:
-
-    ```less
-    @symbol: ">";
-    h1:before {
-      content: "@{symbol}: ";
-    }
-
-    h2:before {
-      content: "@{symbol}@{symbol}: ";
-    }
-    ```
-
-There are two kinds of strings, implicit and explicit strings. Explicit strings
-are wrapped by double quotes, `"hello I am a string"`, or single quotes `'I am
-another string'`. Implicit strings only appear when using `url()`. The text
-between the parentheses is considered a string and thus string interpolation is
-possible:
-
-    ```less
-    @path: "files/";
-    body {
-      background: url(@{path}my_background.png);
-    }
-    ```
-
-### String Format Function
-
-The `%` function can be used to insert values into strings using a *format
-string*. It works similar to `printf` seen in other languages. It has the
-same purpose as string interpolation above, but gives explicit control over
-the output format.
-
-    ```less
-    @symbol: ">";
-    h1:before {
-      content: %("%s: ", @symbol);
-    }
-    ```
-
-The `%` function takes as its first argument the format string, following any
-number of addition arguments that are inserted in place of the format
-directives.
-
-A format directive starts with a `%` and is followed by a single character that
-is either `a`, `d`, or `s`:
-
-    ```less
-    strings: %("%a %d %s %a", hi, 1, 'ok', 'cool');
-    ```
-
-`%a` and `%d` format the value the same way: they compile the argument to its
-CSS value and insert it directly. When used with a string, the quotes are
-included in the output. This typically isn't what we want, so we have the `%s`
-format directive which strips quotes from strings before inserting them.
-
-The `%d` directive functions the same as `%a`, but is typically used for numbers
-assuming the output format of numbers might change in the future.
-
-### String Unquoting
-
-Sometimes you will need to write proprietary CSS syntax that is unable to be
-parsed. As a workaround you can place the code into a string and unquote it.
-Unquoting is the process of outputting a string without its surrounding quotes.
-There are two ways to unquote a string.
-
-The `~` operator in front of a string will unquote that string:
-
-    ```less
-    .class {
-      // a made up, but problematic vendor specific CSS
-      filter: ~"Microsoft.AlphaImage(src='image.png')";
-    }
-    ```
-
-If you are working with other types, such as variables, there is a built in
-function that let's you unquote any value. It is called `e`.
-
-    ```less
-    @color: "red";
-    .class {
-      color: e(@color);
-    }
-    ```
-
 ### Nested Blocks
 
 By nesting blocks we can build up a chain of CSS selectors through scope
@@ -446,6 +356,95 @@ All of the following lines are valid ways to import the same file:
 When importing, the `importDir` is searched for files. This can be configured,
 see [PHP Interface](#php-interface).
 
+### String Interpolation
+
+String interpolation is a convenient way to insert the value of a variable
+right into a string literal. Given some variable named `@var_name`, you just
+need to write it as `@{var_name}` from within the string to have its value
+inserted:
+
+    ```less
+    @symbol: ">";
+    h1:before {
+      content: "@{symbol}: ";
+    }
+
+    h2:before {
+      content: "@{symbol}@{symbol}: ";
+    }
+    ```
+
+There are two kinds of strings, implicit and explicit strings. Explicit strings
+are wrapped by double quotes, `"hello I am a string"`, or single quotes `'I am
+another string'`. Implicit strings only appear when using `url()`. The text
+between the parentheses is considered a string and thus string interpolation is
+possible:
+
+    ```less
+    @path: "files/";
+    body {
+      background: url(@{path}my_background.png);
+    }
+    ```
+
+### String Format Function
+
+The `%` function can be used to insert values into strings using a *format
+string*. It works similar to `printf` seen in other languages. It has the
+same purpose as string interpolation above, but gives explicit control over
+the output format.
+
+    ```less
+    @symbol: ">";
+    h1:before {
+      content: %("%s: ", @symbol);
+    }
+    ```
+
+The `%` function takes as its first argument the format string, following any
+number of addition arguments that are inserted in place of the format
+directives.
+
+A format directive starts with a `%` and is followed by a single character that
+is either `a`, `d`, or `s`:
+
+    ```less
+    strings: %("%a %d %s %a", hi, 1, 'ok', 'cool');
+    ```
+
+`%a` and `%d` format the value the same way: they compile the argument to its
+CSS value and insert it directly. When used with a string, the quotes are
+included in the output. This typically isn't what we want, so we have the `%s`
+format directive which strips quotes from strings before inserting them.
+
+The `%d` directive functions the same as `%a`, but is typically used for numbers
+assuming the output format of numbers might change in the future.
+
+### String Unquoting
+
+Sometimes you will need to write proprietary CSS syntax that is unable to be
+parsed. As a workaround you can place the code into a string and unquote it.
+Unquoting is the process of outputting a string without its surrounding quotes.
+There are two ways to unquote a string.
+
+The `~` operator in front of a string will unquote that string:
+
+    ```less
+    .class {
+      // a made up, but problematic vendor specific CSS
+      filter: ~"Microsoft.AlphaImage(src='image.png')";
+    }
+    ```
+
+If you are working with other types, such as variables, there is a built in
+function that let's you unquote any value. It is called `e`.
+
+    ```less
+    @color: "red";
+    .class {
+      color: e(@color);
+    }
+    ```
 
 ### Built In Functions
 
