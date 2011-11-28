@@ -1,4 +1,5 @@
     title: v0.3.0 documentation
+    link_to_home: true
 --
 
 <h2 skip="true">Documentation v0.3.0</h2>
@@ -525,7 +526,7 @@ All of the following methods will throw an `Exception` if the parsing fails:
     }
     ```
 
-### Setting Variables From PHP 
+### Setting Variables From PHP
 
 The `parse` function takes a second optional argument. If you want to
 initialize variables from outside the LESS file then you can pass in an
