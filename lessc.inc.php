@@ -4,9 +4,9 @@
  * lessphp v0.3.0
  * http://leafo.net/lessphp
  *
- * LESS css compiler, adapted from http://lesscss.org/docs.html
+ * LESS css compiler, adapted from http://lesscss.org
  *
- * Copyright 2010, Leaf Corcoran <leafot@gmail.com>
+ * Copyright 2011, Leaf Corcoran <leafot@gmail.com>
  * Licensed under MIT or GPLv3, see LICENSE
  */
 

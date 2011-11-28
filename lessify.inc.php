@@ -4,6 +4,10 @@
  * Convert a css file into a less file
  * http://leafo.net/lessphp
  * Copyright 2010, leaf corcoran <leafot@gmail.com>
+ *
+ * WARNING: THIS DOES NOT WORK ANYMORE. NEEDS TO BE UPDATED FOR
+ * LATEST VERSION OF LESSPHP.
+ *
  */
 
 require "lessc.inc.php";
