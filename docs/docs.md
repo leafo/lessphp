@@ -1,5 +1,9 @@
+    title: v0.3.0 documentation
+--
 
-$index
+<h2 skip="true">Documentation v0.3.0</h2>
+
+<div style="margin-bottom: 1em;">$index</div>
 
 **lessphp** is a compiler that generates CSS from a superset language which
 adds a collection of convenient features often seen in other languages. All CSS
@@ -10,16 +14,26 @@ as a drop in replacement for PHP projects.
 
 ## Getting Started
 
-The homepage for **lessphp** can be found at
-[http://leafo.net/lessphp/](http://leafo.net/lessphp).
+The homepage for **lessphp** can be found at [http://leafo.net/lessphp/][1].
 
-You can follow development at the project's
-[github](https://github.com/leafo/lessphp).
+You can follow development at the project's [GitHub][2].
 
 Including **lessphp** in your project is as simple as dropping the single
 include file into your code base and running the appropriate compile method as
-described in the [PHP Interface](#php-interface).
+described in the [PHP Interface](#php_interface).
 
+  [1]: http://leafo.net/lessphp "lessphp homepage"
+  [2]: https://github.com/leafo/lessphp "lessphp GitHub page"
+
+## Installation
+
+**lessphp** is distributed entirely in a single stand-alone file. Download the
+latest version from either [the homepage][1] or [GitHub][2].
+
+Development versions can also be downloading from GitHub.
+
+Place `lessphp.inc.php` in a location available to your PHP scripts, and
+include it. That's it! you're ready to begin.
 
 ## The Language
 
@@ -340,7 +354,7 @@ All of the following lines are valid ways to import the same file:
     ```
 
 When importing, the `importDir` is searched for files. This can be configured,
-see [PHP Interface](#php-interface).
+see [PHP Interface](#php_interface).
 
 ### String Interpolation
 
@@ -437,7 +451,7 @@ function that let's you unquote any value. It is called `e`.
 **lessphp** has a collection of built in functions:
 
 * `e(str)` -- returns a string without the surrounding quotes.
-  See [String Unquoting](#string-unquote)
+  See [String Unquoting](#string_unquoting)
 
 * `floor(number)` -- returns the floor of a numerical input
 * `round(number)` -- returns the rounded value of numerical input
@@ -610,3 +624,31 @@ To watch a file for changes, and compile it as needed, use the `-w` flag:
     ```
 
 Errors from watch mode are written to standard out.
+
+
+## License
+
+Copyright (c) 2010 Leaf Corcoran, <http://leafo.net/lessphp>
+ 
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+ 
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+ 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+*Also under GPL3 if required, see `LICENSE` file*
+
