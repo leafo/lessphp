@@ -79,11 +79,10 @@ Use the mathematical operators to evaluate an expression:
     @width: 960px;
     .nav {
       width: @width / 3;
-      color: #001 + #abc; // evaluates to #aabdd
+      color: #001 + #abc;
     }
     .body {
       width: 2 * @width / 3;
-      // evaluates to "helloworld"
       font-family: "hel" + "vetica";
     }
     ```
@@ -102,7 +101,7 @@ subtraction:
 To force the subtraction:
 
     ```less
-    margin: (10px -5px); // produces 5px
+    margin: (10px -5px);
     ```
 
 It is also safe to surround mathematical operators by spaces to ensure that
@@ -163,12 +162,11 @@ the front of the child selector separated by space is not performed.
 
     ```less
     b {
-      // produces a b
       a & {
         color: red;
       }
 
-      // the following produce the same result
+      // the following have the same effect
 
       & i {
         color: blue;
@@ -187,29 +185,17 @@ following:
 
     ```less
     div {
-      .child-class {
-        color: purple;
-      }
+      .child-class { color: purple; }
 
-      &.isa-class {
-        color: green;
-      }
+      &.isa-class { color: green; }
 
-      #child-id {
-        height: 200px;
-      }
+      #child-id { height: 200px; }
 
-      &#div-id {
-        height: 400px;
-      }
+      &#div-id { height: 400px; }
 
-      &:hover {
-        color: red;
-      }
+      &:hover { color: red; }
 
-      :link {
-        color: blue;
-      }
+      :link { color: blue; }
     }
     ```
 
@@ -258,7 +244,7 @@ The canonical example is to create a rounded corners mixin that works across
 browsers:
     
     ```less
-    .rounded-corners (@radius: 5px) {
+    .rounded-corners(@radius: 5px) {
       border-radius: @radius;
       -webkit-border-radius: @radius;
       -moz-border-radius: @radius;
