@@ -507,13 +507,90 @@ To compile a string to a string:
     $css = $less->parse("body { a { color: red } }");
     ```
 
+### Compiling Automatically
+
 Often, you want to write the compiled CSS to a file, and only recompile when
-the original LESS file has changed. The following function will check the
-modification date of the LESS file to see if a compile is required:
+the original LESS file has changed. The following function will check if the
+modification date of the LESS file is more recent than the CSS file.  The LESS
+file will be compiled if it is. If the CSS file doesn't exist yet, then it will
+also compile the LESS file.
 
     ```php
     lessc::ccompile('myfile.less', 'mystyle.css');
     ```
+
+`ccompile` is very basic, it only checks if the input file's modification time.
+It is not of any files that are brought in using `@import`.
+
+For this reason we also have `lessc::cexecute`. It functions slightly
+differently, but gives us the ability to check changes to all files used during
+the compile. It takes one argument, either the name of the file we want to
+compile, or an existing *cache object*. Its return value is an updated cache
+object.
+
+If we don't have a cache object, then we call the function with the name of the
+file to get the initial cache object. If we do have a cache object, then we
+call the function with it. In both cases, an updated cache object is returned.
+
+The cache object keeps track of all the files that must be checked in order to
+determine if a rebuild is required.
+
+The cache object is a plain PHP `array`. It stores the last time it compiled in
+`$cache['updated']` and output of the compile in `$cache['compiled']`.
+
+Here we demonstrate creating an new cache object, then using it to see if we
+have a recompiled version available to be written:
+
+
+    ```php
+    $less_file = 'myfile.less';
+    $css_file = 'myfile.css';
+
+    // create a new cache object, and compile
+    $cache = lessc::cexecute('myfile.less');
+    file_put_contents($css_file, $cache['compiled']);
+
+    // the next time we run, write only if it has updated
+    $last_updated = $cache['updated'];
+    $cache = lessc::cexecute($cache);
+    if ($cache['updated'] > $last_updated) {
+        file_put_contents($css_file, $cache['compiled']);
+    }
+
+    ```
+
+In order for the system to fully work, we must save cache object between
+requests. Because it's a plain PHP `array`, it's sufficient to
+[`serialize`](http://php.net/serialize) it and save it the string somewhere
+like a file or in persistent memory.
+
+An example with saving cache object to a file:
+
+    ```php
+    function auto_compile_less($less_fname, $css_fname) {
+      // load the cache
+      $cache_fname = $less_fname.".cache";
+      if (file_exists($cache_fname)) {
+        $cache = unserialize(file_get_contents($cache_fname));
+      } else {
+        $cache = $less_fname;
+      }
+
+      $new_cache = lessc::cexecute($cache);
+      if (!is_array($cache) || $new_cache['updated'] > $cache['updated']) {
+        file_put_contents($cache_fname, serialize($new_cache));
+        file_put_contents($css_fname, $new_cache['compiled']);
+      }
+    }
+
+    auto_compile_less('myfile.less', 'myfile.css')
+
+    ```
+
+`lessc:cexecute` takes an optional second argument, `$force`. Passing in true
+will cause the input to always be recompiled.
+
+### Error Handling
 
 All of the following methods will throw an `Exception` if the parsing fails:
 
@@ -525,7 +602,6 @@ All of the following methods will throw an `Exception` if the parsing fails:
         echo "lessphp fatal error: ".$ex->getMessage();
     }
     ```
-
 ### Setting Variables From PHP
 
 The `parse` function takes a second optional argument. If you want to
