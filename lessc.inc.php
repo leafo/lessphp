@@ -1870,7 +1870,7 @@ class lessc {
 						/* ensure that we look past the end of this comment,
 						 * otherwise we may detect http:// as a partial
 						 * single line comment in a subsequent iteration */
-						$count = strlen($m[0]) - strlen($min[0]);
+						$count += strlen($m[0]) - strlen($min[0]);
 					} else {
 						$skip = strlen($m[0]);
 						$newlines = substr_count($m[0], "\n");
