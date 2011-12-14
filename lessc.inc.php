@@ -1886,11 +1886,12 @@ class lessc {
 
 
 	// compile to $in to $out if $in is newer than $out
+	// use $vars to pass in variables from php
 	// returns true when it compiles, false otherwise
-	public static function ccompile($in, $out) {
+	public static function ccompile($in, $out, $vars = array()) {
 		if (!is_file($out) || filemtime($in) > filemtime($out)) {
 			$less = new lessc($in);
-			file_put_contents($out, $less->parse());
+			file_put_contents($out, $less->parse(null,$vars));
 			return true;
 		}
 
@@ -1915,9 +1916,10 @@ class lessc {
 	 * 
 	 * @param mixed $in Input
 	 * @param bool $force Force rebuild?
+	 * @param array $vars Variables to pass in
 	 * @return array lessphp cache structure
 	 */
-	public static function cexecute($in, $force = false) {
+	public static function cexecute($in, $force = false, $vars = array()) {
 
 		// assume no root
 		$root = null;
@@ -1951,7 +1953,7 @@ class lessc {
 			$less = new lessc($root);
 			$out = array();
 			$out['root'] = $root;
-			$out['compiled'] = $less->parse();
+			$out['compiled'] = $less->parse(null,$vars);
 			$out['files'] = $less->allParsedFiles();
 			$out['updated'] = time();
 			return $out;
