@@ -1886,10 +1886,11 @@ class lessc {
 
 
 	// compile to $in to $out if $in is newer than $out
+	// force rebuilding by setting $force to true
 	// use $vars to pass in variables from php
 	// returns true when it compiles, false otherwise
-	public static function ccompile($in, $out, $vars = array()) {
-		if (!is_file($out) || filemtime($in) > filemtime($out)) {
+	public static function ccompile($in, $out, $vars = array(), $force = false) {
+		if (!is_file($out) || filemtime($in) > filemtime($out) || $force) {
 			$less = new lessc($in);
 			file_put_contents($out, $less->parse(null,$vars));
 			return true;
@@ -1941,6 +1942,10 @@ class lessc {
 						break;
 					}
 				}
+			} elseif (isset($in['vars']) and $vars !== $in['vars']) {
+				// If the variables we're passing in have changed
+				// we should look at the incoming root to trigger a rebuild.
+				$root = $in['root'];
 			}
 		} else {
 			// TODO: Throw an exception? We got neither a string nor something
@@ -1956,6 +1961,7 @@ class lessc {
 			$out['compiled'] = $less->parse(null,$vars);
 			$out['files'] = $less->allParsedFiles();
 			$out['updated'] = time();
+			$out['vars'] = $vars;
 			return $out;
 		} else {
 			// No changes, pass back the structure
