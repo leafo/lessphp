@@ -78,16 +78,18 @@ $compiling = flag('C');
 $showDiff = flag('d', 'diff');
 echo ($compiling ? "Compiling" : "Running")." $count test".($count == 1 ? '' : 's').":\n";
 
-function dump($msgs, $depth = 1) {
+function dump($msgs, $depth = 1, $prefix="    ") {
 	if (!is_array($msgs)) $msgs = array($msgs);
 	foreach ($msgs as $m) {
-		echo str_repeat("\t", $depth).' - '.$m."\n";
+		echo str_repeat($prefix, $depth).' - '.$m."\n";
 	}
 }
 
+$fail_prefix = " ** ";
+
 $i = 1;
 foreach ($tests as $test) {
-	printf("\t[Test %04d/%04d] %s -> %s\n", $i, $count, basename($test['in']), basename($test['out']));
+	printf("    [Test %04d/%04d] %s -> %s\n", $i, $count, basename($test['in']), basename($test['out']));
 
 	try {
 		ob_start();
@@ -98,7 +100,7 @@ foreach ($tests as $test) {
 			"Failed to compile input, reason:",
 			$e->getMessage(),
 			"Aborting"
-		));
+		), 1, $fail_prefix);
 		break;
 	}
 
@@ -110,14 +112,14 @@ foreach ($tests as $test) {
 				"Failed to find output file: $test[out]",
 				"Maybe you forgot to compile tests?",
 				"Aborting"
-			));
+			), 1, $fail_prefix);
 			break;
 		}
 		$expected = trim(file_get_contents($test['out']));
 
 		if ($expected != $parsed) {
 			if ($showDiff) {
-				dump("Failed:");
+				dump("Failed:", 1, $fail_prefix);
 				$tmp = $test['out'].".tmp";
 				file_put_contents($tmp, $parsed);
 				system($difftool.' '.$test['out'].' '.$tmp);
@@ -125,7 +127,7 @@ foreach ($tests as $test) {
 
 				dump("Aborting");
 				break;
-			} else dump("Failed, run with -d flag to view diff");
+			} else dump("Failed, run with -d flag to view diff", 1, $fail_prefix);
 		} else {
 			dump("Passed");
 		}
