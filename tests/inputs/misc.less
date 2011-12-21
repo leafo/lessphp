@@ -41,9 +41,31 @@ Here is a block comment
 @aaa: aaa;
 @bbb: bbb;
 // make sure the opening selector isn't too greedy
-.test {.mix("@{aaa}, @{bbb}")}
+.cool {.mix("@{aaa}, @{bbb}")}
 
-.test("{hello");
-.test('{hello');
+.cool("{hello");
+.cool('{hello');
 
+
+// merging of mixins
+.span-17 { float: left; }
+.span-17 { width: 660px; }
+
+.x {.span-17;}
+
+.hi {
+	pre {
+		color: red;
+	}
+}
+
+.hi {
+	pre {
+		color: blue;
+	}
+}
+
+.rad {
+	.hi;
+}
 

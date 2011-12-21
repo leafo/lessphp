@@ -14,4 +14,14 @@ color:"aaa, bbb";
   what-ever:100px;
   background:url(/*no comment here*/);
 }
-.test { color:"aaa, bbb"; }
+.cool { color:"aaa, bbb"; }
+.span-17 { float:left; }
+.span-17 { width:660px; }
+.x {
+  float:left;
+  width:660px;
+}
+.hi pre { color:red; }
+.hi pre { color:blue; }
+.rad pre { color:red; }
+.rad pre { color:blue; }

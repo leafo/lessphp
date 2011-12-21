@@ -267,6 +267,9 @@ class lessc {
 
 			if (!$hidden) $this->append(array('block', $block));
 			foreach ($block->tags as $tag) {
+				if (isset($this->env->children[$tag])) {
+					$block = $this->mergeBlock($this->env->children[$tag], $block);
+				}
 				$this->env->children[$tag] = $block;
 			}
 
@@ -283,7 +286,6 @@ class lessc {
 		} else {
 			$this->seek($s);
 		}
-
 
 		// spare ;
 		if ($this->literal(';')) return true;
@@ -836,6 +838,13 @@ class lessc {
 	function compressList($items, $delim) {
 		if (count($items) == 1) return $items[0];	
 		else return array('list', $delim, $items);
+	}
+
+	// just do a shallow propety merge, seems to be what lessjs does
+	function mergeBlock($target, $from) {
+		$target = clone $target;
+		$target->props = array_merge($target->props, $from->props);
+		return $target;
 	}
 
 	/**
