@@ -273,8 +273,7 @@ class lessc {
 			return true;
 		}
 
-
-		// mixin 
+		// mixin
 		if ($this->mixinTags($tags) &&
 			($this->argumentValues($argv) || true) && $this->end())
 		{
@@ -284,6 +283,8 @@ class lessc {
 		} else {
 			$this->seek($s);
 		}
+
+
 		// spare ;
 		if ($this->literal(';')) return true;
 
@@ -738,9 +739,9 @@ class lessc {
 	// a single tag
 	function tag(&$tag, $simple = false) {
 		if ($simple)
-			$chars = '^,:;{}\][>\(\) ';
+			$chars = '^,:;{}\][>\(\) "\'';
 		else
-			$chars = '^,;{}[';
+			$chars = '^,;{}["\'';
 
 		$tag = '';
 		while ($this->tagBracket($first)) $tag .= $first;

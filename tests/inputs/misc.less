@@ -36,3 +36,14 @@ Here is a block comment
 	background: url(/*no comment here*/);
 }
 
+
+.mix(@arg) { color: @arg; }
+@aaa: aaa;
+@bbb: bbb;
+// make sure the opening selector isn't too greedy
+.test {.mix("@{aaa}, @{bbb}")}
+
+.test("{hello");
+.test('{hello');
+
+
