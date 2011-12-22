@@ -36,6 +36,7 @@ class lessc {
 	protected $buffer;
 	protected $count;
 	protected $line;
+	protected $libFunctions = array();
 
 	public $indentLevel;
 	public $indentChar = '  ';
@@ -65,7 +66,7 @@ class lessc {
 	/**
 	 * @link http://www.w3.org/TR/css3-values/
 	 */
-	static protected $units=array(
+	static protected $units = array(
 		'em', 'ex', 'px', 'gd', 'rem', 'vw', 'vh', 'vm', 'ch', // Relative length units
 		'in', 'cm', 'mm', 'pt', 'pc', // Absolute length units
 		'%', // Percentages
@@ -1444,7 +1445,9 @@ class lessc {
 				else {
 					list($_, $name, $args) = $var;
 					if ($name == "%") $name = "_sprintf";
-					$f = array($this, 'lib_'.$name);
+					$f = isset($this->libFunctions[$name]) ?
+						$this->libFunctions[$name] : array($this, 'lib_'.$name);
+
 					if (is_callable($f)) {
 						if ($args[0] == 'list')
 							$args = $this->compressList($args[2], $args[1]);
@@ -1829,6 +1832,14 @@ class lessc {
 
 			$this->addParsedFile($fname);
 		}
+	}
+
+	public function registerFunction($name, $func) {
+		$this->libFunctions[$name] = $func;
+	}
+
+	public function unregisterFunction($name) {
+		unset($this->libFunctions[$name]);
 	}
 
 	// remove comments from $text

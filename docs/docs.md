@@ -632,43 +632,58 @@ instead of the file:
 functions that will be exposed in LESS code during the compile. They can be a
 little tricky though because you need to work with the  **lessphp** type system.
 
-By sub-classing `lessc`, and creating specially named methods we can extend
-**lessphp**. In order for a function to be visible in LESS, its name must
-start with `lib_`.
+An instance of `lessc`, the **lessphp** compiler has two relevant methods:
+`registerFunction` and `unregisterFunction`. `registerFunction` takes two
+arguments, a name and a callable value. `unregisterFunction` just takes the
+name of an existing function to remove.
 
-Let's make a function that doubles any numeric argument.
+Here's an example that adds a function called `double` that doubles any numeric
+argument:
 
     ```php
     <?php
     include "lessc.inc.php";
 
-    class myless extends lessc {
-        function lib_double($arg) {
-            list($type, $value) = $arg;
-            return array($type, $value*2);
-        }
+    function lessphp_double($arg) {
+        list($type, $value) = $arg;
+        return array($type, $value*2);
     }
 
     $myless = new myless();
+    $myless->registerFunction("double", "lessphp_double");
+
+    // gives us a width of 800px
     echo $myless->parse("div { width: double(400px); }");
     ```
 
-Although a little verbose, the implementation of `lib_double` gives us some
-insight on the type system. All values are stored in an array where the 0th
-element is a string representing the type, and the other elements make up the
+The second argument to `registerFunction` is any *callable value* that is
+understood by [`call_user_func`](http://php.net/call_user_func).
+
+If we are using PHP 5.3 or above then we are free to pass a function literal
+like so:
+
+    ```php
+    $myless->registerFunction("double", function($arg) {
+        list($type, $value) = $arg;
+        return array($type, $value*2);
+    });
+    ```
+
+Now let's talk about the `double` function itself.
+
+Although a little verbose, the implementation gives us some insight on the type
+system. All values in **lessphp** are stored in an array where the 0th element
+is a string representing the type, and the other elements make up the
 associated data for that value.
 
-The best way to get an understanding of the system is to make a dummy `lib_`
+The best way to get an understanding of the system is to register is dummy
 function which does a `vardump` on the argument. Try passing the function
 different values from LESS and see what the results are.
 
-The return value of the `lib_` function must also be a LESS type, but if it is
+The return value of the registered function must also be a LESS type, but if it is
 a string or numeric value, it will automatically be coerced into an appropriate
 typed value. In our example, we reconstruct the value with our modifications
-while making sure that we preserve the type.
-
-All of the built in functions are implemented in this manner within the `lessc`
-class.
+while making sure that we preserve the original type.
 
 ## Command Line Interface
 
