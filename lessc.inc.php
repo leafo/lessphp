@@ -37,6 +37,7 @@ class lessc {
 	protected $count;
 	protected $line;
 	protected $libFunctions = array();
+	protected $nextBlockId = 0;
 
 	public $indentLevel;
 	public $indentChar = '  ';
@@ -969,8 +970,11 @@ class lessc {
 	}
 
 	// attempt to find block pointed at by path within search_in or its parent
-	function findBlock($search_in, $path) {
+	function findBlock($search_in, $path, $seen=array()) {
 		if ($search_in == null) return null;
+		if (isset($seen[$search_in->id])) return null;
+		$seen[$search_in->id] = true;
+
 		$name = $path[0];
 
 		if (isset($search_in->children[$name])) {
@@ -978,10 +982,11 @@ class lessc {
 			if (count($path) == 1) {
 				return $block;
 			} else {
-				return $this->findBlock($block, array_slice($path, 1));
+				return $this->findBlock($block, array_slice($path, 1), $seen);
 			}
 		} else {
-			return $this->findBlock($search_in->parent, $path);
+			if ($search_in->parent === $search_in) return null;
+			return $this->findBlock($search_in->parent, $path, $seen);
 		}
 	}
 
@@ -1612,6 +1617,7 @@ class lessc {
 		$b = new stdclass;
 		$b->parent = $this->env;
 
+		$b->id = $this->nextBlockId++;
 		$b->tags = $tags;
 		$b->props = array();
 		$b->children = array();
