@@ -1664,6 +1664,11 @@ class lessc {
 	// get the highest occurrence entry for a name
 	function get($name) {
 		$current = $this->env;
+
+		// @arguments returns a list of all mixin arguments
+		if ($name == $this->vPrefix.'arguments' && sizeof($current->store) > 0)
+			return $this->compressList(array_filter($current->store), ' ');
+
 		while ($current) {
 			if (isset($current->store[$name]))
 				return $current->store[$name];

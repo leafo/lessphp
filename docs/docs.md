@@ -275,6 +275,21 @@ browsers:
     }
     ```
 
+If the mixin might take a variable number of arguments, you can use the special
+`@arguments` variable to output whatever is used:
+
+    ```less
+    .box-shadow(@inset, @x, @y, @blur, @spread, @color) {
+      box-shadow: @arguments;
+      -webkit-box-shadow: @arguments;
+      -moz-box-shadow: @arguments;
+    }
+
+    .menu {
+      .box-shadow(1px, 1px, 5px, #aaa);
+    }
+    ```
+
 If you have a mixin that doesn't have any arguments, but you don't want it to
 show up in the output, give it a blank argument list:
 
