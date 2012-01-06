@@ -1666,8 +1666,13 @@ class lessc {
 		$current = $this->env;
 
 		// @arguments returns a list of all mixin arguments
-		if ($name == $this->vPrefix.'arguments' && isset($current->store))
+		if ($name == $this->vPrefix.'arguments' && isset($current->store) && sizeof($current->store) > 0) {
+			//FIXME: Assuming all arguments are lists if one is.
+			foreach ($current->store as $value)
+				if ($value[0] == 'list')
+					return $this->compressList(array_filter($current->store), ', ');
 			return $this->compressList(array_filter($current->store), ' ');
+		}
 
 		while ($current) {
 			if (isset($current->store[$name]))
