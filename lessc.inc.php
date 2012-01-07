@@ -37,7 +37,7 @@ class lessc {
 	protected $count;
 	protected $line;
 	protected $libFunctions = array();
-	protected $nextBlockId = 0;
+	static protected $nextBlockId = 0;
 
 	public $indentLevel;
 	public $indentChar = '  ';
@@ -1617,7 +1617,7 @@ class lessc {
 		$b = new stdclass;
 		$b->parent = $this->env;
 
-		$b->id = $this->nextBlockId++;
+		$b->id = self::$nextBlockId++;
 		$b->tags = $tags;
 		$b->props = array();
 		$b->children = array();
