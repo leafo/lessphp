@@ -1,5 +1,5 @@
 # lessphp v0.3.0
-#### <http://leafo.net/lessphp>
+### <http://leafo.net/lessphp>
 
 `lessphp` is a compiler for LESS written in PHP. The documentation is great,
 so check it out: <http://leafo.net/lessphp/docs/>. Here's a quick tutorial:
@@ -15,7 +15,7 @@ is newer than the output file.
 
 	try {
 		lessc::ccompile('input.less', 'output.css');
-	catch (exception $ex) {
+	} catch (exception $ex) {
 		exit($ex->getMessage());
 	}
 
