@@ -18,13 +18,23 @@
   padding: @width;
 }
 
+@box-shadow(@inset, @offset-x, @offset-y, @blur-radius, @spread-radius, @color) {
+	box-shadow: @arguments;
+	-webkit-box-shadow: @arguments;
+	-moz-box-shadow: @arguments;
+}
+
 body {
   .class(2.0em);
   @group > @f(red);
   @class(10px, 10px + 2);
   @group > .cool;
+  @box-shadow(1px, 1px, 5px, #aaa);
 }
 
+more {
+  @box-shadow(1px 1px 1px #111, 2px 2px 2px #222);
+}
 
 @lots(@a: 10px, @b: 20px, @c: 30px, @d: 40px, @e: 4px, @f:3px, @g:2px, @h: 1px) {
 	padding: @a @b @c @d;

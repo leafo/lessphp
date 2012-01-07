@@ -4,6 +4,14 @@ body {
   margin:10px;
   height:12px;
   border-bottom:1px solid green;
+  box-shadow:1px 1px 5px #aaaaaa;
+  -webkit-box-shadow:1px 1px 5px #aaaaaa;
+  -moz-box-shadow:1px 1px 5px #aaaaaa;
+}
+more {
+  box-shadow:1px 1px 1px #111111, 2px 2px 2px #222222;
+  -webkit-box-shadow:1px 1px 1px #111111, 2px 2px 2px #222222;
+  -moz-box-shadow:1px 1px 1px #111111, 2px 2px 2px #222222;
 }
 .skip_args {
   margin:22px;
