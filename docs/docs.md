@@ -321,6 +321,41 @@ you want to include. Optionally you can separate them by `>`.
     }
     ```
 
+#### `@arguments` Variable
+
+Within an mixin there is a special variable named `@arguments` that contains
+all the arguments passed to the mixin along with any remaining arguments that
+have default values. The value of the variable has all the values separated by
+spaces.
+
+This useful for quickly assigning all the arguments:
+
+    ```less
+    .box-shadow(@inset, @x, @y, @blur, @spread, @color) {
+      box-shadow: @arguments;
+      -webkit-box-shadow: @arguments;
+      -moz-box-shadow: @arguments;
+    }
+    .menu {
+      .box-shadow(1px, 1px, 5px, #aaa);
+    }
+    ```
+
+In addition to the arguments passed to the mixin, `@arguments` will also inlude
+remaining default values assigned by the mixin:
+
+
+    ```less
+    .border-mixin(@width, @style: solid, @color: black) {
+      border: @arguments;
+    }
+
+    pre {
+      .border-mixin(4px, dotted);
+    }
+
+    ```
+
 ### Import
 
 Multiple LESS files can be compiled into a single CSS file by using the
