@@ -66,3 +66,57 @@ body {
 }
 
 
+// arguments
+
+.spam(@something: 100) {
+	@wow: 23434;
+    foo: @arguments;
+    bar: @arguments;
+}
+
+.eggs {
+    .spam(1px, 2px, 4px, 8px);
+}
+
+.first(@one, @two, @three, @four: cool) {
+	cool: @arguments;
+}
+
+#hello {
+	.first(one, two, three);
+}
+
+
+.rad() {
+	cool: @arguments;
+}
+
+#world {
+	@hello: "world";
+	.rad("@{hello}");
+}
+
+.second() {
+	things: @arguments;
+}
+
+#another {
+	.second(red, blue, green);
+	.second(red blue green);
+}
+
+
+.another() {
+  .cool {
+    color: @arguments;
+  }
+}
+
+#day {
+	.another(one,two, three);
+	.another(one two three);
+}
+
+
+
+

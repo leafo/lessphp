@@ -994,6 +994,7 @@ class lessc {
 	// or the one passed in through $values
 	function zipSetArgs($args, $values) {
 		$i = 0;
+		$assigned_values = array();
 		foreach ($args as $a) {
 			if ($i < count($values) && !is_null($values[$i])) {
 				$value = $values[$i];
@@ -1001,9 +1002,18 @@ class lessc {
 				$value = $a[1];
 			} else $value = null;
 
-			$this->set($this->vPrefix.$a[0], $this->reduce($value));
+			$value = $this->reduce($value);
+			$this->set($this->vPrefix.$a[0], $value);
+			$assigned_values[] = $value;
 			$i++;
 		}
+
+		// copy over any extra default args
+		for ($i = count($values); $i < count($assigned_values); $i++) {
+			$values[] = $assigned_values[$i];
+		}
+
+		$this->env->arguments = $values;
 	}
 
 	// compile a prop and update $lines or $blocks appropriately
@@ -1664,7 +1674,13 @@ class lessc {
 	// get the highest occurrence entry for a name
 	function get($name) {
 		$current = $this->env;
+
+		$is_arguments = $name == $this->vPrefix . 'arguments';
 		while ($current) {
+			if ($is_arguments and isset($current->arguments)) {
+				return array('list', ' ', $current->arguments);
+			}
+
 			if (isset($current->store[$name]))
 				return $current->store[$name];
 			else
