@@ -63,3 +63,29 @@ body {
 	zero: spin(#000000, 100);
 	zero: spin(#ffffff, 100);
 }
+
+
+alpha {
+	// g: alpha(red);
+	g: alpha(rgba(0,0,0,0));
+	g: alpha(rgb(155,55,0));
+}
+
+fade {
+	f: fade(red, 50%);
+	f: fade(#fff, 20%);
+	f: fade(rgba(34,23,64,0.4), 50%);
+}
+
+@a: rgb(255,255,255);
+@b: rgb(0,0,0);
+
+.mix {
+	color: mix(@a, @b, 50%);
+}
+
+.percent {
+	per: percentage(0.5);
+}
+
+

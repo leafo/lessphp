@@ -1310,6 +1310,64 @@ class lessc {
 		return round($hsl[3]);
 	}
 
+	// get the alpha of a color
+	// defaults to 1 for non-colors or colors without an alpha
+	function lib_alpha($color) {
+		if ($color[0] != 'color') return 1;
+		return isset($color[4]) ? $color[4] : 1;
+	}
+
+	// set the alpha of the color
+	function lib_fade($args) {
+		list($color, $alpha) = $this->colorArgs($args);
+		$color[4] = $this->clamp($alpha / 100.0);
+		return $color;
+	}
+
+	function lib_percentage($number) {
+		return array('%', $number[1]*100);
+	}
+
+	// mixes two colors by weight
+	// mix(@color1, @color2, @weight);
+	// http://sass-lang.com/docs/yardoc/Sass/Script/Functions.html#mix-instance_method
+	function lib_mix($args) {
+		if ($args[0] != "list")
+			throw new exception("mix expects (color1, color2, weight)");
+
+		list($first, $second, $weight) = $args[2];
+		$first = $this->assertColor($first);
+		$second = $this->assertColor($second);
+
+		$first_a = $this->lib_alpha($first);
+		$second_a = $this->lib_alpha($second);
+		$weight = $weight[1] / 100.0;
+
+		$w = $weight * 2 - 1;
+		$a = $first_a - $second_a;
+
+		$w1 = (($w * $a == -1 ? $w : ($w + $a)/(1 + $w * $a)) + 1) / 2.0;
+		$w2 = 1.0 - $w1;
+
+		$new = array('color',
+			$w1 * $first[1] + $w2 * $second[1],
+			$w1 * $first[2] + $w2 * $second[2],
+			$w1 * $first[3] + $w2 * $second[3],
+		);
+
+		if ($first_a != 1.0 || $second_a != 1.0) {
+			$new[] = $first_a * $p + $second_a * ($p - 1);
+		}
+
+		return $new;
+	}
+
+	function assertColor($value, $error = "expected color value") {
+		if ($value[0] != "color")
+			throw new exception($error);
+		return $value;
+	}
+
 	function toHSL($color) {
 		if ($color[0] == 'hsl') return $color;
 

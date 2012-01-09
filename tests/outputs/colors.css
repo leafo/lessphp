@@ -44,3 +44,14 @@ body {
   zero:#000000;
   zero:#ffffff;
 }
+alpha {
+  g:0;
+  g:1;
+}
+fade {
+  f:rgba(0,0,0,0.5);
+  f:rgba(255,255,255,0.2);
+  f:rgba(34,23,64,0.5);
+}
+.mix { color:#7f7f7f; }
+.percent { per:50%; }
