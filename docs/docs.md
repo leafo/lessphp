@@ -492,16 +492,33 @@ function that let's you unquote any value. It is called `e`.
 * `floor(number)` -- returns the floor of a numerical input
 * `round(number)` -- returns the rounded value of numerical input
 
-* `lighten(color, percent)` -- lightens color by percent and returns it
-* `darken(color, percent)` -- darkens color by percent and returns it
+* `lighten(color, percent)` -- lightens `color` by `percent` and returns it
+* `darken(color, percent)` -- darkens `color` by `percent` and returns it
 
-* `saturate(color, percent)` -- saturates color by percent and returns it
-* `desaturate(color, percent)` -- desaturates color by percent and returns it
+* `saturate(color, percent)` -- saturates `color` by `percent` and returns it
+* `desaturate(color, percent)` -- desaturates `color` by `percent` and returns it
 
-* `fadein(color, percent)` -- makes color less transparent by percent and returns it
-* `fadeout(color, percent)` -- makes color more transparent by percent and returns it
+* `fadein(color, percent)` -- makes `color` less transparent by `percent` and returns it
+* `fadeout(color, percent)` -- makes `color` more transparent by `percent` and returns it
 
-* `spin(color, amount)` -- returns a color with amount degrees added to hue
+* `spin(color, amount)` -- returns a color with `amount` degrees added to hue
+
+* `fade(color, amount)` -- retuns a color with the alpha set to `amount`
+
+* `hue(color)` -- retuns the hue of `color`
+
+* `saturation(color)` -- retuns the saturation of `color`
+
+* `lightness(color)` -- retuns the lightness of `color`
+
+* `alpha(color)` -- retuns the alpha value of `color` or 1.0 if it doesn't have an alpha
+
+* `percentage(number)` -- converts a floating point number to a percentage, eg. `0.65` -> `65%`
+
+* `mix(color1, color1, percent)` -- mixes two colors by percentagle where 100%
+  keeps all of `color1`, and 0% keeps all of `color2`. Will take into account
+  the alpha of the colors if it exists. See
+  <http://sass-lang.com/docs/yardoc/Sass/Script/Functions.html#mix-instance_method>.
 
 * `rgbahex(color)` -- returns a string containing 4 part hex color.
    

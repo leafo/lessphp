@@ -1359,7 +1359,7 @@ class lessc {
 			$new[] = $first_a * $p + $second_a * ($p - 1);
 		}
 
-		return $new;
+		return $this->fixColor($new);
 	}
 
 	function assertColor($value, $error = "expected color value") {
