@@ -1677,7 +1677,7 @@ class lessc {
 
 		$is_arguments = $name == $this->vPrefix . 'arguments';
 		while ($current) {
-			if ($is_arguments and isset($current->arguments)) {
+			if ($is_arguments && isset($current->arguments)) {
 				return array('list', ' ', $current->arguments);
 			}
 
@@ -1697,7 +1697,7 @@ class lessc {
 		if ($this->count >= strlen($this->buffer)) return false;
 
 		// shortcut on single letter
-		if (!$eatWhitespace and strlen($what) == 1) {
+		if (!$eatWhitespace && strlen($what) == 1) {
 			if ($this->buffer{$this->count} == $what) {
 				$this->count++;
 				return true;
