@@ -1,0 +1,22 @@
+.one {
+  color:one;
+  color:one;
+}
+.two {
+  color:two;
+  color:two;
+}
+.three {
+  color:three;
+  color:three;
+}
+.multi-foo {
+  color:two;
+  color:two;
+  color:three;
+}
+.multi-baz {
+  color:two;
+  color:three;
+  color:three;
+}
