@@ -268,11 +268,25 @@ class lessc {
 			}
 
 			if (!$hidden) $this->append(array('block', $block));
+
 			foreach ($block->tags as $tag) {
-				if (isset($this->env->children[$tag])) {
-					$block = $this->mergeBlock($this->env->children[$tag], $block);
+				// see if we can merge argless block
+				// TODO: remember where the argless default block is
+				if (isset($this->env->children[$tag]) && empty($block->args)) {
+					$children =& $this->env->children[$tag];
+					$found = false;
+					foreach ($children as $i => $old) {
+						if (empty($old->args)) {
+							$found = true;
+							$children[$i] = $this->mergeBlock($old, $block);
+							break;
+						}
+					}
+
+					if ($found) continue;
 				}
-				$this->env->children[$tag] = $block;
+
+				$this->env->children[$tag][] = $block;
 			}
 
 			return true;
@@ -675,14 +689,21 @@ class lessc {
 		if (!$this->literal('(')) return false;
 
 		$values = array();
-		while ($this->variable($vname)) {
-			$arg = array($vname);
-			if ($this->assign() && $this->expressionList($value)) {
-				$arg[] = $value;
-				// let the : slide if there is no value
+		while (true) {
+			if ($this->variable($vname)) {
+				$arg = array("arg", $vname);
+				if ($this->assign() && $this->expressionList($value)) {
+					$arg[] = $value;
+					// let the : slide if there is no value
+				}
+				$values[] = $arg;
+				continue;
 			}
 
-			$values[] = $arg;
+			if ($this->value($literal)) {
+				$values[] = array("lit", $literal);
+			}
+
 			if (!$this->literal($delim)) break;
 		}
 
@@ -692,6 +713,7 @@ class lessc {
 		}
 
 		$args = $values;
+
 		return true;
 	}
 
@@ -969,8 +991,48 @@ class lessc {
 		return $tags;
 	}
 
+	function eq($left, $right) {
+		return false;
+	}
+
+	function patternMatch($block, $callingArgs) {
+		// args can be nil in both cases
+		if (empty($block->args)) {
+			if (empty($callingArgs)) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+
+		foreach ($block->args as $i => $arg) {
+			switch ($arg[0]) {
+			case "lit":
+				throw new exception("not yet");
+				// $val = $callingArgs[$i];
+				break;
+			case "arg":
+				// no arg and no default value
+				if (!isset($callingArgs[$i]) && !isset($arg[2])) {
+					return false;
+				}
+				break;
+			}
+		}
+		return $i >= count($callingArgs) - 1;
+	}
+
+	function patternMatchAll($blocks, $callingArgs) {
+		foreach ($blocks as $block) {
+			if ($this->patternMatch($block, $callingArgs)) {
+				return $block;
+			}
+		}
+		return false;
+	}
+
 	// attempt to find block pointed at by path within search_in or its parent
-	function findBlock($search_in, $path, $seen=array()) {
+	function findBlock($search_in, $path, $args, $seen=array()) {
 		if ($search_in == null) return null;
 		if (isset($seen[$search_in->id])) return null;
 		$seen[$search_in->id] = true;
@@ -978,16 +1040,20 @@ class lessc {
 		$name = $path[0];
 
 		if (isset($search_in->children[$name])) {
-			$block = $search_in->children[$name];
+			$blocks = $search_in->children[$name];
 			if (count($path) == 1) {
-				return $block;
+				$match = $this->patternMatchAll($blocks, $args);
+				if ($match) {
+					return $match;
+				}
 			} else {
-				return $this->findBlock($block, array_slice($path, 1), $seen);
+				return $this->findBlock($blocks[0],
+					array_slice($path, 1), $args, $seen);
 			}
-		} else {
-			if ($search_in->parent === $search_in) return null;
-			return $this->findBlock($search_in->parent, $path, $seen);
 		}
+
+		if ($search_in->parent === $search_in) return null;
+		return $this->findBlock($search_in->parent, $path, $args, $seen);
 	}
 
 	// sets all argument names in $args to either the default value
@@ -996,15 +1062,17 @@ class lessc {
 		$i = 0;
 		$assigned_values = array();
 		foreach ($args as $a) {
-			if ($i < count($values) && !is_null($values[$i])) {
-				$value = $values[$i];
-			} elseif (isset($a[1])) {
-				$value = $a[1];
-			} else $value = null;
+			if ($a[0] == "arg") {
+				if ($i < count($values) && !is_null($values[$i])) {
+					$value = $values[$i];
+				} elseif (isset($a[2])) {
+					$value = $a[2];
+				} else $value = null;
 
-			$value = $this->reduce($value);
-			$this->set($this->vPrefix.$a[0], $value);
-			$assigned_values[] = $value;
+				$value = $this->reduce($value);
+				$this->set($this->vPrefix.$a[1], $value);
+				$assigned_values[] = $value;
+			}
 			$i++;
 		}
 
@@ -1035,7 +1103,7 @@ class lessc {
 		case 'mixin':
 			list(, $path, $args) = $prop;
 
-			$mixin = $this->findBlock($block, $path);
+			$mixin = $this->findBlock($block, $path, $args);
 			if (is_null($mixin)) {
 				// echo "failed to find block: ".implode(" > ", $path)."\n";
 				break; // throw error here??
