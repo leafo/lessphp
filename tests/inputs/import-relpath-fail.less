@@ -1,0 +1,14 @@
+/*
+   test case to verify correct behaviour for issue #118 / # 178
+   
+   will fail when #144 is merged as-is.
+ */
+ 
+@import 'test-imports/178/a/plugin.less'; 
+
+@import 'test-imports/178/c/plugin.less';  // must fail with error due to there not being a c/b.less in there!
+
+// these should remain as is, since we don't resolve remote files. (security risk)
+@import 'http://example.com/bugger.less';
+@import 'http://example.com/bugger.css';
+

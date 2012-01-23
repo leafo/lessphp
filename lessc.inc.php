@@ -77,7 +77,7 @@ class lessc {
 	);
     
 	public $importDisabled = false;
-	public $importDir = '';
+	public $importDir = array('');
 
 	public $compat = false; // lessjs compatibility mode, does nothing right now
 
@@ -225,6 +225,12 @@ class lessc {
 				}
 			}
 
+			// fix relative paths for raw imports inside regular imports:
+			$current_dir = $this->getCurrentDir();
+			if (self::determinePathType($url) == 0 /* relative path */ && !empty($current_dir)) {
+				$url = self::normalizePath($current_dir . (substr($current_dir, -1) != '/' ? '/' : '') . $url);
+			}
+
 			$this->append(array('raw', '@import url("'.$url.'")'.
 				($media ? ' '.$media : '').';'));
 			return true;
@@ -303,11 +309,115 @@ class lessc {
 		return $tags;
 	}
 
+	// determines the type of path: 0 ~ relative path, 1 ~ absolute path, -1 ~ URL (not a path per se)
+	public static function determinePathType($path)
+	{
+		$info = parse_url($path);
+		// cope with Windows absolute paths: the drive letter ends up in ['scheme']!
+		if (array_key_exists('scheme', $info))
+		{
+			if (preg_match('/^[a-zA-Z]$/', $info['scheme']) == 1) 
+				return 1;
+			return -1;
+		}
+		// cope with Windows path ('\' separator) and UNIX path alike:
+		if (strspn($path, "\\/") > 0)
+			return 1;
+		return 0;
+	}
+	
+	/**
+	 * Normalize an absolute or relative path by converting all slashes '/' and/or backslashes '\' and any mix thereof in the
+	 * specified path to UNIX/MAC/Win compatible single forward slashes '/'.
+	 *
+	 * Also roll up any ./ and ../ directory elements in there.
+	 *
+	 * Throw an exception when the operation failed to produce a legal path.
+	 */
+	public static function normalizePath($path)
+	{
+		if (empty($path)) return $path;
+		
+		$path = preg_replace('/(\\\|\/)+/', '/', $path);
+
+		/*
+		 * fold '../' directory parts to prevent possibly malicious paths such as 'a/../../../../../../../../../etc/'
+		 * from succeeding
+		 *
+		 * to prevent screwups in the folding code, we FIRST clean out the './' directories, to prevent
+		 * 'a/./.././.././.././.././.././.././.././.././../etc/' from succeeding:
+		 */
+		$path = preg_replace('#/(\./)+#', '/', $path);
+		// special fix: now strip trailing '/.' section; MUST replace by '/' (trailing) or path won't be accepted as legal when this is the '.' requested for root '/'
+		$path = preg_replace('#/\.$#', '/', $path);
+
+		// now temporarily strip off the leading part up to the colon to prevent entries like '../d:/dir' to succeed when the site root is 'c:/', for example:
+		$lead = '';
+		// the leading part may NOT contain any directory separators, as it's for drive letters only.
+		// So we must check in order to prevent malice like /../../../../../../../c:/dir from making it through.
+		if (preg_match('#^([A-Za-z]:)?/(.*)$#', $path, $matches))
+		{
+			$lead = $matches[1];
+			$path = '/' . $matches[2];
+		}
+		$is_abs_path = ($path{0} == '/');
+
+		while (($pos = strpos($path, '/..')) !== false)
+		{
+			$prev = substr($path, 0, $pos);
+			/*
+			 * on Windows, you get:
+			 *
+			 * dirname("/") = "\"
+			 * dirname("y/") = "."
+			 * dirname("/x") = "\"
+			 *
+			 * so we'd rather not use dirname()   :-(
+			 */
+			$p2 = strrpos($prev, '/');
+			if ($p2 === false)
+			{
+				if ($is_abs_path)
+				{
+					throw new Exception('path tampering:' . $path);
+				}
+				else
+				{
+					// can't 'validate' relative paths that way, so we just barge on, abusing the $lead to make sure we don't fold ../ with the next ../, keeping it legal
+					$lead .= $prev . '/..';
+					$path = substr($path, $pos + 3);
+					continue;
+				}
+			}
+			$prev = substr($prev, 0, $p2);
+			$next = substr($path, $pos + 3);
+			if ($next && $next[0] !== '/')
+			{
+				throw new Exception('path tampering:' . $path); // malicious stuff like /..../pdir
+			}
+			$path = $prev . $next;
+		}
+
+		$path = $lead . $path;
+
+		/*
+		 * iff there was a '../../../etc/' attempt, we'll know because there'd be an exception thrown in the loop above.
+		 */
+
+		return $path;
+	}
+
+	// deliver the configured 'current path', i.e. the last importDir entry
+	function getCurrentDir() {
+		$idx = count($this->importDir) - 1;
+		return ($idx >= 0 ? $this->importDir[$idx] : '');
+	}
+	
 	// attempts to find the path of an import url, returns null for css files
 	function findImport($url) {
-		foreach ((array)$this->importDir as $dir) {
-			$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
-			if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
+		foreach ($this->importDir as $dir) {
+			$full = $dir.((!empty($dir) && substr($dir, -1) != '/') ? '/' : '').$url;
+			if (self::determinePathType($full) >= 0 && ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full))) {
 				return $file;
 			}
 		}
@@ -317,7 +427,7 @@ class lessc {
 
 	function fileExists($name) {
 		// sym link workaround
-		return file_exists($name) || file_exists(realpath(preg_replace('/\w+\/\.\.\//', '', $name)));
+		return file_exists($name) || file_exists(realpath(self::normalizePath($name)));
 	}
 
 	// a list of expressions
@@ -1850,7 +1960,25 @@ class lessc {
 	// create a child parser (for compiling an import)
 	protected function createChild($fname) {
 		$less = new lessc($fname);
-		$less->importDir = $this->importDir;
+		$dir = dirname($fname);
+		$dirlist = $this->importDir;
+		$current_dir = array_pop($dirlist);
+		switch (self::determinePathType($fname))
+		{
+		case 0: /* relative path */
+			$less->importDir = array_merge($dirlist, array(self::normalizePath($current_dir . (!empty($current_dir) ? (substr($current_dir, -1) != '/' ? '/' : '') : '') . $dir)));
+			break;
+			
+		case 1: /* absolute path */
+			$less->importDir = array_merge($dirlist, array(self::normalizePath($dir)));
+			break;
+			
+		default: /* URI */
+			$less->importDir = $dirlist;
+			break;
+		}
+		//echo "child less file path = $fname --> $dir\n";
+		//print_r($less->importDir);
 		$less->indentChar = $this->indentChar;
 		$less->compat = $this->compat;
 		return $less;
@@ -1929,7 +2057,7 @@ class lessc {
 			$pi = pathinfo($fname);
 
 			$this->fileName = $fname;
-			$this->importDir = $pi['dirname'].'/';
+			$this->importDir = array($pi['dirname'].'/');
 			$this->buffer = file_get_contents($fname);
 
 			$this->addParsedFile($fname);
