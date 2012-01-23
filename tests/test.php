@@ -20,7 +20,6 @@ $output = array(
 
 
 $prefix = strtr(realpath(dirname(__FILE__)), '\\', '/');
-$prefix = '.';
 require $prefix.'/../lessc.inc.php';
 
 $compiler = new lessc();
