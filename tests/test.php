@@ -130,11 +130,8 @@ foreach ($tests as $test) {
 			if ($showDiff) {
 				dump("Failed:", 1, $fail_prefix);
 				$tmp = $test['out'].".tmp";
-				printf("------------------\n%s\n------------------\n", $parsed);
-				echo 'put = ' . $tmp . ' @' . file_put_contents($tmp, $parsed) . "\n";
-				print($difftool.' '.$test['out'].' '.$tmp);
 				system($difftool.' '.$test['out'].' '.$tmp);
-				//unlink($tmp);
+				unlink($tmp);
 
 				dump("Aborting");
 				break;
