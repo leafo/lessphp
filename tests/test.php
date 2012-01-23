@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 error_reporting(E_ALL);
 
@@ -18,7 +19,8 @@ $output = array(
 );
 
 
-$prefix = realpath(dirname(__FILE__));
+$prefix = strtr(realpath(dirname(__FILE__)), '\\', '/');
+$prefix = '.';
 require $prefix.'/../lessc.inc.php';
 
 $compiler = new lessc();
@@ -45,6 +47,9 @@ function flag($f) {
 
 if (flag('h', 'help')) {
 	exit('help me');
+}
+if (flag('unix-diff')) {
+	$difftool = 'diff -b -B -t -u';
 }
 
 $input['dir'] = $prefix.'/'.$input['dir'];
@@ -117,13 +122,19 @@ foreach ($tests as $test) {
 		}
 		$expected = trim(file_get_contents($test['out']));
 
+		// don't care about CRLF vs LF change (DOS/Win vs. UNIX):
+		$expected = str_replace("\r\n", "\n", $expected);
+		$parsed = str_replace("\r\n", "\n", $parsed);
+
 		if ($expected != $parsed) {
 			if ($showDiff) {
 				dump("Failed:", 1, $fail_prefix);
 				$tmp = $test['out'].".tmp";
-				file_put_contents($tmp, $parsed);
+				printf("------------------\n%s\n------------------\n", $parsed);
+				echo 'put = ' . $tmp . ' @' . file_put_contents($tmp, $parsed) . "\n";
+				print($difftool.' '.$test['out'].' '.$tmp);
 				system($difftool.' '.$test['out'].' '.$tmp);
-				unlink($tmp);
+				//unlink($tmp);
 
 				dump("Aborting");
 				break;
