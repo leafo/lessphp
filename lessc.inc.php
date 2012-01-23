@@ -346,7 +346,6 @@ class lessc {
 	{
 		if (empty($path)) return $path;
 
-		//printf("normalize: (%s)\n", $path);
 		$path = strtr($path, '\\', '/');
 		$unc = (substr($path, 0, 2) == '//'); 
 		$path = preg_replace('/\/+/', '/', $path);
@@ -400,7 +399,6 @@ class lessc {
 		 * iff there was a '../../../etc/' attempt, we'll know because there'd be an exception thrown in the loop above.
 		 */
 
-		//printf("--> (%s)\n", $path);
 		return $path;
 	}
 
@@ -424,15 +422,12 @@ class lessc {
 	// express the relative directory traversal from file $begin to file $end; do not include the filename of $end in the result, just the directory traversal.
 	public static function getRelPathFromTo($begin, $end)
 	{
-		//print("getRelPathFromTo($begin, $end)\n");
 		$thispath = explode('/', strtr(dirname(self::getAbsPath($begin)), '\\', '/'));
 		$newpath = explode('/', strtr(dirname(self::getAbsPath($end)), '\\', '/'));
-		//print_r(array($thispath, $newpath));
 		while (count($thispath) > 0 && count($newpath) > 0)
 		{
 			if ($thispath[0] != $newpath[0])
 				break;
-			//print(": reduce: {$thispath[0]}\n");
 			array_shift($thispath);
 			array_shift($newpath);
 		}
@@ -446,14 +441,11 @@ class lessc {
 		{
 			$relpath .= $newpath[$i] . '/';
 		}
-		//print("--> $relpath\n");
 		return $relpath;
 	}
 	
 	// attempts to find the path of an import url, returns null for css files
 	function findImport($url) {
-		//printf("findImport(%s)\n", $url);
-		//print_r($this->importDir);
 		// don't support remote URIs:
 		if (self::determinePathType($url) < 0) 
 			return null;
@@ -463,9 +455,7 @@ class lessc {
 		}
 		foreach ($this->importDir as $dir) {
 			$full = $dir.((!empty($dir) && substr($dir, -1) != '/') ? '/' : '').$url;
-			//printf("full dir: (%s) ~ type %d\n", $full, self::determinePathType($full));
 			if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
-				//printf("found file: %s\n", $file);
 				return $file;
 			}
 		}
@@ -1323,7 +1313,6 @@ class lessc {
 						$arg = substr($arg, 1, -1);
 					}
 					$current_dir = $this->baseDir;
-					//print_r(array($current_dir, $d, $arg));
 					switch (self::determinePathType($arg))
 					{
 					case 0: /* relative path */
@@ -1341,8 +1330,6 @@ class lessc {
 					default: /* URI */
 						break;
 					}
-					//print_r($arg);
-					//print("\n");
 					$arg = $d . $arg . $d;
 				}
 				return $value[1].'('.$arg.')';
@@ -2074,7 +2061,6 @@ class lessc {
 		default: /* URI */
 			throw new Exception('@import from remote URI is not supported: ' . $fname);
 		}
-		//print_r(array($fname, $dir, $current_dir, $this->importDir, $path_traverse, $less->importDir, $less->baseDir));
 		$less->indentChar = $this->indentChar;
 		$less->compat = $this->compat;
 		return $less;

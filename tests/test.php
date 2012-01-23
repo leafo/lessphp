@@ -145,7 +145,6 @@ foreach ($tests as $test) {
 				dump("Failed:", 1, $fail_prefix);
 				$tmp = $test['out'].".tmp";
 				file_put_contents($tmp, $parsed);
-				//print($difftool.' '.$test['out'].' '.$tmp."\n");
 				system($difftool.' '.$test['out'].' '.$tmp);
 				unlink($tmp);
 
