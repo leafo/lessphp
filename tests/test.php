@@ -23,7 +23,22 @@ $prefix = strtr(realpath(dirname(__FILE__)), '\\', '/');
 require $prefix.'/../lessc.inc.php';
 
 $compiler = new lessc();
-$compiler->importDir = $input['dir'].'/test-imports';
+/*
+  the last dir in the importDir array is also used as 'current dir' of 
+  any string data fed to the compiler, i.e. any stuff that doesn't 
+  come with a filename itself.
+  
+  The way this is written is not advisable to copycat; use
+      $compiler = new lessc($test['in']);
+	  $parsed = trim($compiler->parse();
+  instead, but then you'ld loose the 'inputs/test-imports' importDir
+  setup here; it is a hack (IMO) for previously incorrect path behaviour
+  of lessphp where some tests have the incorrect
+      @import('file1.less');
+  rather than the correct
+      @import('test-imports/file1.less');
+ */
+$compiler->importDir = array($input['dir'].'/test-imports', $input['dir']);
 
 $fa = 'Fatal Error: ';
 if (php_sapi_name() != 'cli') { 
@@ -122,13 +137,15 @@ foreach ($tests as $test) {
 		$expected = trim(file_get_contents($test['out']));
 
 		// don't care about CRLF vs LF change (DOS/Win vs. UNIX):
-		$expected = str_replace("\r\n", "\n", $expected);
-		$parsed = str_replace("\r\n", "\n", $parsed);
+		$expected = trim(str_replace("\r\n", "\n", $expected));
+		$parsed = trim(str_replace("\r\n", "\n", $parsed));
 
 		if ($expected != $parsed) {
 			if ($showDiff) {
 				dump("Failed:", 1, $fail_prefix);
 				$tmp = $test['out'].".tmp";
+				file_put_contents($tmp, $parsed);
+				//print($difftool.' '.$test['out'].' '.$tmp."\n");
 				system($difftool.' '.$test['out'].' '.$tmp);
 				unlink($tmp);
 

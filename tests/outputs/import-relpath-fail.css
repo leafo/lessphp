@@ -1,4 +1,4 @@
-@import url("./test-imports/178/c/b.less");
+@import url("test-imports/178/c/b.less");
 @import url("/bugger-it/millenium/hand/and/shrimp.less");
 @import url("C:/bugger-it/millenium/hand/and/shrimp.less");
 @import url("//?/c/bugger-it/millenium/hand/and/shrimp.less");
