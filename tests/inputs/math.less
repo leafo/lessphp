@@ -1,0 +1,81 @@
+
+.unary {
+	// all operators are parsable as unary operators, anything
+	// but - throws an error right now though,
+
+	// this gives two numbers
+	sub: 10 -5;
+	// add: 10 +5; // error
+	// div: 10 /5; // error
+	// mul: 10 *5; // error
+}
+
+.spaces {
+	// we can make the parser do math by leaving out the 
+	// space after the first value, or putting spaces on both sides
+
+	sub: 10-5;
+	sub: 10 - 5;
+
+	add: 10+5; 
+	add: 10 + 5; 
+
+	// div: 10/5; // this wont work, read on
+	div: 10 / 5; 
+
+	mul: 10*5; 
+	mul: 10 * 5; 
+}
+
+
+.shorthand {
+	// 10/5 is a special shorthand syntax that can be used in the font property
+	div: 10/5; // outputs a literal 10/5
+}
+
+
+.parens {
+	// if you are unsure, then just wrap the expression in parentheses and it will
+	// always evaluate.
+
+	// notice we no longer have unary operators, and these will evaluate
+	sub: (10 -5);
+	add: (10 +5);
+	div: (10 /5);
+	div: (10/5); // no longer interpreted as the shorthand
+	mul: (10 *5);
+}
+
+.keyword-names {
+	// watch out when doing math with keywords, - is a valid keyword character
+	@a: 100;
+	@b: 25;
+	@a-: "hello";
+	height: @a-@b; // here we get "hello" 25, not 75
+}
+
+
+// and now here are the tests
+
+.test {
+	single: (5);
+	single: 5+(5);
+	single: (5)+((5));
+
+	parens: (5 +(5)) -2;
+	// parens: ((5 +(5)) -2); // FAILS - fixme
+
+	math: (5 + 5)*(2 / 1);
+	math: (5+5)*(2/1);
+
+	width: 2 * (4 * (2 + (1 + 6))) - 1;
+	height: ((2+3)*(2+3) / (9-4)) + 1;
+	padding: (2px + 4px) 1em 2px 2;
+
+	@var: (2 * 2);
+	padding: (2 * @var) 4 4 (@var * 1px);
+	width: (@var * @var) * 6;
+	height: (7 * 7) + (8 * 8);
+	margin: 4 * (5 + 5) / 2 - (@var * 2);
+}
+

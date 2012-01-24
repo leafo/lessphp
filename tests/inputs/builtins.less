@@ -1,0 +1,33 @@
+// builtin
+
+@something: "hello world";
+@color: #112233;
+@color2: rgba(44,55,66, .6);
+
+body {
+	color: @something;
+
+	@num: 7 / 6;
+	height: @num + 4;
+	height: floor(@num) + 4px;
+
+	@num2: 2 / 3;
+	width: @num2;
+	width: round(@num2);
+	width: floor(@num2);
+
+	color: rgbahex(@color);
+	color: rgbahex(@color2);
+}
+
+
+format {
+  @r: 32;
+  format: %("rgb(%d, %d, %d)", @r, 128, 64);
+  format-string: %("hello %s", "world");
+  format-multiple: %("hello %s %d", "earth", 2);
+  format-url-encode: %('red is %A', #ff0000);
+  eformat: e(%("rgb(%d, %d, %d)", @r, 128, 64));
+}
+
+

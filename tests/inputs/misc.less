@@ -1,0 +1,71 @@
+
+@hello: "utf-8";
+@charset @hello;
+
+@color: #fff;
+@images: "/assets/images/";
+@images: @images + "test/"; 
+.topbar { background: url(@{images}topbar.png); }
+.hello { test: empty-function(@images, 40%, to(@color)); }
+
+.css3 {
+	background-image: -webkit-gradient(linear, 0% 0%, 0% 90%, 
+		from(#E9A000), to(#A37000));
+}
+
+
+/**
+
+Here is a block comment
+
+**/
+
+
+// this is a comment
+
+.test, /*hello*/.world {
+	border: 1px solid red; // world
+	/* another property */
+	color: url(http://mage-page.com);
+	string: "hello /* this is not a comment */";
+	world: "// neither is this";
+	string: 'hello /* this is not a comment */' /*what if this is a comment */;
+	world: '// neither is this' // hell world;
+	;
+	what-/*something?*/ever: 100px;
+	background: url(/*no comment here*/);
+}
+
+
+.mix(@arg) { color: @arg; }
+@aaa: aaa;
+@bbb: bbb;
+// make sure the opening selector isn't too greedy
+.cool {.mix("@{aaa}, @{bbb}")}
+
+.cool("{hello");
+.cool('{hello');
+
+
+// merging of mixins
+.span-17 { float: left; }
+.span-17 { width: 660px; }
+
+.x {.span-17;}
+
+.hi {
+	pre {
+		color: red;
+	}
+}
+
+.hi {
+	pre {
+		color: blue;
+	}
+}
+
+.rad {
+	.hi;
+}
+

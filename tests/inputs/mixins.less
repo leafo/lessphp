@@ -1,0 +1,122 @@
+
+@rounded-corners {
+	border-radius: 10px;
+}
+
+.bold {
+	@font-size: 20px;
+	font-size: @font-size;
+	font-weight: bold;
+}
+
+body #window {
+	@rounded-corners;
+	.bold;
+	line-height: @font-size * 1.5;
+}
+
+#bundle {
+  .button {
+    display: block;
+    border: 1px solid black;
+    background-color: grey;
+    &:hover { background-color: white }
+  }
+}
+#header a {
+  color: orange;
+  #bundle > .button; // mixin the button class
+}
+
+div {
+	@abstract {
+		hello: world;
+		b {
+			color: blue;
+		}
+	}
+
+	@abstract > b;
+	@abstract;
+}
+
+@poop {
+	big: baby;
+}
+
+body {
+	div;
+}
+
+// not using > to list mixins
+
+.hello {
+  .world {
+    color: blue;
+  }
+}
+
+.foobar {
+  .hello .world;
+}
+
+
+.butter {
+	.this .one .isnt .found;
+}
+
+
+// arguments
+
+.spam(@something: 100) {
+	@wow: 23434;
+    foo: @arguments;
+    bar: @arguments;
+}
+
+.eggs {
+    .spam(1px, 2px, 4px, 8px);
+}
+
+.first(@one, @two, @three, @four: cool) {
+	cool: @arguments;
+}
+
+#hello {
+	.first(one, two, three);
+}
+
+
+.rad() {
+	cool: @arguments;
+}
+
+#world {
+	@hello: "world";
+	.rad("@{hello}");
+}
+
+.second() {
+	things: @arguments;
+}
+
+#another {
+	.second(red, blue, green);
+	.second(red blue green);
+}
+
+
+.another() {
+  .cool {
+    color: @arguments;
+  }
+}
+
+#day {
+	.another(one,two, three);
+	.another(one two three);
+}
+
+
+
+
