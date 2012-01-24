@@ -270,22 +270,6 @@ class lessc {
 			if (!$hidden) $this->append(array('block', $block));
 
 			foreach ($block->tags as $tag) {
-				// see if we can merge argless block
-				// TODO: remember where the argless default block is
-				if (isset($this->env->children[$tag]) && empty($block->args)) {
-					$children =& $this->env->children[$tag];
-					$found = false;
-					foreach ($children as $i => $old) {
-						if (empty($old->args)) {
-							$found = true;
-							$children[$i] = $this->mergeBlock($old, $block);
-							break;
-						}
-					}
-
-					if ($found) continue;
-				}
-
 				$this->env->children[$tag][] = $block;
 			}
 
@@ -992,24 +976,21 @@ class lessc {
 	}
 
 	function eq($left, $right) {
-		return false;
+		return $left == $right;
 	}
 
 	function patternMatch($block, $callingArgs) {
-		// args can be nil in both cases
 		if (empty($block->args)) {
-			if (empty($callingArgs)) {
-				return true;
-			} else {
-				return false;
-			}
+			// no arg blocks mixed into everything
+			return true;
 		}
 
 		foreach ($block->args as $i => $arg) {
 			switch ($arg[0]) {
 			case "lit":
-				throw new exception("not yet");
-				// $val = $callingArgs[$i];
+				if (!$this->eq($arg[1], $callingArgs[$i])) {
+					return false;
+				}
 				break;
 			case "arg":
 				// no arg and no default value
@@ -1023,16 +1004,18 @@ class lessc {
 	}
 
 	function patternMatchAll($blocks, $callingArgs) {
+		$matches = null;
 		foreach ($blocks as $block) {
 			if ($this->patternMatch($block, $callingArgs)) {
-				return $block;
+				$matches[] = $block;
 			}
 		}
-		return false;
+
+		return $matches;
 	}
 
-	// attempt to find block pointed at by path within search_in or its parent
-	function findBlock($search_in, $path, $args, $seen=array()) {
+	// attempt to find blocks matched by path and args
+	function findBlocks($search_in, $path, $args, $seen=array()) {
 		if ($search_in == null) return null;
 		if (isset($seen[$search_in->id])) return null;
 		$seen[$search_in->id] = true;
@@ -1042,18 +1025,20 @@ class lessc {
 		if (isset($search_in->children[$name])) {
 			$blocks = $search_in->children[$name];
 			if (count($path) == 1) {
-				$match = $this->patternMatchAll($blocks, $args);
-				if ($match) {
-					return $match;
+				$matches = $this->patternMatchAll($blocks, $args);
+				if (!empty($matches)) {
+					// This will return all blocks that match in the closest 
+					// scope that has any matching block, like lessjs
+					return $matches;
 				}
 			} else {
-				return $this->findBlock($blocks[0],
+				return $this->findBlocks($blocks[0],
 					array_slice($path, 1), $args, $seen);
 			}
 		}
 
 		if ($search_in->parent === $search_in) return null;
-		return $this->findBlock($search_in->parent, $path, $args, $seen);
+		return $this->findBlocks($search_in->parent, $path, $args, $seen);
 	}
 
 	// sets all argument names in $args to either the default value
@@ -1103,29 +1088,31 @@ class lessc {
 		case 'mixin':
 			list(, $path, $args) = $prop;
 
-			$mixin = $this->findBlock($block, $path, $args);
-			if (is_null($mixin)) {
+			$mixins = $this->findBlocks($block, $path, $args);
+			if (is_null($mixins)) {
 				// echo "failed to find block: ".implode(" > ", $path)."\n";
 				break; // throw error here??
 			}
 
-			$have_args = false;
-			if (isset($mixin->args)) {
-				$have_args = true;
-				$this->pushEnv();
-				$this->zipSetArgs($mixin->args, $args);
+			foreach ($mixins as $mixin) {
+				$have_args = false;
+				if (isset($mixin->args)) {
+					$have_args = true;
+					$this->pushEnv();
+					$this->zipSetArgs($mixin->args, $args);
+				}
+
+				$old_parent = $mixin->parent;
+				$mixin->parent = $block;
+
+				foreach ($mixin->props as $sub_prop) {
+					$this->compileProp($sub_prop, $mixin, $tags, $_lines, $_blocks);
+				}
+
+				$mixin->parent = $old_parent;
+
+				if ($have_args) $this->pop();
 			}
-
-			$old_parent = $mixin->parent;
-			$mixin->parent = $block;
-
-			foreach ($mixin->props as $sub_prop) {
-				$this->compileProp($sub_prop, $mixin, $tags, $_lines, $_blocks);
-			}
-
-			$mixin->parent = $old_parent;
-
-			if ($have_args) $this->pop();
 
 			break;
 		case 'raw':
