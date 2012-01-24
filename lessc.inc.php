@@ -60,6 +60,15 @@ class lessc {
 	);
 	static protected $operatorString; // regex string to match any of the operators
 
+	static protected $whitespace = array(
+		' ',
+		"\t",
+		"\n",
+		"\r",
+		"\0",
+		"\x0B"
+	);
+
 	// types that have delayed computation
 	static protected $dtypes = array('expression', 'variable',
 		'function', 'negative', 'list', 'lookup');
@@ -1779,13 +1788,30 @@ class lessc {
 		// shortcut on single letter
 		if (!$eatWhitespace && !isset($what{1})) {
 			if ($this->buffer{$this->count} == $what) {
-				$this->count++;
+				++$this->count;
 				return true;
 			}
 			else return false;
 		}
 
-		return $this->match($this->preg_quote($what), $m, $eatWhitespace);
+		// match terminals
+		$c = 0;
+		while (isset($what{$c})) {
+			if ($this->buffer{$this->count} != $what{$c}) {
+				return false;
+			}
+			++$this->count;
+			++$c;
+		}
+
+		// eat whitespace
+		if ($eatWhitespace) {
+			while (isset($this->buffer{$this->count}) && in_array($this->buffer{$this->count}, self::$whitespace) !== false) {
+				++$this->count;
+			}
+		}
+
+		return true;
 	}
 
 	function preg_quote($what) {
