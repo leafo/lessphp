@@ -1526,7 +1526,7 @@ class lessc {
 						if ($args[0] == 'list')
 							$args = $this->compressList($args[2], $args[1]);
 
-						$var = call_user_func($f, $this->reduce($args));
+						$var = call_user_func($f, $this->reduce($args), $this);
 
 						// convet to a typed value if the result is a php primitive
 						if (is_numeric($var)) $var = array('number', $var);

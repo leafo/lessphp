@@ -732,10 +732,13 @@ The best way to get an understanding of the system is to register is dummy
 function which does a `vardump` on the argument. Try passing the function
 different values from LESS and see what the results are.
 
-The return value of the registered function must also be a LESS type, but if it is
+The return value of the registered function must also be a **lessphp** type, but if it is
 a string or numeric value, it will automatically be coerced into an appropriate
 typed value. In our example, we reconstruct the value with our modifications
 while making sure that we preserve the original type.
+
+In addition to the arguments passed from **lessphp**, the instnace of
+**lessphp** itself is sent to the registered function as the second argument.
 
 ## Command Line Interface
 
