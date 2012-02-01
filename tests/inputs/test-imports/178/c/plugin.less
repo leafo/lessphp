@@ -1,0 +1,14 @@
+/*
+   part of import-relpath.less test case for issues 118 / 178
+ */
+
+// this file should NOT exist in this directory, hence remain as is (and maybe throw a error in striuct mode or something?)
+@import 'b.less'; 
+
+
+// now these ones will fail as well, but they particularly should be recognized as an absolute path by the compiler!
+@import '/bugger-it/millenium/hand/and/shrimp.less';  // must fail with error due to there not being a c/b.less in there!
+@import 'C:/bugger-it/millenium/hand/and/shrimp.less';  // Windows path
+@import '//?/c/bugger-it/millenium/hand/and/shrimp.less';  // Windows URN path
+@import 'http://example.com/bugger-it/millenium/hand/and/shrimp.less';  // URL, another form of 'absolute path'
+

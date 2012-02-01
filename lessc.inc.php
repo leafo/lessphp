@@ -77,7 +77,11 @@ class lessc {
 	);
     
 	public $importDisabled = false;
-	public $importDir = '';
+	public $importDir = array('');
+	/**
+	 * The path which will be assumed to be the base directory for any relative paths in url()s and @import.
+	 */
+	public $baseDir = '';
 
 	public $compat = false; // lessjs compatibility mode, does nothing right now
 
@@ -99,9 +103,9 @@ class lessc {
 
 	/**
 	 * Parse a single chunk off the head of the buffer and place it.
-	 * @return false when the buffer is empty, or there is an error
+	 * @return false when the buffer is empty, or when there is an error.
 	 *
-	 * This functions is called repeatedly until the entire document is
+	 * This function is called repeatedly until the entire document is
 	 * parsed.
 	 *
 	 * This parser is most similar to a recursive descent parser. Single
@@ -111,7 +115,7 @@ class lessc {
 	 * Consider the function lessc::keyword(). (all parse functions are
 	 * structured the same)
 	 *
-	 * The function takes a single reference argument. When calling the the
+	 * The function takes a single reference argument. When calling the
 	 * function it will attempt to match a keyword on the head of the buffer.
 	 * If it is successful, it will place the keyword in the referenced
 	 * argument, advance the position in the buffer, and return true. If it
@@ -125,10 +129,10 @@ class lessc {
 	 * grammatical rules, you can chain them together using &&.
 	 *
 	 * But, if some of the rules in the chain succeed before one fails, then
-	 * then buffer position will be left at an invalid state. In order to 
+	 * the buffer position will be left at an invalid state. In order to 
 	 * avoid this, lessc::seek() is used to remember and set buffer positions.
 	 *
-	 * Before doing a chain, use $s = $this->seek() to remember the current
+	 * Before parsing a chain, use $s = $this->seek() to remember the current
 	 * position into $s. Then if a chain fails, use $this->seek($s) to 
 	 * go back where we started.
 	 */
@@ -212,6 +216,10 @@ class lessc {
 		}
 
 		if ($this->import($url, $media)) {
+			// expand variables in import paths too:
+			$url = $this->compileValue(array('string', $url));
+			$media = $this->compileValue(array('string', $media));
+			
 			// don't check .css files
 			if (empty($media) && substr_compare($url, '.css', -4, 4) !== 0) {
 				if ($this->importDisabled) {
@@ -223,6 +231,12 @@ class lessc {
 						return true;
 					}
 				}
+			}
+
+			// fix relative paths for raw imports inside regular imports:
+			$current_dir = $this->baseDir;
+			if (self::determinePathType($url) == 0 /* relative path */ && !empty($current_dir)) {
+				$url = self::normalizePath($current_dir . (substr($current_dir, -1) != '/' ? '/' : '') . $url);
 			}
 
 			$this->append(array('raw', '@import url("'.$url.'")'.
@@ -298,15 +312,149 @@ class lessc {
 	function fixTags($tags) {
 		// move @ tags out of variable namespace
 		foreach ($tags as &$tag) {
-			if ($tag{0} == $this->vPrefix) $tag[0] = $this->mPrefix;
+			if ($tag{0} == $this->vPrefix) $tag{0} = $this->mPrefix;
 		}
 		return $tags;
 	}
 
+	// determines the type of path: 0 ~ relative path, 1 ~ absolute path, -1 ~ URL (not a path per se)
+	public static function determinePathType($path)
+	{
+		$info = parse_url($path);
+		// cope with Windows absolute paths: the drive letter ends up in ['scheme']!
+		if (array_key_exists('scheme', $info))
+		{
+			if (preg_match('/^[a-zA-Z]$/', $info['scheme']) == 1) 
+				return 1;
+			return -1;
+		}
+		// cope with Windows path ('\' separator) and UNIX path alike:
+		if (strspn($path, '\\/') > 0)
+			return 1;
+		return 0;
+	}
+	
+	/**
+	 * Normalize an absolute or relative path by converting all slashes '/' and/or backslashes '\' and any mix thereof in the
+	 * specified path to UNIX/MAC/Win compatible single forward slashes '/'.
+	 *
+	 * Also roll up any ./ and ../ directory elements in there.
+	 *
+	 * Throw an exception when the operation failed to produce a legal path.
+	 */
+	public static function normalizePath($path)
+	{
+		if (empty($path)) return $path;
+
+		$path = strtr($path, '\\', '/');
+		$unc = (substr($path, 0, 2) == '//'); 
+		$path = preg_replace('/\/+/', '/', $path);
+
+		/*
+		 * fold '../' directory parts to prevent possibly malicious paths such as 'a/../../../../../../../../../etc/'
+		 * from succeeding
+		 *
+		 * to prevent screwups in the folding code, we FIRST clean out the './' directories, to prevent
+		 * 'a/./.././.././.././.././.././.././.././.././../etc/' from succeeding:
+		 */
+		$path = preg_replace('#/(\./)+#', '/', $path);
+		// special fix: now strip trailing '/.' section; MUST replace by '/' (trailing) or path won't be accepted as legal when this is the '.' requested for root '/'
+		$path = preg_replace('#/\.$#', '/', $path);
+		// and strip any leading './' that remains:
+		$path = preg_replace('#^\./#', '', $path);
+
+		// now temporarily strip off the leading part up to the colon to prevent entries like '../d:/dir' to succeed when the site root is 'c:/', for example:
+		$lead = ($unc ? '/' : '');
+		// the leading part may NOT contain any directory separators, as it's for drive letters only.
+		// So we must check in order to prevent malice like /../../../../../../../c:/dir from making it through.
+		if (preg_match('#^([A-Za-z]:)/(.*)$#', $path, $matches))
+		{
+			$lead = $matches[1];
+			$path = '/' . $matches[2];
+		}
+		$is_abs_path = ($path{0} == '/');
+		
+		if ($is_abs_path)
+			$path = substr($path, 1);
+
+		$path = explode('/', $path);
+		for ($i = 0; $i < count($path); $i++)
+		{
+			if ($path[$i] == '..')
+			{
+				if ($i == 0 && $is_abs_path)
+				{
+					throw new Exception('path tampering:' . $path);
+				}
+				// rel path: don't touch ../ at start.
+				if ($i == 0 || $path[$i - 1] == '..')
+					continue;
+				array_splice($path, $i - 1, 2);
+				$i -= 2;
+			}
+		}
+		$path = $lead . ($is_abs_path ? '/' : '') . implode('/', $path);
+
+		/*
+		 * iff there was a '../../../etc/' attempt, we'll know because there'd be an exception thrown in the loop above.
+		 */
+
+		return $path;
+	}
+
+	// realpath() requires that the file exists, we do not!
+	public static function getAbsPath($path)
+	{
+		switch (self::determinePathType($path))
+		{
+		case 0: /* relative path */
+			$cwd = strtr(getcwd(), '\\', '/');
+			return self::normalizePath($cwd . (substr($cwd, -1) != '/' ? '/' : '') . $path);
+
+		case 1:
+			return self::normalizePath($path);
+			
+		default:
+			return $path;
+		}
+	}
+	
+	// express the relative directory traversal from file $begin to file $end; do not include the filename of $end in the result, just the directory traversal.
+	public static function getRelPathFromTo($begin, $end)
+	{
+		$thispath = explode('/', strtr(dirname(self::getAbsPath($begin)), '\\', '/'));
+		$newpath = explode('/', strtr(dirname(self::getAbsPath($end)), '\\', '/'));
+		while (count($thispath) > 0 && count($newpath) > 0)
+		{
+			if ($thispath[0] != $newpath[0])
+				break;
+			array_shift($thispath);
+			array_shift($newpath);
+		}
+		// now add a '../' for each entry remaining in $thispath:
+		$relpath = '';
+		for ($i = count($thispath); $i > 0; $i--)
+		{
+			$relpath .= '../';
+		}
+		for ($i = 0; $i < count($newpath); $i++)
+		{
+			$relpath .= $newpath[$i] . '/';
+		}
+		return $relpath;
+	}
+	
 	// attempts to find the path of an import url, returns null for css files
 	function findImport($url) {
-		foreach ((array)$this->importDir as $dir) {
-			$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
+		// don't support remote URIs:
+		if (self::determinePathType($url) < 0) 
+			return null;
+		if (!is_array($this->importDir))
+		{
+			$this->importDir = array($this->importDir);
+		}
+		foreach ($this->importDir as $dir) {
+			$full = $dir.((!empty($dir) && substr($dir, -1) != '/') ? '/' : '').$url;
 			if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
 				return $file;
 			}
@@ -317,7 +465,7 @@ class lessc {
 
 	function fileExists($name) {
 		// sym link workaround
-		return file_exists($name) || file_exists(realpath(preg_replace('/\w+\/\.\.\//', '', $name)));
+		return file_exists($name) || file_exists(realpath(self::normalizePath($name)));
 	}
 
 	// a list of expressions
@@ -362,7 +510,7 @@ class lessc {
 		$this->inExp = true;
 		$ss = $this->seek();
 
-		// if the if there was whitespace before the operator, then we require whitespace after
+		// if there was whitespace before the operator, then we require whitespace after
 		// the operator for it to be a mathematical operator.
 
 		$needWhite = false;
@@ -478,8 +626,8 @@ class lessc {
 		}
 
 		// unquote string
-		if ($this->literal("~") && $this->string($value, $d)) {
-			$value = array("keyword", $value);
+		if ($this->literal('~') && $this->string($value, $d)) {
+			$value = array('keyword', $value);
 			return true;
 		} else {
 			$this->seek($s);
@@ -715,7 +863,7 @@ class lessc {
 		$tags = array();
 		while ($this->tag($tt, true)) {
 			$tags[] = $tt;
-			$this->literal(">");
+			$this->literal('>');
 		}
 
 		if (count($tags) == 0) return false;
@@ -732,7 +880,7 @@ class lessc {
 			if ($this->match('', $_)) $value .= $_[0];
 
 			// escape parent selector
-			$value = str_replace($this->parentSelector, "&&", $value);
+			$value = str_replace($this->parentSelector, '&&', $value);
 			return true;
 		}
 
@@ -842,7 +990,7 @@ class lessc {
 		else return array('list', $delim, $items);
 	}
 
-	// just do a shallow propety merge, seems to be what lessjs does
+	// just do a shallow property merge, seems to be what lessjs does
 	function mergeBlock($target, $from) {
 		$target = clone $target;
 		$target->props = array_merge($target->props, $from->props);
@@ -902,9 +1050,9 @@ class lessc {
 		if ($special_block) {
 			$this->indentLevel--;
 			if (isset($block->media)) {
-				echo "@media ".$block->media;
+				echo '@media '.$block->media;
 			} elseif (isset($block->keyframes)) {
-				echo $block->tags[0]." ".
+				echo $block->tags[0].' '.
 					$this->compileValue($this->reduce($block->keyframes));
 			} else {
 				list($name) = $block->tags;
@@ -917,9 +1065,9 @@ class lessc {
 		// dump it
 		if (count($lines) > 0) {
 			if (!$special_block && !$isRoot) {
-				echo $indent.implode(", ", $tags);
-				if (count($lines) > 1) echo " {".$nl;
-				else echo " { ";
+				echo $indent.implode(', ', $tags);
+				if (count($lines) > 1) echo ' {'.$nl;
+				else echo ' { ';
 			}
 
 			echo implode($nl, $lines);
@@ -947,16 +1095,16 @@ class lessc {
 		$tags = array();
 		foreach ($parents as $ptag) {
 			foreach ($current as $tag) {
-				// inject parent in place of parent selector, ignoring escaped valuews
+				// inject parent in place of parent selector, ignoring escaped values
 				$count = 0;
-				$parts = explode("&&", $tag);
+				$parts = explode('&&', $tag);
 
 				foreach ($parts as $i => $chunk) {
 					$parts[$i] = str_replace($this->parentSelector, $ptag, $chunk, $c);
 					$count += $c;
 				}
 				
-				$tag = implode("&", $parts);
+				$tag = implode('&', $parts);
 
 				if ($count > 0) {
 					$tags[] = trim($tag);
@@ -1025,7 +1173,7 @@ class lessc {
 				$this->set($name, $this->reduce($value));
 			} else {
 				$_lines[] = "$name:".
-					$this->compileValue($this->reduce($value)).";";
+					$this->compileValue($this->reduce($value)).';';
 			}
 			break;
 		case 'block':
@@ -1066,13 +1214,23 @@ class lessc {
 		case 'import':
 			list(, $path) = $prop;
 			$this->addParsedFile($path);
-			$root = $this->createChild($path)->parseTree();
+			$child = $this->createChild($path);
+			$root = $child->parseTree();
+
+			// and temporarily swap the importDir+baseDir section for the child's,
+			// as this compile happens in the child's scope - at least from a paths perspective.
+			$backup = array($this->importDir, $this->baseDir);
+			$this->importDir = $child->importDir;
+			$this->baseDir = $child->baseDir;
 
 			$root->parent = $block;
 			foreach ($root->props as $sub_prop) {
 				$this->compileProp($sub_prop, $root, $tags, $_lines, $_blocks);
 			}
 
+			$this->importDir = $backup[0];
+			$this->baseDir = $backup[1];
+			
 			// inject imported blocks into this block, local will overwrite import
 			$block->children = array_merge($root->children, $block->children);
 			break;
@@ -1136,15 +1294,45 @@ class lessc {
 			if (count($value) == 5) { // rgba
 				return 'rgba('.$value[1].','.$value[2].','.$value[3].','.$value[4].')';
 			}
-			return sprintf("#%02x%02x%02x", $value[1], $value[2], $value[3]);
+			return sprintf('#%02x%02x%02x', $value[1], $value[2], $value[3]);
 		case 'function':
 			// [1] - function name
-			// [2] - some value representing arguments
+			// [2] - some array value representing arguments, either ['string', value] or ['list', ',', values[]]
 
 			// see if function evaluates to something else
 			$value = $this->reduce($value);
 			if ($value[0] == 'function') {
-				return $value[1].'('.$this->compileValue($value[2]).')';
+				$arg = $this->compileValue($value[2]);
+				// when it's the url() CSS function, perform relative path correction where applicable:
+				if ($value[1] == 'url')
+				{
+					$d = '';
+					if ($arg{0} == '"' || $arg{0} == "'")
+					{
+						$d = $arg{0};
+						$arg = substr($arg, 1, -1);
+					}
+					$current_dir = $this->baseDir;
+					switch (self::determinePathType($arg))
+					{
+					case 0: /* relative path */
+						if (!empty($current_dir)) 
+						{
+							$arg = $current_dir . (!empty($current_dir) ? (substr($current_dir, -1) != '/' ? '/' : '') : '') . $arg;
+						}
+						$arg = self::normalizePath($arg);
+						break;
+						
+					case 1: /* absolute path */
+						$arg = self::normalizePath($arg);
+						break;
+						
+					default: /* URI */
+						break;
+					}
+					$arg = $d . $arg . $d;
+				}
+				return $value[1].'('.$arg.')';
 			}
 			else return $this->compileValue($value);
 		default: // assumed to be unit	
@@ -1164,13 +1352,13 @@ class lessc {
 	// utility func to unquote a string
 	function lib_e($arg) {
 		switch ($arg[0]) {
-			case "list":
+			case 'list':
 				$items = $arg[2];
 				if (isset($items[0])) {
 					return $this->lib_e($items[0]);
 				}
-				return "";
-			case "string":
+				return '';
+			case 'string':
 				$str = $this->compileValue($arg);
 				return substr($str, 1, -1);
 			default:
@@ -1179,10 +1367,10 @@ class lessc {
 	}
 
 	function lib__sprintf($args) {
-		if ($args[0] != "list") return $args;
+		if ($args[0] != 'list') return $args;
 		$values = $args[2];
 		$source = $this->reduce(array_shift($values));
-		if ($source[0] != "string") {
+		if ($source[0] != 'string') {
 			return $source;
 		}
 
@@ -1193,8 +1381,8 @@ class lessc {
 				$val = isset($values[$i]) ? $this->reduce($values[$i]) : array('keyword', '');
 				$i++;
 				switch ($match[1]) {
-				case "s":
-					if ($val[0] == "string") {
+				case 's':
+					if ($val[0] == 'string') {
 						$rep = substr($val[1], 1, -1);
 						break;
 					}
@@ -1224,8 +1412,8 @@ class lessc {
 	}
 
 	/**
-	 * Helper function to get argurments for color functions
-	 * accepts invalid input, non colors interpreted to black
+	 * Helper function to get arguments for color functions.
+	 * Accepts invalid input, non colors interpreted as being black.
 	 */
 	function colorArgs($args) {
 		if ($args[0] != 'list' || count($args[2]) < 2) {
@@ -1333,7 +1521,7 @@ class lessc {
 	// mix(@color1, @color2, @weight);
 	// http://sass-lang.com/docs/yardoc/Sass/Script/Functions.html#mix-instance_method
 	function lib_mix($args) {
-		if ($args[0] != "list")
+		if ($args[0] != 'list')
 			throw new exception("mix expects (color1, color2, weight)");
 
 		list($first, $second, $weight) = $args[2];
@@ -1416,7 +1604,7 @@ class lessc {
 	}
 
 	/**
-	 * Converts an hsl array into a color value in rgb.
+	 * Converts a hsl array into a color value in rgb.
 	 * Expects H to be in range of 0 to 360, S and L in 0 to 100
 	 */
 	function toRGB($color) {
@@ -1518,7 +1706,7 @@ class lessc {
 				if ($color) $var = $color;
 				else {
 					list($_, $name, $args) = $var;
-					if ($name == "%") $name = "_sprintf";
+					if ($name == '%') $name = '_sprintf';
 					$f = isset($this->libFunctions[$name]) ?
 						$this->libFunctions[$name] : array($this, 'lib_'.$name);
 
@@ -1528,7 +1716,7 @@ class lessc {
 
 						$var = call_user_func($f, $this->reduce($args), $this);
 
-						// convet to a typed value if the result is a php primitive
+						// convert to a typed value if the result is a php primitive
 						if (is_numeric($var)) $var = array('number', $var);
 						elseif (!is_array($var)) $var = array('keyword', $var);
 					} else {
@@ -1850,7 +2038,29 @@ class lessc {
 	// create a child parser (for compiling an import)
 	protected function createChild($fname) {
 		$less = new lessc($fname);
-		$less->importDir = $this->importDir;
+		$dir = dirname($fname);
+		if (!is_array($this->importDir))
+		{
+			$this->importDir = array($this->importDir);
+		}
+		$dirlist = $this->importDir;
+		$current_dir = array_pop($dirlist);
+		$path_traverse = self::getRelPathFromTo((isset($this->fileName) ? $this->fileName : $current_dir . (!empty($current_dir) ? (substr($current_dir, -1) != '/' ? '/' : '') : '') . '__undefined.less'), $fname);
+		switch (self::determinePathType($fname))
+		{
+		case 0: /* relative path */
+			$less->importDir = array_merge($dirlist, array(self::normalizePath($current_dir . (!empty($current_dir) ? (substr($current_dir, -1) != '/' ? '/' : '') : '') . $path_traverse)));
+			$less->baseDir = self::normalizePath($this->baseDir . (!empty($this->baseDir) ? (substr($this->baseDir, -1) != '/' ? '/' : '') : '') . $path_traverse);
+			break;
+			
+		case 1: /* absolute path */
+			$less->importDir = array_merge($dirlist, array(self::normalizePath($dir)));
+			$less->baseDir = self::normalizePath($this->baseDir . (!empty($this->baseDir) ? (substr($this->baseDir, -1) != '/' ? '/' : '') : '') . $path_traverse);
+			break;
+			
+		default: /* URI */
+			throw new Exception('@import from remote URI is not supported: ' . $fname);
+		}
 		$less->indentChar = $this->indentChar;
 		$less->compat = $this->compat;
 		return $less;
@@ -1929,7 +2139,7 @@ class lessc {
 			$pi = pathinfo($fname);
 
 			$this->fileName = $fname;
-			$this->importDir = $pi['dirname'].'/';
+			$this->importDir = array($pi['dirname'].'/');
 			$this->buffer = file_get_contents($fname);
 
 			$this->addParsedFile($fname);
@@ -2008,7 +2218,7 @@ class lessc {
 	}
 
 
-	// compile to $in to $out if $in is newer than $out
+	// compile file $in to file $out if $in is newer than $out
 	// returns true when it compiles, false otherwise
 	public static function ccompile($in, $out) {
 		if (!is_file($out) || filemtime($in) > filemtime($out)) {

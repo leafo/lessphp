@@ -1,0 +1,28 @@
+@import url("nasty/relpath/bugger.less");
+@import url("/nasty/abspath/bugger.less");
+@import url("https://yodel:squeak@example.com/nasty/uri/bugger.less");
+@import url("test-imports/nasty/relpath/bugger.less");
+@import url("/nasty/abspath/bugger.less");
+@import url("https://yodel:squeak@example.com/nasty/uri/bugger.less");
+.just-filename { background-image:url('oh-boy.gif'); }
+.simple-rel-path { background-image:url('oh-boy.gif'); }
+.simple-rel-subdir-path { background-image:url('pictures/oh-boy.gif'); }
+.simple-rel-parentdir-path { background-image:url('../oh-boy.gif'); }
+.simple-rel-parentdir-subdir-path { background-image:url('../pictures/oh-boy.gif'); }
+.absdir-path { background-image:url('/images/oh-boy.gif'); }
+.absdir-unnormalized-path { background-image:url('/images/gifs/oh-boy.gif'); }
+.remote-path { background-image:url('http://example.com/gifs/oh-boy.gif'); }
+.windows-path { background-image:url('c:/crikey/this/is/gonna/hurt/oh-boy.gif'); }
+.windows-urn-path { background-image:url('//?/c/say/whut.gif'); }
+.reldir-unnormalized-path { background-image:url('images/gifs/oh-boy.gif'); }
+.just-filename { background-image:url('test-imports/oh-boy.gif'); }
+.simple-rel-path { background-image:url('test-imports/oh-boy.gif'); }
+.simple-rel-subdir-path { background-image:url('test-imports/pictures/oh-boy.gif'); }
+.simple-rel-parentdir-path { background-image:url('oh-boy.gif'); }
+.simple-rel-parentdir-subdir-path { background-image:url('pictures/oh-boy.gif'); }
+.absdir-path { background-image:url('/images/oh-boy.gif'); }
+.absdir-unnormalized-path { background-image:url('/images/gifs/oh-boy.gif'); }
+.remote-path { background-image:url('http://example.com/gifs/oh-boy.gif'); }
+.windows-path { background-image:url('c:/crikey/this/is/gonna/hurt/oh-boy.gif'); }
+.windows-urn-path { background-image:url('//?/c/say/whut.gif'); }
+.reldir-unnormalized-path { background-image:url('test-imports/images/gifs/oh-boy.gif'); }
