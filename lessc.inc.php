@@ -1209,11 +1209,11 @@ class lessc {
 	}
 
 	function lib_floor($arg) {
-		return floor($arg[1]);
+		return array($arg[0], floor($arg[1]));
 	}
 
 	function lib_round($arg) {
-		return round($arg[1]);
+		return array($arg[0], round($arg[1]));
 	}
 
 	// is a string surrounded in quotes? returns the quoting char if true
