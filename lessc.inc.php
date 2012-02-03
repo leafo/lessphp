@@ -1850,7 +1850,7 @@ class lessc {
 	// create a child parser (for compiling an import)
 	protected function createChild($fname) {
 		$less = new lessc($fname);
-		$less->importDir = $this->importDir;
+		$less->importDir = array_merge((array)$less->importDir, (array)$this->importDir);
 		$less->indentChar = $this->indentChar;
 		$less->compat = $this->compat;
 		return $less;
