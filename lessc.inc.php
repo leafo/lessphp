@@ -2008,6 +2008,25 @@ class lessc {
 	}
 
 
+        /**
+         * Compile from the current less file to $out if the less file is newer than $out or $recompile is true
+         * @param string $out The output filename
+         * @param bool $recompile Tell the function to always recompile
+         * @return bool Returns true when it compiles, false otherwise
+         */
+        public function compile($out, $recompile=false){
+		if (!is_file($out) || filemtime($this->fileName) > filemtime($out)) {
+			file_put_contents($out, $this->parse());
+			return true;
+		}elseif($recompile){
+			file_put_contents($out, $this->parse());
+			return true;
+                }
+
+		return false;
+        }
+
+
 	// compile to $in to $out if $in is newer than $out
 	// returns true when it compiles, false otherwise
 	public static function ccompile($in, $out) {
