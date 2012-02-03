@@ -12,11 +12,14 @@
 }
 .multi-foo {
   color:two;
+  color:three;
   color:two;
+  color:three;
   color:three;
 }
 .multi-baz {
   color:two;
   color:three;
+  color:two;
   color:three;
 }
