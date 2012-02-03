@@ -6,7 +6,7 @@ error_reporting(E_ALL);
  * and compile them, then compare them to paired file in
  * output directory.
  */
-$difftool = 'meld';
+$difftool = 'diff';
 $input = array(
 	'dir' => 'inputs',
 	'glob' => '*.less',
@@ -16,7 +16,6 @@ $output = array(
 	'dir' => 'outputs',
 	'filename' => '%s.css',
 );
-
 
 $prefix = realpath(dirname(__FILE__));
 require $prefix.'/../lessc.inc.php';
@@ -29,22 +28,10 @@ if (php_sapi_name() != 'cli') {
 	exit($fa.$argv[0].' must be run in the command line.');
 }
 
-$exe = array_shift($argv); // remove filename
-function flag($f) {
-	if (func_num_args() > 1) {
-		foreach (func_get_args() as $f) if (flag($f)) return true;
-		return false;
-	}
-	global $argv;
-	$pre = strlen($f) > 1 ? '--' : '-';
-	foreach ($argv as $a) {
-		if (preg_match('/^'.$pre.$f.'($|\s)/', $a)) return true;
-	}
-	return false;
-}
+$opts = getopt("hCd::");
 
-if (flag('h', 'help')) {
-	exit('help me');
+if (isset($opts['h'])) {
+	exit("help me");
 }
 
 $input['dir'] = $prefix.'/'.$input['dir'];
@@ -52,6 +39,7 @@ $output['dir'] = $prefix.'/'.$output['dir'];
 if (!is_dir($input['dir']) || !is_dir($output['dir']))
 	exit($fa." both input and output directories must exist\n");
 
+$exe = array_shift($argv); // remove filename
 // get the first non flag as search string
 $searchString = null;
 foreach ($argv as $a) {
@@ -74,8 +62,12 @@ if ($matches) {
 }
 
 $count = count($tests);
-$compiling = flag('C');
-$showDiff = flag('d', 'diff');
+$compiling = isset($opts["C"]);
+$showDiff = isset($opts["d"]);
+if ($showDiff && !empty($opts["d"])) {
+	$difftool = $opts["d"];
+}
+
 echo ($compiling ? "Compiling" : "Running")." $count test".($count == 1 ? '' : 's').":\n";
 
 function dump($msgs, $depth = 1, $prefix="    ") {
