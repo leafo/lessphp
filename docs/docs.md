@@ -341,7 +341,7 @@ This useful for quickly assigning all the arguments:
     }
     ```
 
-In addition to the arguments passed to the mixin, `@arguments` will also inlude
+In addition to the arguments passed to the mixin, `@arguments` will also include
 remaining default values assigned by the mixin:
 
 
@@ -503,19 +503,19 @@ function that let's you unquote any value. It is called `e`.
 
 * `spin(color, amount)` -- returns a color with `amount` degrees added to hue
 
-* `fade(color, amount)` -- retuns a color with the alpha set to `amount`
+* `fade(color, amount)` -- returns a color with the alpha set to `amount`
 
-* `hue(color)` -- retuns the hue of `color`
+* `hue(color)` -- returns the hue of `color`
 
-* `saturation(color)` -- retuns the saturation of `color`
+* `saturation(color)` -- returns the saturation of `color`
 
-* `lightness(color)` -- retuns the lightness of `color`
+* `lightness(color)` -- returns the lightness of `color`
 
-* `alpha(color)` -- retuns the alpha value of `color` or 1.0 if it doesn't have an alpha
+* `alpha(color)` -- returns the alpha value of `color` or 1.0 if it doesn't have an alpha
 
-* `percentage(number)` -- converts a floating point number to a percentage, eg. `0.65` -> `65%`
+* `percentage(number)` -- converts a floating point number to a percentage, e.g. `0.65` -> `65%`
 
-* `mix(color1, color1, percent)` -- mixes two colors by percentagle where 100%
+* `mix(color1, color1, percent)` -- mixes two colors by percentage where 100%
   keeps all of `color1`, and 0% keeps all of `color2`. Will take into account
   the alpha of the colors if it exists. See
   <http://sass-lang.com/docs/yardoc/Sass/Script/Functions.html#mix-instance_method>.
@@ -737,7 +737,7 @@ a string or numeric value, it will automatically be coerced into an appropriate
 typed value. In our example, we reconstruct the value with our modifications
 while making sure that we preserve the original type.
 
-In addition to the arguments passed from **lessphp**, the instnace of
+In addition to the arguments passed from **lessphp**, the instance of
 **lessphp** itself is sent to the registered function as the second argument.
 
 ## Command Line Interface

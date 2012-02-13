@@ -99,9 +99,9 @@ class lessc {
 
 	/**
 	 * Parse a single chunk off the head of the buffer and place it.
-	 * @return false when the buffer is empty, or there is an error
+	 * @return false when the buffer is empty, or when there is an error.
 	 *
-	 * This functions is called repeatedly until the entire document is
+	 * This function is called repeatedly until the entire document is
 	 * parsed.
 	 *
 	 * This parser is most similar to a recursive descent parser. Single
@@ -111,7 +111,7 @@ class lessc {
 	 * Consider the function lessc::keyword(). (all parse functions are
 	 * structured the same)
 	 *
-	 * The function takes a single reference argument. When calling the the
+	 * The function takes a single reference argument. When calling the
 	 * function it will attempt to match a keyword on the head of the buffer.
 	 * If it is successful, it will place the keyword in the referenced
 	 * argument, advance the position in the buffer, and return true. If it
@@ -125,10 +125,10 @@ class lessc {
 	 * grammatical rules, you can chain them together using &&.
 	 *
 	 * But, if some of the rules in the chain succeed before one fails, then
-	 * then buffer position will be left at an invalid state. In order to 
+	 * the buffer position will be left at an invalid state. In order to 
 	 * avoid this, lessc::seek() is used to remember and set buffer positions.
 	 *
-	 * Before doing a chain, use $s = $this->seek() to remember the current
+	 * Before parsing a chain, use $s = $this->seek() to remember the current
 	 * position into $s. Then if a chain fails, use $this->seek($s) to 
 	 * go back where we started.
 	 */
@@ -362,7 +362,7 @@ class lessc {
 		$this->inExp = true;
 		$ss = $this->seek();
 
-		// if the if there was whitespace before the operator, then we require whitespace after
+		// if there was whitespace before the operator, then we require whitespace after
 		// the operator for it to be a mathematical operator.
 
 		$needWhite = false;
@@ -842,7 +842,7 @@ class lessc {
 		else return array('list', $delim, $items);
 	}
 
-	// just do a shallow propety merge, seems to be what lessjs does
+	// just do a shallow property merge, seems to be what lessjs does
 	function mergeBlock($target, $from) {
 		$target = clone $target;
 		$target->props = array_merge($target->props, $from->props);
@@ -947,7 +947,7 @@ class lessc {
 		$tags = array();
 		foreach ($parents as $ptag) {
 			foreach ($current as $tag) {
-				// inject parent in place of parent selector, ignoring escaped valuews
+				// inject parent in place of parent selector, ignoring escaped values
 				$count = 0;
 				$parts = explode("&&", $tag);
 
@@ -1139,7 +1139,7 @@ class lessc {
 			return sprintf("#%02x%02x%02x", $value[1], $value[2], $value[3]);
 		case 'function':
 			// [1] - function name
-			// [2] - some value representing arguments
+			// [2] - some array value representing arguments, either ['string', value] or ['list', ',', values[]]
 
 			// see if function evaluates to something else
 			$value = $this->reduce($value);
@@ -1224,8 +1224,8 @@ class lessc {
 	}
 
 	/**
-	 * Helper function to get argurments for color functions
-	 * accepts invalid input, non colors interpreted to black
+	 * Helper function to get arguments for color functions.
+	 * Accepts invalid input, non colors interpreted as being black.
 	 */
 	function colorArgs($args) {
 		if ($args[0] != 'list' || count($args[2]) < 2) {
@@ -1416,7 +1416,7 @@ class lessc {
 	}
 
 	/**
-	 * Converts an hsl array into a color value in rgb.
+	 * Converts a hsl array into a color value in rgb.
 	 * Expects H to be in range of 0 to 360, S and L in 0 to 100
 	 */
 	function toRGB($color) {
@@ -1528,7 +1528,7 @@ class lessc {
 
 						$var = call_user_func($f, $this->reduce($args), $this);
 
-						// convet to a typed value if the result is a php primitive
+						// convert to a typed value if the result is a php primitive
 						if (is_numeric($var)) $var = array('number', $var);
 						elseif (!is_array($var)) $var = array('keyword', $var);
 					} else {
@@ -2008,7 +2008,7 @@ class lessc {
 	}
 
 
-	// compile to $in to $out if $in is newer than $out
+	// compile file $in to file $out if $in is newer than $out
 	// returns true when it compiles, false otherwise
 	public static function ccompile($in, $out) {
 		if (!is_file($out) || filemtime($in) > filemtime($out)) {
