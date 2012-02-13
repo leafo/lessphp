@@ -17,7 +17,8 @@ $output = array(
 	'filename' => '%s.css',
 );
 
-$prefix = realpath(dirname(__FILE__));
+
+$prefix = strtr(realpath(dirname(__FILE__)), '\\', '/');
 require $prefix.'/../lessc.inc.php';
 
 $compiler = new lessc();
@@ -108,6 +109,10 @@ foreach ($tests as $test) {
 			break;
 		}
 		$expected = trim(file_get_contents($test['out']));
+
+		// don't care about CRLF vs LF change (DOS/Win vs. UNIX):
+		$expected = trim(str_replace("\r\n", "\n", $expected));
+		$parsed = trim(str_replace("\r\n", "\n", $parsed));
 
 		if ($expected != $parsed) {
 			if ($showDiff) {
