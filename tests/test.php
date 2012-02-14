@@ -7,7 +7,7 @@ error_reporting(E_ALL);
  * and compile them, then compare them to paired file in
  * output directory.
  */
-$difftool = 'meld';
+$difftool = 'diff -b -B -t -u';
 $input = array(
 	'dir' => 'inputs',
 	'glob' => '*.less',
@@ -29,7 +29,7 @@ if (php_sapi_name() != 'cli') {
 	exit($fa.$argv[0].' must be run in the command line.');
 }
 
-$opts = getopt('hCd::g', array('unix-diff'));
+$opts = getopt('hCd::g');
 
 if ($opts === false || isset($opts['h'])) {
 	echo <<<EOT
@@ -40,18 +40,10 @@ where [options] can be a mix of these:
   -h              Show this help message and exit.
 
   -d=[difftool]   Show the diff of the actual output vs. the reference when a
-                  test fails; uses the 'meld' tool by default, but vanilla
-                  UNIXes don't have that one: you can specify another diff
-                  tool as an optional argument, e.g. 'diff', or use the
-                  additional '--unix-diff' option.
+                  test fails; uses 'diff -b -B -t -u' by default.
 
                   The test is aborted after the first failure report, unless
                   you also specify the '-g' option ('go on').
-
-  --unix-diff     Set the diff tool to 'diff -b -B -t -u' i.e. use standard
-                  UNIX 'diff' and ignore whitespace differences (thus ignoring
-                  Windows vs. UNIX line endings differences in the reference
-                  vs. output, etc.)
 
   -g              Continue executing the other tests when a test fails and
                   option '-d' is active.
@@ -79,19 +71,11 @@ Examples of use:
 - Run only the mixin tests:
     ./test.php mixin
 
-- Use UNIX diff (with whitespoace ignore settings) to show diffs for
-  failing tests, run all tests:
-    ./test.php -d --unix-diff
-
-- Use vanilla UNIX diff to show diffs for failing tests, run only
-  the mixin tests:
-    ./test.php -d=diff mixin
+- Use a custom diff tool to show diffs for failing tests
+    ./test.php -d=meld
 
 EOT;
 	exit(1);
-}
-if (isset($opts['unix-diff'])) {
-	$difftool = 'diff -b -B -t -u';
 }
 
 $input['dir'] = $prefix.'/'.$input['dir'];
