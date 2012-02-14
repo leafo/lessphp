@@ -18,7 +18,8 @@ $output = array(
 	'filename' => '%s.css',
 );
 
-$prefix = realpath(dirname(__FILE__));
+
+$prefix = strtr(realpath(dirname(__FILE__)), '\\', '/');
 require $prefix.'/../lessc.inc.php';
 
 $compiler = new lessc();
