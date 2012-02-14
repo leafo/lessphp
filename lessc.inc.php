@@ -988,7 +988,7 @@ class lessc {
 		foreach ($block->args as $i => $arg) {
 			switch ($arg[0]) {
 			case "lit":
-				if (!$this->eq($arg[1], $callingArgs[$i])) {
+				if (empty($callingArgs[$i]) || !$this->eq($arg[1], $callingArgs[$i])) {
 					return false;
 				}
 				break;
@@ -1088,6 +1088,7 @@ class lessc {
 		case 'mixin':
 			list(, $path, $args) = $prop;
 
+			$args = array_map(array($this, "reduce"), $args);
 			$mixins = $this->findBlocks($block, $path, $args);
 			if (is_null($mixins)) {
 				// echo "failed to find block: ".implode(" > ", $path)."\n";
