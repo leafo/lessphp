@@ -980,11 +980,21 @@ class lessc {
 	}
 
 	function patternMatch($block, $callingArgs) {
-		if (empty($block->args)) {
-			// no arg blocks mixed into everything
-			return true;
+		// blocks with no required arguments are mixed into everything
+		if (empty($block->args)) return true;
+
+		// has args but all have default values
+		$pseudoEmpty = true;
+		foreach ($block->args as $arg) {
+			if (!isset($arg[2])) {
+				$pseudoEmpty = false;
+				break;
+			}
 		}
 
+		if ($pseudoEmpty) return true;
+
+		// try to match by arity or by argument literal
 		foreach ($block->args as $i => $arg) {
 			switch ($arg[0]) {
 			case "lit":
@@ -1000,6 +1010,7 @@ class lessc {
 				break;
 			}
 		}
+
 		return $i >= count($callingArgs) - 1;
 	}
 
