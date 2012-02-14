@@ -2,7 +2,7 @@
     link_to_home: true
 --
 
-<h2 skip="true">Documentation v0.3.0</h2>
+<h2 skip="true">Documentation v0.3.1</h2>
 
 <div style="margin-bottom: 1em;">$index</div>
 
@@ -331,7 +331,7 @@ spaces.
 This useful for quickly assigning all the arguments:
 
     ```less
-    .box-shadow(@inset, @x, @y, @blur, @spread, @color) {
+    .box-shadow(@x, @y, @blur, @color) {
       box-shadow: @arguments;
       -webkit-box-shadow: @arguments;
       -moz-box-shadow: @arguments;
