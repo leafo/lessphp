@@ -884,6 +884,7 @@ class lessc {
 
 		if ($this->literal("(") && $this->expression($exp) && $this->literal(")")) {
 			$guard = $exp;
+			if ($negate) $guard = array("negate", $guard);
 			return true;
 		}
 
@@ -1049,12 +1050,17 @@ class lessc {
 				$this->pushEnv();
 				$this->zipSetArgs($block->args, $callingArgs);
 
-				if ($this->reduce($guard) == self::$TRUE) {
-					$passed = true;
-					break;
+				$negate = false;
+				if ($guard[0] == "negate") {
+					$guard = $guard[1];
+					$negate = true;
 				}
 
+				$passed = $this->reduce($guard) == self::$TRUE;
+				if ($negate) $passed = !$passed;
+
 				$this->pop();
+				if ($passed) break;
 			}
 
 			if (!$passed) {
