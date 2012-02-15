@@ -1047,20 +1047,6 @@ class lessc {
 	}
 
 	function patternMatch($block, $callingArgs) {
-		// blocks with no required arguments are mixed into everything
-		if (empty($block->args)) return true;
-
-		// has args but all have default values
-		$pseudoEmpty = true;
-		foreach ($block->args as $arg) {
-			if (!isset($arg[2])) {
-				$pseudoEmpty = false;
-				break;
-			}
-		}
-
-		if ($pseudoEmpty) return true;
-
 		// match the guards if it has them
 		// any one of the groups must have all its guards pass for a match
 		if (!empty($block->guards)) {
@@ -1096,6 +1082,20 @@ class lessc {
 				return false;
 			}
 		}
+
+		// blocks with no required arguments are mixed into everything
+		if (empty($block->args)) return true;
+
+		// has args but all have default values
+		$pseudoEmpty = true;
+		foreach ($block->args as $arg) {
+			if (!isset($arg[2])) {
+				$pseudoEmpty = false;
+				break;
+			}
+		}
+
+		if ($pseudoEmpty) return true;
 
 		// try to match by arity or by argument literal
 		foreach ($block->args as $i => $arg) {
