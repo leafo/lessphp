@@ -68,14 +68,15 @@ body {
 
 // arguments
 
-.spam(@something: 100) {
+.spam(@something: 100, @dad: land) {
 	@wow: 23434;
     foo: @arguments;
     bar: @arguments;
 }
 
 .eggs {
-    .spam(1px, 2px, 4px, 8px);
+    .spam(1px, 2px);
+    .spam();
 }
 
 .first(@one, @two, @three, @four: cool) {
@@ -86,8 +87,7 @@ body {
 	.first(one, two, three);
 }
 
-
-.rad() {
+.rad(@name) {
 	cool: @arguments;
 }
 
@@ -96,7 +96,7 @@ body {
 	.rad("@{hello}");
 }
 
-.second() {
+.second(@x, @y:skip, @z: me) {
 	things: @arguments;
 }
 
@@ -106,7 +106,7 @@ body {
 }
 
 
-.another() {
+.another(@x, @y:skip, @z:me) {
   .cool {
     color: @arguments;
   }

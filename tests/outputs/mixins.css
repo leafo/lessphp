@@ -34,14 +34,16 @@ body b { color:blue; }
 .hello .world { color:blue; }
 .foobar { color:blue; }
 .eggs {
-  foo:1px 2px 4px 8px;
-  bar:1px 2px 4px 8px;
+  foo:1px 2px;
+  bar:1px 2px;
+  foo:100 land;
+  bar:100 land;
 }
 #hello { cool:one two three cool; }
 #world { cool:"world"; }
 #another {
   things:red blue green;
-  things:red blue green;
+  things:red blue green skip me;
 }
 #day .cool { color:one two three; }
-#day .cool { color:one two three; }
+#day .cool { color:one two three skip me; }
