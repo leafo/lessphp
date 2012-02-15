@@ -1202,7 +1202,7 @@ class lessc {
 		case 'mixin':
 			list(, $path, $args) = $prop;
 
-			$args = array_map(array($this, "reduce"), $args);
+			$args = array_map(array($this, "reduce"), (array)$args);
 			$mixins = $this->findBlocks($block, $path, $args);
 			if (is_null($mixins)) {
 				// echo "failed to find block: ".implode(" > ", $path)."\n";
