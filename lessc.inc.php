@@ -33,6 +33,7 @@
  *
  */
 class lessc {
+	public static $VERSION = "v0.3.1-dev";
 	protected $buffer;
 	protected $count;
 	protected $line;
