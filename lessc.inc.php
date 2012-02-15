@@ -57,17 +57,17 @@ class lessc {
 	static protected $precedence = array(
 		'and' => 0,
 
-		'=<' => 0,
-		'>=' => 0,
-		'=' => 0,
-		'<' => 0,
-		'>' => 0,
+		'=<' => 1,
+		'>=' => 1,
+		'=' => 1,
+		'<' => 1,
+		'>' => 1,
 
-		'+' => 1,
-		'-' => 1,
-		'*' => 2,
-		'/' => 2,
-		'%' => 2,
+		'+' => 2,
+		'-' => 2,
+		'*' => 3,
+		'/' => 3,
+		'%' => 3,
 	);
 	static protected $operatorString; // regex string to match any of the operators
 
@@ -1710,6 +1710,11 @@ class lessc {
 
 		if ($right_color = $this->coerceColor($right)) {
 			$right = $right_color;
+		}
+
+		if ($op == "and") {
+			return $left == self::$TRUE && $right == self::$TRUE ?
+				self::$TRUE : self::$FALSE;
 		}
 
 		if ($op == "=") {
