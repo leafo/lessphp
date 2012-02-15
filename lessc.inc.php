@@ -55,19 +55,17 @@ class lessc {
 	public $parentSelector = '&';
 
 	static protected $precedence = array(
-		'and' => 0,
+		'=<' => 0,
+		'>=' => 0,
+		'=' => 0,
+		'<' => 0,
+		'>' => 0,
 
-		'=<' => 1,
-		'>=' => 1,
-		'=' => 1,
-		'<' => 1,
-		'>' => 1,
-
-		'+' => 2,
-		'-' => 2,
-		'*' => 3,
-		'/' => 3,
-		'%' => 3,
+		'+' => 1,
+		'-' => 1,
+		'*' => 2,
+		'/' => 2,
+		'%' => 2,
 	);
 	static protected $operatorString; // regex string to match any of the operators
 
@@ -1287,6 +1285,34 @@ class lessc {
 		default: // assumed to be unit	
 			return $value[1].$value[0];
 		}
+	}
+
+	function lib_isnumber($value) {
+		return $this->toBool(is_numeric($value[1]));
+	}
+
+	function lib_isstring($value) {
+		return $this->toBool($value[0] == "string");
+	}
+
+	function lib_iscolor($value) {
+		return $this->toBool($this->coerceColor($value));
+	}
+
+	function lib_iskeyword($value) {
+		return $this->toBool($value[0] == "keyword");
+	}
+
+	function lib_ispixel($value) {
+		return $this->toBool($value[0] == "px");
+	}
+
+	function lib_ispercentage($value) {
+		return $this->toBool($value[0] == "%");
+	}
+
+	function lib_isem($value) {
+		return $this->toBool($value[0] == "em");
 	}
 
 	function lib_rgbahex($color) {
