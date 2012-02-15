@@ -864,14 +864,32 @@ class lessc {
 
 		$guards = array();
 
-		while ($this->guard($g)) {
+		while ($this->guard_group($g)) {
 			$guards[] = $g;
 			if (!$this->literal(",")) break;
 		}
 
 		if (count($guards) == 0) {
-			$this->seek($s);
 			$guards = null;
+			$this->seek($s);
+			return false;
+		}
+
+		return true;
+	}
+
+	// a bunch of guards that are and'd together
+	function guard_group(&$guard_group) {
+		$s = $this->seek();
+		$guard_group = array();
+		while ($this->guard($guard)) {
+			$guard_group[] = $guard;
+			if (!$this->literal("and")) break;
+		}
+
+		if (count($guard_group) == 0) {
+			$guard_group = null;
+			$this->seek($s);
 			return false;
 		}
 
@@ -1044,26 +1062,37 @@ class lessc {
 		if ($pseudoEmpty) return true;
 
 		// match the guards if it has them
+		// any one of the groups must have all its guards pass for a match
 		if (!empty($block->guards)) {
-			$passed = false;
-			foreach ($block->guards as $guard) {
-				$this->pushEnv();
-				$this->zipSetArgs($block->args, $callingArgs);
+			$group_passed = false;
+			foreach ($block->guards as $guard_group) {
+				foreach ($guard_group as $guard) {
+					$this->pushEnv();
+					$this->zipSetArgs($block->args, $callingArgs);
 
-				$negate = false;
-				if ($guard[0] == "negate") {
-					$guard = $guard[1];
-					$negate = true;
+					$negate = false;
+					if ($guard[0] == "negate") {
+						$guard = $guard[1];
+						$negate = true;
+					}
+
+					$passed = $this->reduce($guard) == self::$TRUE;
+					if ($negate) $passed = !$passed;
+
+					$this->pop();
+
+					if ($passed) {
+						$group_passed = true;
+					} else {
+						$group_passed = false;
+						break;
+					}
 				}
 
-				$passed = $this->reduce($guard) == self::$TRUE;
-				if ($negate) $passed = !$passed;
-
-				$this->pop();
-				if ($passed) break;
+				if ($group_passed) break;
 			}
 
-			if (!$passed) {
+			if (!$group_passed) {
 				return false;
 			}
 		}
