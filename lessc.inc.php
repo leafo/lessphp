@@ -39,6 +39,9 @@ class lessc {
 	protected $libFunctions = array();
 	static protected $nextBlockId = 0;
 
+	static protected $TRUE = array("keyword", "true");
+	static protected $FALSE = array("keyword", "false");
+
 	public $indentLevel;
 	public $indentChar = '  ';
 
@@ -52,11 +55,19 @@ class lessc {
 	public $parentSelector = '&';
 
 	static protected $precedence = array(
-		'+' => 0,
-		'-' => 0,
-		'*' => 1,
-		'/' => 1,
-		'%' => 1,
+		'and' => 0,
+
+		'=<' => 0,
+		'>=' => 0,
+		'=' => 0,
+		'<' => 0,
+		'>' => 0,
+
+		'+' => 1,
+		'-' => 1,
+		'*' => 2,
+		'/' => 2,
+		'%' => 2,
 	);
 	static protected $operatorString; // regex string to match any of the operators
 
@@ -232,10 +243,12 @@ class lessc {
 
 		// opening parametric mixin
 		if ($this->tag($tag, true) && $this->argumentDef($args) &&
+			($this->guards($guards) || true) &&
 			$this->literal('{'))
 		{
 			$block = $this->pushBlock($this->fixTags(array($tag)));
 			$block->args = $args;
+			if (!empty($guards)) $block->guards = $guards;
 			return true;
 		} else {
 			$this->seek($s);
@@ -843,6 +856,43 @@ class lessc {
 		return false;
 	}
 
+	function guards(&$guards) {
+		$s = $this->seek();
+
+		if (!$this->literal("when")) {
+			$this->seek($s);
+			return false;
+		}
+
+		$guards = array();
+
+		while ($this->guard($g)) {
+			$guards[] = $g;
+			if (!$this->literal(",")) break;
+		}
+
+		if (count($guards) == 0) {
+			$this->seek($s);
+			$guards = null;
+			return false;
+		}
+
+		return true;
+	}
+
+	function guard(&$guard) {
+		$s = $this->seek();
+		$negate = $this->literal("not");
+
+		if ($this->literal("(") && $this->expression($exp) && $this->literal(")")) {
+			$guard = $exp;
+			return true;
+		}
+
+		$this->seek($s);
+		return false;
+	}
+
 	function compressList($items, $delim) {
 		if (count($items) == 1) return $items[0];	
 		else return array('list', $delim, $items);
@@ -993,6 +1043,26 @@ class lessc {
 		}
 
 		if ($pseudoEmpty) return true;
+
+		// match the guards if it has them
+		if (!empty($block->guards)) {
+			$passed = false;
+			foreach ($block->guards as $guard) {
+				$this->pushEnv();
+				$this->zipSetArgs($block->args, $callingArgs);
+
+				if ($this->reduce($guard) == self::$TRUE) {
+					$passed = true;
+					break;
+				}
+
+				$this->pop();
+			}
+
+			if (!$passed) {
+				return false;
+			}
+		}
 
 		// try to match by arity or by argument literal
 		foreach ($block->args as $i => $arg) {
@@ -1640,6 +1710,10 @@ class lessc {
 
 		if ($right_color = $this->coerceColor($right)) {
 			$right = $right_color;
+		}
+
+		if ($op == "=") {
+			return $this->eq($left, $right) ? self::$TRUE : self::$FALSE;
 		}
 
 		if ($left[0] == 'color' && $right[0] == 'color') {
