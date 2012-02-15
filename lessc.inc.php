@@ -397,7 +397,7 @@ class lessc {
 			}
 
 			// peek for next operator to see what to do with rhs
-			if ($this->peek(self::$operatorString, $next) && self::$precedence[$next[1]] > $minP) {
+			if ($this->peek(self::$operatorString, $next) && self::$precedence[$next[1]] > self::$precedence[$m[1]]) {
 				$rhs = $this->expHelper($rhs, self::$precedence[$next[1]]);
 			}
 
