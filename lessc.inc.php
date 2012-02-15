@@ -1699,6 +1699,11 @@ class lessc {
 		}
 	}
 
+	function toBool($a) {
+		if ($a) return self::$TRUE;
+		else return self::$FALSE;
+	}
+
 	// evaluate an expression
 	function evaluate($op, $left, $right) {
 		$left = $this->reduce($left);
@@ -1713,12 +1718,11 @@ class lessc {
 		}
 
 		if ($op == "and") {
-			return $left == self::$TRUE && $right == self::$TRUE ?
-				self::$TRUE : self::$FALSE;
+			return $this->toBool($left == self::$TRUE && $right == self::$TRUE);
 		}
 
 		if ($op == "=") {
-			return $this->eq($left, $right) ? self::$TRUE : self::$FALSE;
+			return $this->toBool($this->eq($left, $right) );
 		}
 
 		if ($left[0] == 'color' && $right[0] == 'color') {
@@ -1838,6 +1842,14 @@ class lessc {
 			if ($right[1] == 0) throw new exception('parse error: divide by zero');
 			$value = $left[1] / $right[1];
 			break;
+		case '<':
+			return $this->toBool($left[1] < $right[1]);
+		case '>':
+			return $this->toBool($left[1] > $right[1]);
+		case '>=':
+			return $this->toBool($left[1] >= $right[1]);
+		case '=<':
+			return $this->toBool($left[1] <= $right[1]);
 		default:
 			throw new exception('parse error: unknown number operator: '.$op);	
 		}
