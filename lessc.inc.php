@@ -212,10 +212,10 @@ class lessc {
 		}
 
 		// setting a variable
-		if ($this->variable($name) && $this->assign() &&
+		if ($this->variable($var) && $this->assign() &&
 			$this->propertyValue($value) && $this->end())
 		{
-			$this->append(array('assign', $this->vPrefix.$name, $value));
+			$this->append(array('assign', $var, $value));
 			return true;
 		} else {
 			$this->seek($s);
@@ -446,8 +446,8 @@ class lessc {
 
 		// see if there is a negation
 		$s = $this->seek();
-		if ($this->literal('-', false) && $this->variable($vname)) {
-			$value = array('negative', array('variable', $this->vPrefix.$vname));
+		if ($this->literal('-', false) && $this->variable($var)) {
+			$value = array('negative', array('variable', $var));
 			return true;
 		} else {
 			$this->seek($s);
@@ -482,8 +482,8 @@ class lessc {
 		}
 
 		// try a variable
-		if ($this->variable($vname)) {
-			$value = array('variable', $this->vPrefix.$vname);
+		if ($this->variable($var)) {
+			$value = array('variable', $var);
 			return true;
 		}
 
@@ -558,7 +558,7 @@ class lessc {
 		// either it is a variable or a property
 		// why is a property wrapped in quotes, who knows!
 		if ($this->variable($name)) {
-			$name = $this->vPrefix.$name;
+			// ~
 		} elseif ($this->literal("'") && $this->keyword($name) && $this->literal("'")) {
 			// .. $this->count is messed up if we wanted to test another access type
 		} else {
@@ -819,10 +819,19 @@ class lessc {
 	// consume a less variable
 	function variable(&$name) {
 		$s = $this->seek();
-		if ($this->literal($this->vPrefix, false) && $this->keyword($name)) {
+		if ($this->literal($this->vPrefix, false) &&
+			($this->variable($sub) || $this->keyword($name)))
+		{
+			if (!empty($sub)) {
+				$name = array('variable', $sub);
+			} else {
+				$name = $this->vPrefix.$name;
+			}
 			return true;	
 		}
 
+		$name = null;
+		$this->seek($s);
 		return false;
 	}
 
@@ -1170,7 +1179,7 @@ class lessc {
 				} else $value = null;
 
 				$value = $this->reduce($value);
-				$this->set($this->vPrefix.$a[1], $value);
+				$this->set($a[1], $value);
 				$assigned_values[] = $value;
 			}
 			$i++;
@@ -1698,6 +1707,15 @@ class lessc {
 		return false;
 	}
 
+	function toName($val) {
+		switch($val[0]) {
+		case "string":
+			return substr($val[1], 1, -1);
+		default:
+			return $val[1];
+		}
+	}
+
 	// reduce a delayed type to its final value
 	// dereference variables and solve equations
 	function reduce($var, $defaultValue = array('number', 0)) {
@@ -1708,7 +1726,10 @@ class lessc {
 			} elseif ($var[0] == 'expression') {
 				$var = $this->evaluate($var[1], $var[2], $var[3]);
 			} elseif ($var[0] == 'variable') {
-				$var = $this->get($var[1]);
+				$key = is_array($var[1]) ?
+					$this->vPrefix.$this->toName($this->reduce($var[1])) : $var[1];
+
+				$var = $this->get($key);
 			} elseif ($var[0] == 'lookup') {
 				// do accessor here....
 				$var = array('number', 0);

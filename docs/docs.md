@@ -82,6 +82,16 @@ appear. They can hold any CSS property value.
 Variables are only visible for use from their current scope, or any enclosed
 scopes.
 
+If you have a string or keyword in a variable, you can reference another
+variable by that name by repeating the `@`:
+
+    ```less
+    @value: 20px;
+    @value_name: "value";
+
+    width: @@value_name;
+    ```
+
 ### Expressions
 
 Expressions let you combine values and variables in meaningful ways. For
