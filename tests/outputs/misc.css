@@ -14,6 +14,11 @@ color:"aaa, bbb";
   what-ever:100px;
   background:url(/*no comment here*/);
 }
+.urls {
+  background:url("http://google.com");
+  background:url(http://google.com);
+  background:url("http://google.com");
+}
 .cool { color:"aaa, bbb"; }
 .span-17 { float:left; }
 .span-17 { width:660px; }

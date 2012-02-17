@@ -33,7 +33,7 @@
  *
  */
 class lessc {
-	public static $VERSION = "v0.3.2";
+	public static $VERSION = "v0.3.2-dev";
 	protected $buffer;
 	protected $count;
 	protected $line;
@@ -785,30 +785,36 @@ class lessc {
 
 		if ($this->match('(%|[\w\-_][\w\-_:\.]*)', $m) && $this->literal('(')) {
 			$fname = $m[1];
-			if ($fname == 'url') {
-				$this->to(')', $content, true);
-				$args = array('string', $content);
-			} else {
-				$args = array();
-				while (true) {
-					$ss = $this->seek();
-					if ($this->keyword($name) && $this->literal('=') && $this->expressionList($value)) {
-						$args[] = array('list', '=', array(array('keyword', $name), $value));
-					} else {
-						$this->seek($ss);
-						if ($this->expressionList($value)) {
-							$args[] = $value;
-						}
-					}
 
-					if (!$this->literal(',')) break;
+			$s_pre_args = $this->seek();
+
+			$args = array();
+			while (true) {
+				$ss = $this->seek();
+				// this ugly nonsense is for ie filter properties
+				if ($this->keyword($name) && $this->literal('=') && $this->expressionList($value)) {
+					$args[] = array('list', '=', array(array('keyword', $name), $value));
+				} else {
+					$this->seek($ss);
+					if ($this->expressionList($value)) {
+						$args[] = $value;
+					}
 				}
-				$args = array('list', ',', $args);
+
+				if (!$this->literal(',')) break;
 			}
+			$args = array('list', ',', $args);
 
 			if ($this->literal(')')) {
 				$func = array('function', $fname, $args);
 				return true;
+			} elseif ($fname == 'url') {
+				// couldn't parse and in url? treat as string
+				$this->seek($s_pre_args);
+				if ($this->to(')', $content, true) && $this->literal(')')) {
+					$func = array('function', $fname,array('string', $content));
+					return true;
+				}
 			}
 		}
 

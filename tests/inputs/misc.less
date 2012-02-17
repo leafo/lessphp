@@ -37,6 +37,13 @@ Here is a block comment
 }
 
 
+.urls {
+	@var: "http://google.com";
+	background: url(@var);
+	background: url(@{var});
+	background: url("@{var}");
+}
+
 .mix(@arg) { color: @arg; }
 @aaa: aaa;
 @bbb: bbb;
