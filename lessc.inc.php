@@ -1191,12 +1191,7 @@ class lessc {
 			$i++;
 		}
 
-		// copy over any extra default args
-		for ($i = count($values); $i < count($assigned_values); $i++) {
-			$values[] = $assigned_values[$i];
-		}
-
-		$this->env->arguments = $values;
+		$this->env->arguments = $assigned_values;
 	}
 
 	// compile a prop and update $lines or $blocks appropriately
