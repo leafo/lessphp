@@ -1200,7 +1200,7 @@ class lessc {
 		case 'assign':
 			list(, $name, $value) = $prop;
 			if ($name[0] == $this->vPrefix) {
-				$this->set($name, $this->reduce($value));
+				$this->set($name, $value);
 			} else {
 				$_lines[] = "$name:".
 					$this->compileValue($this->reduce($value)).";";
