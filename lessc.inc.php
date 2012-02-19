@@ -974,12 +974,14 @@ class lessc {
 			$tags = $this->multiplyTags($parent_tags, $block->tags);
 		}
 
-		$this->pushEnv();
+		$env = $this->pushEnv();
 		$lines = array();
 		$blocks = array();
 		foreach ($block->props as $prop) {
 			$this->compileProp($prop, $block, $tags, $lines, $blocks);
 		}
+
+		$block->scope = $env;
 
 		$this->pop();
 
@@ -1027,7 +1029,6 @@ class lessc {
 
 		return ob_get_clean();
 	}
-
 
 	// find the fully qualified tags for a block and its parent's tags
 	function multiplyTags($parents, $current) {
@@ -1221,6 +1222,12 @@ class lessc {
 			}
 
 			foreach ($mixins as $mixin) {
+				$old_scope = null;
+				if (isset($mixin->parent->scope)) {
+					$old_scope = $this->env;
+					$this->env = $mixin->parent->scope;
+				}
+
 				$have_args = false;
 				if (isset($mixin->args)) {
 					$have_args = true;
@@ -1238,6 +1245,10 @@ class lessc {
 				$mixin->parent = $old_parent;
 
 				if ($have_args) $this->pop();
+
+				if ($old_scope) {
+					$this->env = $old_scope;
+				}
 			}
 
 			break;
