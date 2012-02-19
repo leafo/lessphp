@@ -1745,7 +1745,6 @@ class lessc {
 
 			$seen =& $this->env->seenNames;
 
-			// increment
 			if (!empty($seen[$key])) {
 				$this->throwError("infinite loop detected: $key");
 			}
@@ -1754,7 +1753,6 @@ class lessc {
 
 			$out = $this->reduce($this->get($key));
 
-			// decrement
 			$seen[$key] = false;
 
 			return $out;
