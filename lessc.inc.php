@@ -1204,7 +1204,7 @@ class lessc {
 				$this->set($name, $value);
 			} else {
 				$_lines[] = "$name:".
-					$this->compileValue($this->reduce($value)).";";
+					$this->compileValue($this->safeReduce($value)).";";
 			}
 			break;
 		case 'block':
@@ -1730,7 +1730,7 @@ class lessc {
 
 	// reduce a delayed type to its final value
 	// dereference variables and solve equations
-	function reduce($var, $defaultValue = array('number', 0)) {
+	function reduce($var) {
 		while (in_array($var[0], self::$dtypes)) {
 			if ($var[0] == 'list') {
 				foreach ($var[2] as &$value) $value = $this->reduce($value);
@@ -1779,6 +1779,14 @@ class lessc {
 		}
 
 		return $var;
+	}
+
+	// prevent infinite loops
+	function safeReduce($value) {
+		$this->env->seenNames = array();
+		$out = $this->reduce($value);
+		unset($this->env->seenNames);
+		return $out;
 	}
 
 	function coerceColor($value) {
@@ -2007,6 +2015,14 @@ class lessc {
 	// get the highest occurrence entry for a name
 	function get($name) {
 		$current = $this->env;
+
+		// handled by safeReduce
+		if (isset($this->env->seenNames)) {
+			if (isset($this->env->seenNames[$name])) {
+				throw new exception("infinite loop on variable: $name");
+			}
+			$this->env->seenNames[$name] = true;
+		}
 
 		$is_arguments = $name == $this->vPrefix . 'arguments';
 		while ($current) {
