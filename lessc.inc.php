@@ -150,7 +150,7 @@ class lessc {
 		if ($this->keyword($key) && $this->assign() &&
 			$this->propertyValue($value) && $this->end())
 		{
-			$this->append(array('assign', $key, $value));
+			$this->append(array('assign', $key, $value), $s);
 			return true;
 		} else {
 			$this->seek($s);
@@ -172,7 +172,7 @@ class lessc {
 			if ($this->literal('@charset') && $this->propertyValue($value) &&
 				$this->end())
 			{
-				$this->append(array('charset', $value));
+				$this->append(array('charset', $value), $s);
 				return true;
 			} else {
 				$this->seek($s);
@@ -215,7 +215,7 @@ class lessc {
 		if ($this->variable($var) && $this->assign() &&
 			$this->propertyValue($value) && $this->end())
 		{
-			$this->append(array('assign', $var, $value));
+			$this->append(array('assign', $var, $value), $s);
 			return true;
 		} else {
 			$this->seek($s);
@@ -229,14 +229,14 @@ class lessc {
 				} else {
 					$path = $this->findImport($url);
 					if (!is_null($path)) {
-						$this->append(array('import', $path));
+						$this->append(array('import', $path), $s);
 						return true;
 					}
 				}
 			}
 
 			$this->append(array('raw', '@import url("'.$url.'")'.
-				($media ? ' '.$media : '').';'));
+				($media ? ' '.$media : '').';'), $s);
 			return true;
 		}
 
@@ -268,7 +268,7 @@ class lessc {
 				$block = $this->pop();
 			} catch (exception $e) {
 				$this->seek($s);
-				$this->throwParseError($e->getMessage());
+				$this->throwError($e->getMessage());
 			}
 
 			$hidden = true;
@@ -279,7 +279,7 @@ class lessc {
 				}
 			}
 
-			if (!$hidden) $this->append(array('block', $block));
+			if (!$hidden) $this->append(array('block', $block), $s);
 
 			foreach ($block->tags as $tag) {
 				$this->env->children[$tag][] = $block;
@@ -293,7 +293,7 @@ class lessc {
 			($this->argumentValues($argv) || true) && $this->end())
 		{
 			$tags = $this->fixTags($tags);
-			$this->append(array('mixin', $tags, $argv));
+			$this->append(array('mixin', $tags, $argv), $s);
 			return true;
 		} else {
 			$this->seek($s);
@@ -1197,6 +1197,12 @@ class lessc {
 
 	// compile a prop and update $lines or $blocks appropriately
 	function compileProp($prop, $block, $tags, &$_lines, &$_blocks) {
+		if (isset($prop[-1])) {
+			$this->count = $prop[-1];
+		} else {
+			$this->count = -1;
+		}
+
 		switch ($prop[0]) {
 		case 'assign':
 			list(, $name, $value) = $prop;
@@ -1273,8 +1279,7 @@ class lessc {
 			$_lines[] = '@charset '.$this->compileValue($this->reduce($value)).';';
 			break;
 		default:
-			echo "unknown op: {$prop[0]}\n";
-			throw new exception();
+			$this->throwError("unknown op: {$prop[0]}\n");
 		}
 	}
 
@@ -1374,7 +1379,7 @@ class lessc {
 
 	function lib_rgbahex($color) {
 		if ($color[0] != 'color')
-			throw new exception("color expected for rgbahex");
+			$this->throwError("color expected for rgbahex");
 
 		return sprintf("#%02x%02x%02x%02x",
 			isset($color[4]) ? $color[4]*255 : 0,
@@ -1554,7 +1559,7 @@ class lessc {
 	// http://sass-lang.com/docs/yardoc/Sass/Script/Functions.html#mix-instance_method
 	function lib_mix($args) {
 		if ($args[0] != "list")
-			throw new exception("mix expects (color1, color2, weight)");
+			$this->throwError("mix expects (color1, color2, weight)");
 
 		list($first, $second, $weight) = $args[2];
 		$first = $this->assertColor($first);
@@ -1585,7 +1590,7 @@ class lessc {
 
 	function assertColor($value, $error = "expected color value") {
 		$color = $this->coerceColor($value);
-		if (is_null($color)) throw new exception($error);
+		if (is_null($color)) $this->throwError($error);
 		return $color;
 	}
 
@@ -1909,11 +1914,11 @@ class lessc {
 				$out[] = $lval % $rval;
 				break;
 			case '/':
-				if ($rval == 0) throw new exception("evaluate error: can't divide by zero");
+				if ($rval == 0) $this->throwError("evaluate error: can't divide by zero");
 				$out[] = $lval / $rval;
 				break;
 			default:
-				throw new exception('evaluate error: color op number failed on op '.$op);
+				$this->throwError('evaluate error: color op number failed on op '.$op);
 			}
 		}
 		return $this->fixColor($out);
@@ -1942,7 +1947,7 @@ class lessc {
 			$value = $left[1] % $right[1];
 			break;	
 		case '/':
-			if ($right[1] == 0) throw new exception('parse error: divide by zero');
+			if ($right[1] == 0) $this->throwError('parse error: divide by zero');
 			$value = $left[1] / $right[1];
 			break;
 		case '<':
@@ -1954,7 +1959,7 @@ class lessc {
 		case '=<':
 			return $this->toBool($left[1] <= $right[1]);
 		default:
-			throw new exception('parse error: unknown number operator: '.$op);	
+			$this->throwError('parse error: unknown number operator: '.$op);
 		}
 
 		return array($type, $value);
@@ -2008,7 +2013,8 @@ class lessc {
 	}
 
 	// append an property
-	function append($prop) {
+	function append($prop, $pos = null) {
+		if (!is_null($pos)) $prop[-1] = $pos;
 		$this->env->props[] = $prop;
 	}
 
@@ -2019,7 +2025,7 @@ class lessc {
 		// handled by safeReduce
 		if (isset($this->env->seenNames)) {
 			if (isset($this->env->seenNames[$name])) {
-				throw new exception("infinite loop on variable: $name");
+				$this->throwError("infinite loop on variable: $name");
 			}
 			$this->env->seenNames[$name] = true;
 		}
@@ -2131,7 +2137,7 @@ class lessc {
 		while (false !== $this->parseChunk());
 
 		if ($this->count != strlen($this->buffer))
-			$this->throwParseError();
+			$this->throwError();
 
 		if (!is_null($this->env->parent))
 			throw new exception('parse error: unclosed block');
@@ -2169,16 +2175,23 @@ class lessc {
 		return $out;
 	}
 
-	function throwParseError($msg = 'parse error') {
-		$line = $this->line + substr_count(substr($this->buffer, 0, $this->count), "\n");
-		if (isset($this->fileName)) {
-			$loc = $this->fileName.' on line '.$line;
-		} else {
-			$loc = "line: ".$line;
-		}
+	/**
+	 * Uses the current value of $this->count to show line and line number
+	 */
+	function throwError($msg = 'parse error') {
+		if ($this->count > 0) {
+			$line = $this->line + substr_count(substr($this->buffer, 0, $this->count), "\n");
+			if (isset($this->fileName)) {
+				$loc = $this->fileName.' on line '.$line;
+			} else {
+				$loc = "line: ".$line;
+			}
 
-		if ($this->peek("(.*?)(\n|$)", $m))
-			throw new exception($msg.': failed at `'.$m[1].'` '.$loc);
+			if ($this->peek("(.*?)(\n|$)", $m))
+				throw new exception($msg.': failed at `'.$m[1].'` '.$loc);
+		} else {
+			throw new exception($msg);
+		}
 	}
 
 	/**
