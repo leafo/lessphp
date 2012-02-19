@@ -975,6 +975,8 @@ class lessc {
 		}
 
 		$env = $this->pushEnv();
+		$env->nameDepth = array();
+
 		$lines = array();
 		$blocks = array();
 		foreach ($block->props as $prop) {
@@ -1210,7 +1212,7 @@ class lessc {
 				$this->set($name, $value);
 			} else {
 				$_lines[] = "$name:".
-					$this->compileValue($this->safeReduce($value)).";";
+					$this->compileValue($this->reduce($value)).";";
 			}
 			break;
 		case 'block':
@@ -1736,17 +1738,34 @@ class lessc {
 	// reduce a delayed type to its final value
 	// dereference variables and solve equations
 	function reduce($var) {
+		// this is done here for infinite loop checking
+		if ($var[0] == "variable") {
+			$key = is_array($var[1]) ?
+				$this->vPrefix.$this->toName($this->reduce($var[1])) : $var[1];
+
+			$seen =& $this->env->seenNames;
+
+			// increment
+			if (!empty($seen[$key])) {
+				$this->throwError("infinite loop detected: $key");
+			}
+
+			$seen[$key] = true;
+
+			$out = $this->reduce($this->get($key));
+
+			// decrement
+			$seen[$key] = false;
+
+			return $out;
+		}
+
 		while (in_array($var[0], self::$dtypes)) {
 			if ($var[0] == 'list') {
 				foreach ($var[2] as &$value) $value = $this->reduce($value);
 				break;
 			} elseif ($var[0] == 'expression') {
 				$var = $this->evaluate($var[1], $var[2], $var[3]);
-			} elseif ($var[0] == 'variable') {
-				$key = is_array($var[1]) ?
-					$this->vPrefix.$this->toName($this->reduce($var[1])) : $var[1];
-
-				$var = $this->get($key);
 			} elseif ($var[0] == 'lookup') {
 				// do accessor here....
 				$var = array('number', 0);
@@ -1784,14 +1803,6 @@ class lessc {
 		}
 
 		return $var;
-	}
-
-	// prevent infinite loops
-	function safeReduce($value) {
-		$this->env->seenNames = array();
-		$out = $this->reduce($value);
-		unset($this->env->seenNames);
-		return $out;
 	}
 
 	function coerceColor($value) {
@@ -2021,14 +2032,6 @@ class lessc {
 	// get the highest occurrence entry for a name
 	function get($name) {
 		$current = $this->env;
-
-		// handled by safeReduce
-		if (isset($this->env->seenNames)) {
-			if (isset($this->env->seenNames[$name])) {
-				$this->throwError("infinite loop on variable: $name");
-			}
-			$this->env->seenNames[$name] = true;
-		}
 
 		$is_arguments = $name == $this->vPrefix . 'arguments';
 		while ($current) {
