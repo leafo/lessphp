@@ -9,8 +9,8 @@ color:44px;
   background:#6c94be;
   font-family:"Trebuchet MS", Verdana, sans-serif;
   margin:3px;
-  font-size:10px/12px;
-  font-size:120%/120%;
+  font:10px / 12px serif;
+  font:120% / 120% serif;
 }
 .external {
   color:#888888;

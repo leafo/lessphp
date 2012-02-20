@@ -74,6 +74,9 @@ class lessc {
 	static protected $dtypes = array('expression', 'variable',
 		'function', 'negative', 'list', 'lookup');
 
+	// these properties will supress division unless it's inside parenthases
+	static protected $supressDivisionProps = array('/border-radius$/i', '/^font$/i');
+
 	/**
 	 * @link http://www.w3.org/TR/css3-values/
 	 */
@@ -148,7 +151,7 @@ class lessc {
 		
 		// setting a property
 		if ($this->keyword($key) && $this->assign() &&
-			$this->propertyValue($value) && $this->end())
+			$this->propertyValue($value, $key) && $this->end())
 		{
 			$this->append(array('assign', $key, $value), $s);
 			return true;
@@ -382,6 +385,15 @@ class lessc {
 
 		// try to find a valid operator
 		while ($this->match(self::$operatorString.($needWhite ? '\s' : ''), $m) && self::$precedence[$m[1]] >= $minP) {
+			if (!$this->inParens && isset($this->env->currentProperty) && $m[1] == "/") {
+				foreach (self::$supressDivisionProps as $pattern) {
+					if (preg_match($pattern, $this->env->currentProperty)) {
+						$this->env->supressedDivision = true;
+						break 2;
+					}
+				}
+			}
+
 			// get rhs
 			$s = $this->seek();
 			$p = $this->inParens;
@@ -421,8 +433,10 @@ class lessc {
 	}
 
 	// consume a list of values for a property
-	function propertyValue(&$value) {
+	function propertyValue(&$value, $keyName=null) {
 		$values = array();	
+
+		if (!is_null($keyName)) $this->env->currentProperty = $keyName;
 		
 		$s = null;
 		while ($this->expressionList($v)) {
@@ -432,6 +446,8 @@ class lessc {
 		}
 
 		if ($s) $this->seek($s);
+
+		if (!is_null($keyName)) unset($this->env->currentProperty);
 
 		if (count($values) == 0) return false;
 
@@ -501,6 +517,15 @@ class lessc {
 			return true;
 		} else {
 			$this->seek($s);
+		}
+
+		// the spare / when supressing division
+		if (!empty($this->env->supressedDivision)) {
+			unset($this->env->supressedDivision);
+			if ($this->literal("/")) {
+				$value = array('keyword', '/');
+				return true;
+			}
 		}
 
 		return false;
@@ -601,24 +626,11 @@ class lessc {
 	 * $allowed restricts the types that are matched.
 	 */
 	function unit(&$unit, $allowed = null) {
-		$simpleCase = $allowed == null;
 		if (!$allowed) $allowed = self::$units;
 
-		if ($this->match('(-?[0-9]*(\.)?[0-9]+)('.implode('|', $allowed).')?', $m, !$simpleCase)) {
+		if ($this->match('(-?[0-9]*(\.)?[0-9]+)('.implode('|', $allowed).')?', $m)) {
 			if (!isset($m[3])) $m[3] = 'number';
 			$unit = array($m[3], $m[1]);
-
-			// check for size/height font unit.. should this even be here?
-			if ($simpleCase) {
-				$s = $this->seek();
-				if (!$this->inExp && $this->literal('/', false) && $this->unit($right, self::$units)) {
-					$unit = array('keyword', $this->compileValue($unit).'/'.$this->compileValue($right));
-				} else {
-					// get rid of whitespace
-					$this->seek($s);
-					$this->match('', $_);
-				}
-			}
 
 			return true;
 		}

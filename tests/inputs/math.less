@@ -27,10 +27,16 @@
 	mul: 10 * 5; 
 }
 
-
-.shorthand {
-	// 10/5 is a special shorthand syntax that can be used in the font property
-	div: 10/5; // outputs a literal 10/5
+// these properties have divison not in parenthases
+.supress-division {
+	border-radius: 10px / 10px;
+	border-radius: 10px/10px;
+	border-radius: hello (10px/10px) world;
+	@x: 10px;
+	font: @x/30 sans-serif;
+	font: 10px / 20px sans-serif;
+	font: 10px/20px sans-serif;
+	border-radius:0 15px 15px 15px / 0 50% 50% 50%;
 }
 
 
