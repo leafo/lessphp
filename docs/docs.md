@@ -136,9 +136,16 @@ they are evaluated:
     margin: 10px - 5px;
     ```
 
-Division has a special quirk. Due to CSS font shorthand syntax, we need to be
-careful about how we place spaces. In the following example we are using font
-size and lineheight shorthand. No division should take place:
+Division has a special quirk. There are certain CSS properties that use the `/`
+operator as part of their value's syntax. Namely, the [font][4] shorthand and
+[border-radius][3].
+
+  [3]: https://developer.mozilla.org/en/CSS/border-radius
+  [4]: https://developer.mozilla.org/en/CSS/font
+
+
+Thus, **lessphp** will ignore any division in these properties unless it is
+wrapped in parentheses. For example, no division will take place here:
 
     ```less
     .font {
@@ -146,14 +153,21 @@ size and lineheight shorthand. No division should take place:
     }
     ```
 
-In order to force division we can surround the `/` by spaces, or we can wrap
-the expression in parentheses:
+In order to force division we must wrap the expression in parentheses:
 
     ```less
     .font {
-      // these two will evaluate
-      font: 20px / 80px "Times New Roman";
       font: (20px/80px) "Times New Roman";
+    }
+    ```
+
+If you want to write a literal `/` expression without dividing in another
+property (or a variable), you can use [string unquoting](#string_unquoting):
+
+    ```less
+    .var {
+      @size: ~"20px/80px"
+      font: @size sans-serif;
     }
     ```
 
