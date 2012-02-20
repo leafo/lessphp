@@ -462,9 +462,20 @@ class lessc {
 
 		// see if there is a negation
 		$s = $this->seek();
-		if ($this->literal('-', false) && $this->variable($var)) {
-			$value = array('negative', array('variable', $var));
-			return true;
+		if ($this->literal('-', false)) {
+			$value = null;
+			if ($this->variable($var)) {
+				$value = array('variable', $var);
+			} elseif ($this->buffer{$this->count} == "(" && $this->expression($exp)) {
+				$value = $exp;
+			} else {
+				$this->seek($s);
+			}
+
+			if (!is_null($value)) {
+				$value = array('negative', $value);
+				return true;
+			}
 		} else {
 			$this->seek($s);
 		}
@@ -795,7 +806,7 @@ class lessc {
 	function func(&$func) {
 		$s = $this->seek();
 
-		if ($this->match('(%|[\w\-_][\w\-_:\.]*)', $m) && $this->literal('(')) {
+		if ($this->match('(%|[\w\-_][\w\-_:\.]+|[\w_])', $m) && $this->literal('(')) {
 			$fname = $m[1];
 
 			$s_pre_args = $this->seek();

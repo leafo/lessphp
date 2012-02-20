@@ -25,6 +25,11 @@
   mul:50;
 }
 .keyword-names { height:"hello" 25; }
+.negation {
+  hello:-1px;
+  hello:-1px;
+  hello:-10;
+}
 .test {
   single:5;
   single:10;
