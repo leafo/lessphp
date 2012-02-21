@@ -18,3 +18,7 @@ test results. Combine with a *test-name-glob* to selectively compile.
 You can also run specific tests by passing in an argument that contains any
 part of the test name.
 
+## bootstrap.sh
+
+It's a syntetic test comparing lessc and lessphp output compiling twitter bootstrap;
+see bootstrap.sh for details.
