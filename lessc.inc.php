@@ -1958,11 +1958,8 @@ class lessc {
 
 	// operator on two numbers
 	function op_number_number($op, $left, $right) {
-		if ($right[0] == '%') $right[1] /= 100;
-
-		// figure out type
-		if ($right[0] == 'number' || $right[0] == '%') $type = $left[0];
-		else $type = $right[0];
+		$type = is_null($left) ? "number" : $left[0];
+		if ($type == "number") $type = $right[0];
 
 		$value = 0;
 		switch ($op) {
