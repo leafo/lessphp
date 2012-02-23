@@ -572,12 +572,26 @@ class lessc {
 	}
 
 	// a list of media types, very lenient
-	function mediaTypes(&$types) {
+	function mediaTypes(&$parts) {
+		$parts = array();
+		while ($this->to("(", $chunk, false, "[^{]")) {
+			$parts[] = array('raw', $chunk."(");
+			$s = $this->seek();
+			if ($this->keyword($name) && $this->assign() &&
+				$this->propertyValue($value))
+			{
+				$parts[] = array('assign', $name, $value);
+			} else {
+				$this->seek($s);
+			}
+		}
+
 		if ($this->to('{', $rest, true, true)) {
-			$types = trim($rest);
+			$parts[] = array('raw', $rest);
 			return true;
 		}
 
+		$parts = null;
 		return false;
 	}
 
@@ -1018,7 +1032,7 @@ class lessc {
 		if ($special_block) {
 			$this->indentLevel--;
 			if (isset($block->media)) {
-				echo "@media ".$block->media;
+				echo $this->compileMedia($block);
 			} elseif (isset($block->keyframes)) {
 				echo $block->tags[0]." ".
 					$this->compileValue($this->reduce($block->keyframes));
@@ -1372,6 +1386,21 @@ class lessc {
 		default: // assumed to be unit	
 			return $value[1].$value[0];
 		}
+	}
+
+	function compileMedia($block) {
+		$mediaParts = array();
+		foreach ($block->media as $part) {
+			if ($part[0] == "raw") {
+				$mediaParts[] = $part[1];
+			} elseif ($part[0] == "assign") {
+				list(, $propName, $propVal) = $part;
+				$mediaParts[] = "$propName: ".
+					$this->compileValue($this->reduce($propVal));
+			}
+		}
+
+		return "@media ".trim(implode($mediaParts));
 	}
 
 	function lib_isnumber($value) {
@@ -2090,8 +2119,13 @@ class lessc {
 
 	// advance counter to next occurrence of $what
 	// $until - don't include $what in advance
+	// $allowNewline, if string, will be used as valid char set
 	function to($what, &$out, $until = false, $allowNewline = false) {
-		$validChars = $allowNewline ? "." : "[^\n]";
+		if (is_string($allowNewline)) {
+			$validChars = $allowNewline;
+		} else {
+			$validChars = $allowNewline ? "." : "[^\n]";
+		}
 		if (!$this->match('('.$validChars.'*?)'.$this->preg_quote($what), $m, !$until)) return false;
 		if ($until) $this->count -= strlen($what); // give back $what
 		$out = $m[1];
@@ -2111,7 +2145,7 @@ class lessc {
 	// match something without consuming it
 	function peek($regex, &$out = null) {
 		$r = '/'.$regex.'/Ais';
-		$result =  preg_match($r, $this->buffer, $out, null, $this->count);
+		$result = preg_match($r, $this->buffer, $out, null, $this->count);
 		
 		return $result;
 	}

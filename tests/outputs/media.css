@@ -20,3 +20,9 @@
 	screen and (min-width: 150em) {
   body { color:blue; }
 }
+@media screen and (min-height: 110px) {
+  body { color:red; }
+}
+@media screen and (height: 100px) and (width: 110px), (size: 120px) {
+  body { color:red; }
+}

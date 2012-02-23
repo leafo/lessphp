@@ -25,3 +25,14 @@
     body { color: blue }
 }
 
+
+@media screen and (min-height: 100px + 10px) {
+	body { color: red; }
+}
+
+@cool: 100px;
+
+@media screen and (height: @cool) and (width: @cool + 10), (size: @cool + 20) {
+	body { color: red; }
+}
+
