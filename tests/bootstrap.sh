@@ -29,17 +29,21 @@ lessc bootstrap/less/bootstrap.less tmp/bootstrap.lessc.css
 echo ">> Lessphp compilation"
 ../plessc bootstrap/less/bootstrap.less tmp/bootstrap.lessphp.css
 echo ">> Cleanup and convert"
-csstidy tmp/bootstrap.lessc.css $csstidy_params tmp/bootstrap.lessc.clean.css
-csstidy tmp/bootstrap.lessphp.css $csstidy_params tmp/bootstrap.lessphp.clean.css
 
-# put a newline after { and :
-function split() {
-  sed 's/\(;\|{\)/\1\n/g'
-}
+# csstidy tmp/bootstrap.lessc.css $csstidy_params tmp/bootstrap.lessc.clean.css
+# csstidy tmp/bootstrap.lessphp.css $csstidy_params tmp/bootstrap.lessphp.clean.css
+#
+# # put a newline after { and :
+# function split() {
+#   sed 's/\(;\|{\)/\1\n/g'
+# }
+#
+# # csstidy is messed up and wont output to stdout when there are a bunch of options
+# cat tmp/bootstrap.lessc.clean.css | split | tee tmp/bootstrap.lessc.clean.css
+# cat tmp/bootstrap.lessphp.clean.css | split | tee tmp/bootstrap.lessphp.clean.css
 
-# csstidy is messed up and wont output to stdout when there are a bunch of options
-cat tmp/bootstrap.lessc.clean.css | split | tee tmp/bootstrap.lessc.clean.css
-cat tmp/bootstrap.lessphp.clean.css | split | tee tmp/bootstrap.lessphp.clean.css
+php sort.php tmp/bootstrap.lessc.css > tmp/bootstrap.lessc.clean.css
+php sort.php tmp/bootstrap.lessphp.css > tmp/bootstrap.lessphp.clean.css
 
 echo ">> Doing diff"
 $diff_tool tmp/bootstrap.lessc.clean.css tmp/bootstrap.lessphp.clean.css
