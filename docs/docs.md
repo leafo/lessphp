@@ -827,8 +827,7 @@ An example with saving cache object to a file:
       }
     }
 
-    auto_compile_less('myfile.less', 'myfile.css')
-
+    auto_compile_less('myfile.less', 'myfile.css');
     ```
 
 `lessc:cexecute` takes an optional second argument, `$force`. Passing in true
