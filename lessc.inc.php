@@ -1369,7 +1369,7 @@ class lessc {
 			// [2] - green component
 			// [3] - blue component
 			// [4] - optional alpha component
-			if (count($value) == 5) { // rgba
+			if (count($value) == 5 && $value[4] != 1) { // rgba
 				return 'rgba('.$value[1].','.$value[2].','.$value[3].','.$value[4].')';
 			}
 			return sprintf("#%02x%02x%02x", round($value[1]), round($value[2]), round($value[3]));
