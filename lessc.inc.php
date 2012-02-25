@@ -1556,7 +1556,10 @@ class lessc {
 		list($color, $delta) = $this->colorArgs($args);
 
 		$hsl = $this->toHSL($color);
-		$hsl[1] = $this->clamp($hsl[1] + $delta, 360);
+
+		$hsl[1] = $hsl[1] + $delta % 360;
+		if ($hsl[1] < 0) $hsl[1] += 360;
+
 		return $this->toRGB($hsl);
 	}
 
