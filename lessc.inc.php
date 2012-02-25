@@ -1615,7 +1615,7 @@ class lessc {
 	// mix(@color1, @color2, @weight);
 	// http://sass-lang.com/docs/yardoc/Sass/Script/Functions.html#mix-instance_method
 	function lib_mix($args) {
-		if ($args[0] != "list")
+		if ($args[0] != "list" || count($args[2]) < 3)
 			$this->throwError("mix expects (color1, color2, weight)");
 
 		list($first, $second, $weight) = $args[2];
@@ -1940,7 +1940,6 @@ class lessc {
 		foreach (range(1, 3) as $i) {
 			if ($c[$i] < 0) $c[$i] = 0;
 			if ($c[$i] > 255) $c[$i] = 255;
-			$c[$i] = floor($c[$i]);
 		}
 
 		return $c;
