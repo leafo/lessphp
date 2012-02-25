@@ -1372,7 +1372,7 @@ class lessc {
 			if (count($value) == 5) { // rgba
 				return 'rgba('.$value[1].','.$value[2].','.$value[3].','.$value[4].')';
 			}
-			return sprintf("#%02x%02x%02x", $value[1], $value[2], $value[3]);
+			return sprintf("#%02x%02x%02x", round($value[1]), round($value[2]), round($value[3]));
 		case 'function':
 			// [1] - function name
 			// [2] - some array value representing arguments, either ['string', value] or ['list', ',', values[]]
@@ -1719,7 +1719,8 @@ class lessc {
 			$b = $this->toRGB_helper($H - 1/3, $temp1, $temp2);
 		}
 
-		$out = array('color', round($r*255), round($g*255), round($b*255));
+		// $out = array('color', round($r*255), round($g*255), round($b*255));
+		$out = array('color', $r*255, $g*255, $b*255);
 		if (count($color) > 4) $out[] = $color[4]; // copy alpha
 		return $out;
 	}
