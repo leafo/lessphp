@@ -55,6 +55,10 @@ class lessc {
 	public $imPrefix = '!'; // special character to add !important
 	public $parentSelector = '&';
 
+	// set the the parser that generated the current line when compiling
+	// so we know how to create error messages
+	protected $sourceParser = null;
+
 	static protected $precedence = array(
 		'=<' => 0,
 		'>=' => 0,
@@ -982,7 +986,8 @@ class lessc {
 			if ($prop[0] == 'import') {
 				list(, $path) = $prop;
 				$this->addParsedFile($path);
-				$root = $this->createChild($path)->parseTree();
+				$child_less = $this->createChild($path);
+				$root = $child_less->parseTree();
 
 				$root->parent = $block;
 				$this->mixImports($root);
@@ -992,7 +997,10 @@ class lessc {
 
 				// splice in all the props
 				foreach ($root->props as $sub_prop) {
-					// TODO fix the position to point to right file
+					if (isset($sub_prop[-1])) {
+						// leave a reference to the imported file for error messages
+						$sub_prop[-1] = array($child_less, $sub_prop[-1]);
+					}
 					$props[] = $sub_prop;
 				}
 			} else {
@@ -1264,8 +1272,16 @@ class lessc {
 
 	// compile a prop and update $lines or $blocks appropriately
 	function compileProp($prop, $block, $tags, &$_lines, &$_blocks) {
+		// set error position context
 		if (isset($prop[-1])) {
-			$this->count = $prop[-1];
+			if (is_array($prop[-1])) {
+				list($less, $count) = $prop[-1];
+				$parentParser = $this->sourceParser;
+				$this->sourceParser = $less;
+				$this->count = $count;
+			} else {
+				$this->count = $prop[-1];
+			}
 		} else {
 			$this->count = -1;
 		}
@@ -1334,6 +1350,10 @@ class lessc {
 			break;
 		default:
 			$this->throwError("unknown op: {$prop[0]}\n");
+		}
+
+		if (isset($parentParser)) {
+			$this->sourceParser = $parentParser;
 		}
 	}
 
@@ -2252,7 +2272,10 @@ class lessc {
 	 * Uses the current value of $this->count to show line and line number
 	 */
 	function throwError($msg = 'parse error') {
-		if ($this->count > 0) {
+		if (!empty($this->sourceParser)) {
+			$this->sourceParser->count = $this->count;
+			return $this->sourceParser->throwError($msg);
+		} elseif ($this->count > 0) {
 			$line = $this->line + substr_count(substr($this->buffer, 0, $this->count), "\n");
 			if (isset($this->fileName)) {
 				$loc = $this->fileName.' on line '.$line;
@@ -2262,9 +2285,9 @@ class lessc {
 
 			if ($this->peek("(.*?)(\n|$)", $m))
 				throw new exception($msg.': failed at `'.$m[1].'` '.$loc);
-		} else {
-			throw new exception($msg);
 		}
+
+		throw new exception($msg);
 	}
 
 	/**
