@@ -166,7 +166,7 @@ property (or a variable), you can use [string unquoting](#string_unquoting):
 
     ```less
     .var {
-      @size: ~"20px/80px"
+      @size: ~"20px/80px";
       font: @size sans-serif;
     }
     ```
