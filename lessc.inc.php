@@ -975,6 +975,33 @@ class lessc {
 		return $target;
 	}
 
+	// import all imports into the block
+	function mixImports($block) {
+		$props = array();
+		foreach ($block->props as $prop) {
+			if ($prop[0] == 'import') {
+				list(, $path) = $prop;
+				$this->addParsedFile($path);
+				$root = $this->createChild($path)->parseTree();
+
+				$root->parent = $block;
+				$this->mixImports($root);
+
+				// inject imported blocks into this block, local will overwrite import
+				$block->children = array_merge($root->children, $block->children);
+
+				// splice in all the props
+				foreach ($root->props as $sub_prop) {
+					// TODO fix the position to point to right file
+					$props[] = $sub_prop;
+				}
+			} else {
+				$props[] = $prop;
+			}
+		}
+		$block->props = $props;
+	}
+
 	/**
 	 * Recursively compiles a block. 
 	 * @param $block the block
@@ -1016,6 +1043,7 @@ class lessc {
 
 		$lines = array();
 		$blocks = array();
+		$this->mixImports($block);
 		foreach ($block->props as $prop) {
 			$this->compileProp($prop, $block, $tags, $lines, $blocks);
 		}
@@ -1299,19 +1327,6 @@ class lessc {
 			break;
 		case 'raw':
 			$_lines[] = $prop[1];
-			break;
-		case 'import':
-			list(, $path) = $prop;
-			$this->addParsedFile($path);
-			$root = $this->createChild($path)->parseTree();
-
-			$root->parent = $block;
-			foreach ($root->props as $sub_prop) {
-				$this->compileProp($sub_prop, $root, $tags, $_lines, $_blocks);
-			}
-
-			// inject imported blocks into this block, local will overwrite import
-			$block->children = array_merge($root->children, $block->children);
 			break;
 		case 'charset':
 			list(, $value) = $prop;

@@ -147,6 +147,7 @@ function dumpValue($node, $depth = 0) {
 		}
 		return $out;
 	} elseif (is_array($node)) {
+		if (empty($node)) return "[]";
 		$type = $node[0];
 		if ($type == "block")
 			return dumpValue($node[1], $depth);
