@@ -3,12 +3,13 @@
 //
 // command line utility to compile less to stdout
 // leaf corcoran <leafo.net>
-$VERSION = "v0.3.0";
 
 error_reporting(E_ALL);
 $path  = realpath(dirname(__FILE__)).'/';
 
 require $path."lessc.inc.php";
+
+$VERSION = lessc::$VERSION;
 
 $fa = "Fatal Error: ";
 function err($msg) {
