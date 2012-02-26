@@ -55,7 +55,7 @@ class lessc {
 	public $imPrefix = '!'; // special character to add !important
 	public $parentSelector = '&';
 
-	// set the the parser that generated the current line when compiling
+	// set to the parser that generated the current line when compiling
 	// so we know how to create error messages
 	protected $sourceParser = null;
 
