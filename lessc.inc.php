@@ -1404,10 +1404,15 @@ class lessc {
 			// [2] - green component
 			// [3] - blue component
 			// [4] - optional alpha component
+			list(, $r, $g, $b) = $value;
+			$r = round($r);
+			$g = round($g);
+			$b = round($b);
+
 			if (count($value) == 5 && $value[4] != 1) { // rgba
-				return 'rgba('.$value[1].','.$value[2].','.$value[3].','.$value[4].')';
+				return 'rgba('.$r.','.$g.','.$b.','.$value[4].')';
 			}
-			return sprintf("#%02x%02x%02x", round($value[1]), round($value[2]), round($value[3]));
+			return sprintf("#%02x%02x%02x", $r, $g, $b);
 		case 'function':
 			// [1] - function name
 			// [2] - some array value representing arguments, either ['string', value] or ['list', ',', values[]]
