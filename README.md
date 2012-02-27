@@ -1,4 +1,4 @@
-# lessphp v0.3.2
+# lessphp v0.3.3
 ### <http://leafo.net/lessphp>
 
 `lessphp` is a compiler for LESS written in PHP. The documentation is great,
