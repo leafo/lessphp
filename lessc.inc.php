@@ -1479,6 +1479,10 @@ class lessc {
 			isset($color[4]) ? $color[4]*255 : 0,
 			$color[1],$color[2], $color[3]);
 	}
+	
+	function lib_argb($color){
+            return $this->lib_rgbahex($color);
+        }
 
 	// utility func to unquote a string
 	function lib_e($arg) {
