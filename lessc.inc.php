@@ -338,7 +338,7 @@ class lessc {
         }
 
 		// sym link workaround
-        $pattern = '/([^.][^\/]*\/|\.[^.][^\/]*\/|\.[^.][^\/]*\/)\.\.\//';
+        $pattern = '/([^.][^\/]*\/|\.[^.\/][^\/]*\/|\.\.[^\/]+\/)\.\.\//';
         while (preg_match($pattern, $name, $matches)) {
             $name = preg_replace($pattern, '/', $name);
         }
