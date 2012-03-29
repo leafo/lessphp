@@ -2397,13 +2397,35 @@ class lessc {
 
 	// compile file $in to file $out if $in is newer than $out
 	// returns true when it compiles, false otherwise
-	public static function ccompile($in, $out) {
-		if (!is_file($out) || filemtime($in) > filemtime($out)) {
+	public static function ccompile($in, $out, $depth = 0) {
+		if($depth > 0)
+			$changed = self::checkImports($in, filemtime($out), $depth);
+		else
+			$changed = filemtime($in) > filemtime($out);
+
+
+		if (!is_file($out) || $changed) {
 			$less = new lessc($in);
 			file_put_contents($out, $less->parse());
 			return true;
 		}
 
+		return false;
+	}
+
+	public static function checkImports($file, $time, $depth) {
+		$content = file_get_contents($file);
+		preg_match_all("/@import[ \"']+(.+?)[\"']/", $content, $matches);
+
+		foreach ($matches[1] as $import) {
+			$path = dirname($file) . "/" . $import;
+			if($depth > 0)
+				if(self::checkImports($path, $time, $depth - 1))
+					return true;
+
+			if(filemtime($path) > $time)
+				return true;
+		}
 		return false;
 	}
 
