@@ -1505,7 +1505,8 @@ class lessc {
 	}
 
 	function lib_rgbahex($color) {
-		if ($color[0] != 'color')
+		$color = $this->coerceColor($color);
+		if (is_null($color))
 			$this->throwError("color expected for rgbahex");
 
 		return sprintf("#%02x%02x%02x%02x",
