@@ -1534,6 +1534,10 @@ class lessc {
 	function lib_floor($arg) {
 		return array($arg[0], floor($arg[1]));
 	}
+	
+	function lib_ceil($arg) {
+		return array($arg[0], ceil($arg[1]));
+	}
 
 	function lib_round($arg) {
 		return array($arg[0], round($arg[1]));
