@@ -1357,7 +1357,7 @@ class lessc {
 				}
 
 				$old_parent = $mixin->parent;
-				$mixin->parent = $block;
+				if ($mixin != $block) $mixin->parent = $block;
 
 				foreach ($mixin->props as $sub_prop) {
 					$this->compileProp($sub_prop, $mixin, $tags, $_lines, $_blocks);
