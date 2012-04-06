@@ -1688,7 +1688,7 @@ class lessc {
 		);
 
 		if ($first_a != 1.0 || $second_a != 1.0) {
-			$new[] = $first_a * $p + $second_a * ($p - 1);
+			$new[] = $first_a * $weight + $second_a * ($weight - 1);
 		}
 
 		return $this->fixColor($new);
