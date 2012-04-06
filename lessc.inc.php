@@ -520,7 +520,7 @@ class lessc {
 
 		// unquote string
 		if ($this->literal("~") && $this->string($value, $d)) {
-			$value = array("keyword", $value);
+			$value = array("escape", $value);
 			return true;
 		} else {
 			$this->seek($s);
@@ -1379,6 +1379,7 @@ class lessc {
 		case 'number':
 			// [1] - the number 
 			return $value[1];
+		case 'escape':
 		case 'string':
 			// [1] - contents of string (includes quotes)
 			
