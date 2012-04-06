@@ -280,7 +280,7 @@ class lessc {
 
 			$hidden = true;
 			if (!isset($block->args)) foreach ($block->tags as $tag) {
-				if ($tag{0} != $this->mPrefix) {
+				if (!is_string($tag) || $tag{0} != $this->mPrefix) {
 					$hidden = false;
 					break;
 				}
@@ -289,7 +289,9 @@ class lessc {
 			if (!$hidden) $this->append(array('block', $block), $s);
 
 			foreach ($block->tags as $tag) {
-				$this->env->children[$tag][] = $block;
+				if (is_string($tag)) {
+					$this->env->children[$tag][] = $block;
+				}
 			}
 
 			return true;
@@ -799,12 +801,27 @@ class lessc {
 		return false;
 	}
 
+	function tagExpression(&$value) {
+		$s = $this->seek();
+		if ($this->literal("(") && $this->expression($exp) && $this->literal(")")) {
+			$value = array('exp', $exp);
+			return true;
+		}
+
+		$this->seek($s);
+		return false;
+	}
+
 	// a single tag
 	function tag(&$tag, $simple = false) {
 		if ($simple)
 			$chars = '^,:;{}\][>\(\) "\'';
 		else
 			$chars = '^,;{}["\'';
+
+		if (!$simple && $this->tagExpression($tag)) {
+			return true;
+		}
 
 		$tag = '';
 		while ($this->tagBracket($first)) $tag .= $first;
@@ -1043,7 +1060,22 @@ class lessc {
 			$tags = array();
 		} else {
 			$special_block = false;
-			$tags = $this->multiplyTags($parent_tags, $block->tags);
+
+			// evaluate expression tags
+			$tags = null;
+			if (is_array($block->tags)) {
+				$tags = array();
+				foreach ($block->tags as $tag) {
+					if (is_array($tag)) {
+						list(, $value) = $tag;
+						$tags[] = $this->compileValue($this->reduce($value));
+					} else {
+						$tags[] = $tag;
+					}
+				}
+			}
+
+			$tags = $this->multiplyTags($parent_tags, $tags);
 		}
 
 		$env = $this->pushEnv();
