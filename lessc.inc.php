@@ -248,12 +248,13 @@ class lessc {
 		}
 
 		// opening parametric mixin
-		if ($this->tag($tag, true) && $this->argumentDef($args) &&
+		if ($this->tag($tag, true) && $this->argumentDef($args, $is_vararg) &&
 			($this->guards($guards) || true) &&
 			$this->literal('{'))
 		{
 			$block = $this->pushBlock($this->fixTags(array($tag)));
 			$block->args = $args;
+			$block->is_vararg = $is_vararg;
 			if (!empty($guards)) $block->guards = $guards;
 			return true;
 		} else {
@@ -723,19 +724,34 @@ class lessc {
 
 	// consume an argument definition list surrounded by ()
 	// each argument is a variable name with optional value
-	function argumentDef(&$args, $delim = ',') {
+	// or at the end a ... or a variable named followed by ...
+	function argumentDef(&$args, &$is_vararg, $delim = ',') {
 		$s = $this->seek();
 		if (!$this->literal('(')) return false;
 
 		$values = array();
+
+		$is_vararg = false;
 		while (true) {
+			if ($this->literal("...")) {
+				$is_vararg = true;
+				break;
+			}
+
 			if ($this->variable($vname)) {
 				$arg = array("arg", $vname);
+				$ss = $this->seek();
 				if ($this->assign() && $this->expressionList($value)) {
 					$arg[] = $value;
-					// let the : slide if there is no value
+				} else {
+					$this->seek($ss);
+					if ($this->literal("...")) {
+						$arg[0] = "rest";
+						$is_vararg = true;
+					}
 				}
 				$values[] = $arg;
+				if ($is_vararg) break;
 				continue;
 			}
 
@@ -1207,20 +1223,13 @@ class lessc {
 			}
 		}
 
-		// blocks with no required arguments are mixed into everything
-		if (empty($block->args)) return true;
+		$numCalling = count($callingArgs);
 
-		// has args but all have default values
-		$pseudoEmpty = true;
-		foreach ($block->args as $arg) {
-			if (!isset($arg[2])) {
-				$pseudoEmpty = false;
-				break;
-			}
+		if (empty($block->args)) {
+			return $numCalling == 0;
 		}
 
-		if ($pseudoEmpty) return true;
-
+		$i = -1; // no args
 		// try to match by arity or by argument literal
 		foreach ($block->args as $i => $arg) {
 			switch ($arg[0]) {
@@ -1235,10 +1244,19 @@ class lessc {
 					return false;
 				}
 				break;
+			case "rest":
+				$i--; // rest can be empty
+				break 2;
 			}
 		}
 
-		return $i >= count($callingArgs) - 1;
+		if ($block->is_vararg) {
+			return true; // not having enough is handled above
+		} else {
+			$numMatched = $i + 1;
+			// greater than becuase default values always match
+			return $numMatched >= $numCalling;
+		}
 	}
 
 	function patternMatchAll($blocks, $callingArgs) {
@@ -1297,6 +1315,13 @@ class lessc {
 				$assigned_values[] = $value;
 			}
 			$i++;
+		}
+
+		// check for a rest
+		$last = end($args);
+		if ($last[0] == "rest") {
+			$rest = array_slice($values, count($args) - 1);
+			$this->set($last[1], $this->reduce(array("list", " ", $rest)));
 		}
 
 		$this->env->arguments = $assigned_values;

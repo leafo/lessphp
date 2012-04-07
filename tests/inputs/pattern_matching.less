@@ -1,15 +1,15 @@
 
-.mixin (light, @color) {
+.demo (light, @color) {
   color: lighten(@color, 10%);
 }
-.mixin (@_, @color) {
+.demo (@_, @color) {
   display: block;
 }
 
 @switch: light;
 
 .class {
-  .mixin(@switch, #888);
+  .demo(@switch, #888);
 }
 
 // by arity
