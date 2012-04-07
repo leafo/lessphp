@@ -35,3 +35,21 @@
 .only-right { right:33; }
 .only-left { left:33; }
 .left-right { both:330; }
+#hola { color:blue; }
+#defaults_1 {
+  height:one;
+  height:two;
+  height:three;
+  height:four;
+}
+.thing { color:red; }
+#aa {
+  color:green;
+  color:blue;
+  color:red;
+}
+#bb {
+  color:green;
+  color:blue;
+  color:red;
+}
