@@ -388,19 +388,18 @@ scope are checked to see if they match based on what was passed to the mixin
 and how it was declared.
 
 The simplest case is matching by number of arguments. Only the mixins that
-match the number of arguments passed in are used, with the exception of 0
-argument mixins, which are always included.
+match the number of arguments passed in are used.
 
     ```less
-    .simple() { // no argument mixin always included
+    .simple() { // matches no arguments
       height: 10px;
     }
 
-    .simple(@a, @b) {
+    .simple(@a, @b) { // matches two arguments
       color: red;
     }
 
-    .simple(@a) {
+    .simple(@a) { // matches one argument
       color: blue;
     }
 
@@ -411,6 +410,71 @@ argument mixins, which are always included.
     span {
       .simple(10, 20);
     }
+    ```
+
+Whether an argument has default values is also taken into account when matching
+based on number of arguments:
+
+    ```less
+    // matches one or two arguments
+    .hello(@a, @b: blue) {
+      height: @a;
+      color: @b;
+    }
+
+    .hello(@a, @b) { // matches only two
+      width: @a;
+      border-color: @b;
+    }
+
+    .hello(@a) { // matches only one
+      padding: 1em;
+    }
+
+    div {
+      .hello(10px);
+    }
+
+    pre {
+      .hello(10px, yellow);
+    }
+    ```
+
+Additionally, a *vararg* value can be used to further control how things are
+matched.  A mixin's argument list can optionally end in the special argument
+named `...`.  The `...` may match any number of arguments, including 0.
+
+    ```less
+    // this will match any number of arguments
+    .first(...) {
+      color: blue;
+    }
+
+    // matches at least 1 argument
+    .second(@arg, ...) {
+      height: 200px + @arg;
+    }
+
+    div { .first("some", "args"); }
+    pre { .second(10px); }
+    ```
+
+If you want to capture the values that get captured by the *vararg* you can
+give it a variable name by putting it directly before the `...`. This variable
+must be the last argument defined. It's value is just like the special
+[`@arguments` variable](#arguments_variable), a space separated list.
+
+
+    ```less
+    .hello(@first, @rest...) {
+      color: @first;
+      text-shadow: @rest;
+    }
+
+    span {
+      .hello(red, 1px, 1px, 0px, white);
+    }
+
     ```
 
 Another way of controlling whether a mixin matches is by specifying a value in
@@ -593,7 +657,7 @@ mixin to work like a loop to generate a series of CSS blocks.
     }
     .spanX (0) {}
 
-    // call it:
+    // mix it into the global scopee:
     .spanX(4);
     ```
 
