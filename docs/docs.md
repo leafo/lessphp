@@ -548,6 +548,55 @@ These are `isnumber`, `iscolor`, `iskeyword`, `isstring`, `ispixel`,
     }
     ```
 
+### Selector Expressions
+
+Sometimes we want to dynamically generate the selector of a block based on some
+variable or expression. We can do this by using *selector expressions*. Selector
+expressions are CSS selectors that are evaluated in the current scope before
+being written out.
+
+A simple example is a mixin that dynamically creates a selector named after the
+mixin's argument:
+
+    ```less
+    .create-selector(@name) {
+      (e(@name)) {
+        color: red;
+      }
+    }
+
+    .create-selector("hello");
+    .create-selector("world");
+    ```
+
+Any selector that is enclosed in `()` will have it's contents evaluated and
+directly written to output. The value is not changed any way before being
+outputted, thats why we use the `e` function. If you're not familiar, the `e`
+function strips quotes off a string value. If we didn't have it, then the
+selector would have quotes around it, and that's not valid CSS!
+
+Any value can be used in a selector expression, but it works best when using
+strings and things like [String Interpolation](#string_interpolation).
+
+Here's an interesting example adapted from Twitter Bootstrap. A couple advanced
+things are going on. We are using [Guards](#guards) along with a recursive
+mixin to work like a loop to generate a series of CSS blocks.
+
+
+    ```less
+    // create our recursive mixin:
+    .spanX (@index) when (@index > 0) {
+      (~".span@{index}") {
+        width: @index * 100px;
+      }
+      .spanX(@index - 1);
+    }
+    .spanX (0) {}
+
+    // call it:
+    .spanX(4);
+    ```
+
 ### Import
 
 Multiple LESS files can be compiled into a single CSS file by using the
