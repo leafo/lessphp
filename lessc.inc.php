@@ -1226,7 +1226,7 @@ class lessc {
 		$numCalling = count($callingArgs);
 
 		if (empty($block->args)) {
-			return $numCalling == 0;
+			return $block->is_vararg || $numCalling == 0;
 		}
 
 		$i = -1; // no args
