@@ -2142,6 +2142,7 @@ class lessc {
 		$b->parent = $this->env;
 
 		$b->id = self::$nextBlockId++;
+		$b->is_vararg = false;
 		$b->tags = $tags;
 		$b->props = array();
 		$b->children = array();
