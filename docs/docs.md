@@ -1,4 +1,4 @@
-    title: v0.3.3 documentation
+    title: v0.3.4 documentation
     link_to_home: true
 --
 
