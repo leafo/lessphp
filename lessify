@@ -11,7 +11,18 @@ if (!$fname = array_shift($argv)) {
 	exit("Usage: ".$exe." input-file\n");
 }
 
-require "lessify.inc.php";
+try {
+	if (class_exists('Phar',false)) {
+		Phar::mapPhar('lessify.phar');
+		require "phar://lessify.phar/lessify.inc.php";
+	}
+} catch (Exception $ex) {}
+
+if (!class_exists('lessify',false)) {
+	$path  = realpath(dirname(__FILE__)).'/';
+
+	require $path."lessify.inc.php";
+}
 
 try  {
 	$parser = new lessify($fname);
@@ -20,4 +31,4 @@ try  {
 	exit("Fatal error: ".$e->getMessage()."\n");
 }
 
-
+__HALT_COMPILER(); ?>

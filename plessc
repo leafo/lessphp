@@ -5,9 +5,18 @@
 // leaf corcoran <leafo.net>
 
 error_reporting(E_ALL);
-$path  = realpath(dirname(__FILE__)).'/';
 
-require $path."lessc.inc.php";
+try {
+	if (class_exists('Phar',false)) {
+		Phar::mapPhar('plessc.phar');
+		require "phar://plessc.phar/lessc.inc.php";
+	}
+} catch (Exception $ex) {}
+if (!class_exists('lessc',false)) {
+	$path  = realpath(dirname(__FILE__)).'/';
+
+	require $path."lessc.inc.php";
+}
 
 $VERSION = lessc::$VERSION;
 
@@ -190,4 +199,4 @@ try {
 }
 
 
-?>
+__HALT_COMPILER(); ?>
