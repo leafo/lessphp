@@ -185,6 +185,13 @@ class lessc {
 				$this->seek($s);
 			}
 
+			// page
+		        if ($this->literal('@page') && $this->literal('{')) {
+		            $b = $this->pushSpecialBlock('@page');
+		            return true;
+		        } else {
+		            $this->seek($s);
+		        }
 
 			// media
 			if ($this->literal('@media') && $this->mediaTypes($types) &&
