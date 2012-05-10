@@ -330,7 +330,7 @@ class lessc {
 			if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
 				return $file;
 			} else {
-					$this->throwError("File '$file' does not exist");
+				$this->throwError("File '$file' does not exist");
 			}
 		}
 
