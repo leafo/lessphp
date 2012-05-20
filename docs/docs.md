@@ -864,6 +864,48 @@ To compile a string to a string:
     $css = $less->parse("body { a { color: red } }");
     ```
 
+### Output Formatting
+
+Besides the default output formatter, **lessphp** comes with two additional
+ones, and it's easy to make your own.
+
+The first extra formatter is called `compressed`. It compresses the output by
+removing any extra whitespace.
+
+We use the `setFormatter` method set the formatter that should be used. Just
+pass the name of the formatter:
+
+    ```php
+    $less = new lessc("myfile.less");
+
+    $less->setFormatter("compressed");
+
+    $css = $less->parse();
+    ```
+
+The second formatter is called `indent`. It will indent CSS blocks based on how
+they were nested in the LESS code.
+
+#### Custom Formatter
+
+The easiest way to customize is to create your own instance of the formatter
+and alter its public properties before passing it off to **lessphp**. The
+`setFormatter` method can also take an instance of a formatter.
+
+For example, let's use tabs instead of the default two spaces to indent:
+
+    ```php
+    $formatter = new lessc_formatter;
+    $formatter->indentChar = "\t";
+
+    $less = new lessc("myfile.less");
+    $less->setFormatter($formatter);
+    $css = $less->parse();
+    ```
+
+For more information about what can be configured with the formatter consult
+the sourcecode.
+
 ### Compiling Automatically
 
 Often, you want to write the compiled CSS to a file, and only recompile when

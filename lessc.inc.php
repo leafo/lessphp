@@ -44,7 +44,6 @@ class lessc {
 	static protected $FALSE = array("keyword", "false");
 
 	public $indentLevel;
-	public $indentChar = '  ';
 
 	protected $env = null;
 
@@ -2318,13 +2317,18 @@ class lessc {
 	}
 
 	function setFormatter($name) {
-		$this->formatter_name = $name;
+		$this->formatterName = $name;
 	}
 
 	function newFormatter() {
-		$clsname = isset($this->formatter_name) ?
-			"lessc_formatter_$this->formatter_name" : "lessc_formatter";
-		return new $clsname;
+		$className = "lessc_formatter";
+		if (!empty($this->formatterName)) {
+			if (!is_string($this->formatterName))
+				return $this->formatterName;
+			$className = "lessc_formatter_$this->formatterName";
+		}
+
+		return new $className;
 	}
 
 	/**

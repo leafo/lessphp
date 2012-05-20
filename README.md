@@ -61,4 +61,9 @@ compile as needed to the output file
 
 Errors from watch mode are written to standard out.
 
+`lessphp` also supports output formatters. To compress the output run this:
+
+	$ plessc -f=compressed myfile.less
+
+For more help, run `plessc --help`
 
