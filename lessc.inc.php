@@ -2309,12 +2309,22 @@ class lessc {
 		$root = $this->parseTree($str);
 		$root->isRoot = true;
 
-		$this->formatter = new lessc_formatter;
+		$this->formatter = $this->newFormatter();
 
 		if ($initialVariables) $this->injectVariables($initialVariables);
 		$out = $this->compileBlock($root);
 		setlocale(LC_NUMERIC, $locale);
 		return $out;
+	}
+
+	function setFormatter($name) {
+		$this->formatter_name = $name;
+	}
+
+	function newFormatter() {
+		$clsname = isset($this->formatter_name) ?
+			"lessc_formatter_$this->formatter_name" : "lessc_formatter";
+		return new $clsname;
 	}
 
 	/**
@@ -2739,4 +2749,13 @@ class lessc_formatter {
 	}
 }
 
+class lessc_formatter_compressed extends lessc_formatter {
+	public $indentChar = "";
+
+	public $break = "";
+	public $open = "{";
+	public $close = "}";
+	public $tagSeparator = ",";
+	public $disableSingle = true;
+}
 
