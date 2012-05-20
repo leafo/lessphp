@@ -1505,6 +1505,34 @@ class lessc {
 			isset($color[4]) ? $color[4]*255 : 0,
 			$color[1],$color[2], $color[3]);
 	}
+
+	function lib_red($color){
+		$color = $this->coerceColor($color);
+		if (is_null($color)) {
+			$this->throwError('color expected for red()');
+		}
+		
+		return $color[1];
+	}
+
+	function lib_green($color){
+		$color = $this->coerceColor($color);
+		if (is_null($color)) {
+			$this->throwError('color expected for green()');
+		}
+		
+		return $color[2];
+	}
+
+	function lib_blue($color){
+		$color = $this->coerceColor($color);
+		if (is_null($color)) {
+			$this->throwError('color expected for blue()');
+		}
+		
+		return $color[3];
+	}
+
 	
 	function lib_argb($color){
             return $this->lib_rgbahex($color);
