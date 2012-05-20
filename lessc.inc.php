@@ -2298,7 +2298,12 @@ class lessc {
 	}
 	
 	// parse and compile buffer
-	function parse($str = null, $initial_variables = null) {
+	function parse($str = null, $initialVariables = null) {
+		if (is_array($str)) {
+			$initialVariables = $str;
+			$str = null;
+		}
+
 		$locale = setlocale(LC_NUMERIC, 0);
 		setlocale(LC_NUMERIC, "C");
 		$root = $this->parseTree($str);
@@ -2306,7 +2311,7 @@ class lessc {
 
 		$this->formatter = new lessc_formatter;
 
-		if ($initial_variables) $this->injectVariables($initial_variables);
+		if ($initialVariables) $this->injectVariables($initialVariables);
 		$out = $this->compileBlock($root);
 		setlocale(LC_NUMERIC, $locale);
 		return $out;

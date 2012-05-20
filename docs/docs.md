@@ -973,13 +973,12 @@ associative array of names and values. The values will parsed as CSS values:
         ));
     ```
 
-You can also do this when loading from a file, but remember to set the first
-argument of the parse function to `null`, otherwise it will try to compile that
-instead of the file:
+You can also do this when loading from a file. If the first argument of `parse`
+is an array it will be used an array of variables to set.
 
     ```php
     $less = new lessc("myfile.less");
-    echo $less->parse(null, array('color' => 'blue'));
+    echo $less->parse(array('color' => 'blue'));
     ```
 
 ### Custom Functions
