@@ -2759,3 +2759,17 @@ class lessc_formatter_compressed extends lessc_formatter {
 	public $disableSingle = true;
 }
 
+class lessc_formatter_indent extends lessc_formatter {
+	function indentAmount($block) {
+		if (isset($block->isRoot)) return 1;
+		$numLines = 0;
+		foreach ($block->props as $prop) {
+			$t = $prop[0];
+			if ($t != 'block' && $t != 'mixin') {
+				$numLines++;
+			}
+		}
+		return $numLines > 0 ? 1 : 0;
+	}
+}
+
