@@ -2259,7 +2259,7 @@ class lessc {
 	protected function createChild($fname) {
 		$less = new lessc($fname);
 		$less->importDir = array_merge((array)$less->importDir, (array)$this->importDir);
-		$less->indentChar = $this->indentChar;
+		$less->formatter = $this->formatter;
 		$less->compat = $this->compat;
 		return $less;
 	}
