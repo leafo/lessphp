@@ -146,6 +146,7 @@ if (has("w")) {
 				if (has("n")) {
 					`notify-send -u critical "compile failed" "{$ex->getMessage()}"`;
 				}
+				exit(1);
 			}
 		}
 
