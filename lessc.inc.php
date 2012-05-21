@@ -1097,7 +1097,8 @@ class lessc {
 
 		$idelta = $this->formatter->indentAmount($block);
 		$this->indentLevel += $idelta;
-		foreach ($block->props as $prop) {
+
+		foreach ($this->sortProps($block->props) as $prop) {
 			$this->compileProp($prop, $block, $tags, $lines, $blocks);
 		}
 		$this->indentLevel -= $idelta;
@@ -1118,6 +1119,19 @@ class lessc {
 
 		return $this->formatter->block($tags, $special_block, $lines,
 			$blocks, $this->indentLevel);
+	}
+
+	function sortProps($props) {
+		$out = array();
+		foreach ($props as $prop) {
+			if ($prop[0] == "assign") $out[] = $prop;
+		}
+
+		foreach ($props as $prop) {
+			if ($prop[0] != "assign") $out[] = $prop;
+		}
+
+		return $out;
 	}
 
 	// find the fully qualified tags for a block and its parent's tags
@@ -1351,7 +1365,7 @@ class lessc {
 				$old_parent = $mixin->parent;
 				if ($mixin != $block) $mixin->parent = $block;
 
-				foreach ($mixin->props as $sub_prop) {
+				foreach ($this->sortProps($mixin->props) as $sub_prop) {
 					$this->compileProp($sub_prop, $mixin, $tags, $_lines, $_blocks);
 				}
 
