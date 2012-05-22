@@ -1,8 +1,8 @@
-    title: v0.3.3 documentation
+    title: v0.3.4 documentation
     link_to_home: true
 --
 
-<h2 skip="true">Documentation v0.3.3</h2>
+<h2 skip="true">Documentation v0.3.4</h2>
 
 <div style="margin-bottom: 1em;">$index</div>
 
@@ -388,19 +388,18 @@ scope are checked to see if they match based on what was passed to the mixin
 and how it was declared.
 
 The simplest case is matching by number of arguments. Only the mixins that
-match the number of arguments passed in are used, with the exception of 0
-argument mixins, which are always included.
+match the number of arguments passed in are used.
 
     ```less
-    .simple() { // no argument mixin always included
+    .simple() { // matches no arguments
       height: 10px;
     }
 
-    .simple(@a, @b) {
+    .simple(@a, @b) { // matches two arguments
       color: red;
     }
 
-    .simple(@a) {
+    .simple(@a) { // matches one argument
       color: blue;
     }
 
@@ -411,6 +410,71 @@ argument mixins, which are always included.
     span {
       .simple(10, 20);
     }
+    ```
+
+Whether an argument has default values is also taken into account when matching
+based on number of arguments:
+
+    ```less
+    // matches one or two arguments
+    .hello(@a, @b: blue) {
+      height: @a;
+      color: @b;
+    }
+
+    .hello(@a, @b) { // matches only two
+      width: @a;
+      border-color: @b;
+    }
+
+    .hello(@a) { // matches only one
+      padding: 1em;
+    }
+
+    div {
+      .hello(10px);
+    }
+
+    pre {
+      .hello(10px, yellow);
+    }
+    ```
+
+Additionally, a *vararg* value can be used to further control how things are
+matched.  A mixin's argument list can optionally end in the special argument
+named `...`.  The `...` may match any number of arguments, including 0.
+
+    ```less
+    // this will match any number of arguments
+    .first(...) {
+      color: blue;
+    }
+
+    // matches at least 1 argument
+    .second(@arg, ...) {
+      height: 200px + @arg;
+    }
+
+    div { .first("some", "args"); }
+    pre { .second(10px); }
+    ```
+
+If you want to capture the values that get captured by the *vararg* you can
+give it a variable name by putting it directly before the `...`. This variable
+must be the last argument defined. It's value is just like the special
+[`@arguments` variable](#arguments_variable), a space separated list.
+
+
+    ```less
+    .hello(@first, @rest...) {
+      color: @first;
+      text-shadow: @rest;
+    }
+
+    span {
+      .hello(red, 1px, 1px, 0px, white);
+    }
+
     ```
 
 Another way of controlling whether a mixin matches is by specifying a value in
@@ -546,6 +610,55 @@ These are `isnumber`, `iscolor`, `iskeyword`, `isstring`, `ispixel`,
     div.a {
       .mix(350px);
     }
+    ```
+
+### Selector Expressions
+
+Sometimes we want to dynamically generate the selector of a block based on some
+variable or expression. We can do this by using *selector expressions*. Selector
+expressions are CSS selectors that are evaluated in the current scope before
+being written out.
+
+A simple example is a mixin that dynamically creates a selector named after the
+mixin's argument:
+
+    ```less
+    .create-selector(@name) {
+      (e(@name)) {
+        color: red;
+      }
+    }
+
+    .create-selector("hello");
+    .create-selector("world");
+    ```
+
+Any selector that is enclosed in `()` will have it's contents evaluated and
+directly written to output. The value is not changed any way before being
+outputted, thats why we use the `e` function. If you're not familiar, the `e`
+function strips quotes off a string value. If we didn't have it, then the
+selector would have quotes around it, and that's not valid CSS!
+
+Any value can be used in a selector expression, but it works best when using
+strings and things like [String Interpolation](#string_interpolation).
+
+Here's an interesting example adapted from Twitter Bootstrap. A couple advanced
+things are going on. We are using [Guards](#guards) along with a recursive
+mixin to work like a loop to generate a series of CSS blocks.
+
+
+    ```less
+    // create our recursive mixin:
+    .spanX (@index) when (@index > 0) {
+      (~".span@{index}") {
+        width: @index * 100px;
+      }
+      .spanX(@index - 1);
+    }
+    .spanX (0) {}
+
+    // mix it into the global scopee:
+    .spanX(4);
     ```
 
 ### Import
@@ -751,6 +864,48 @@ To compile a string to a string:
     $css = $less->parse("body { a { color: red } }");
     ```
 
+### Output Formatting
+
+Besides the default output formatter, **lessphp** comes with two additional
+ones, and it's easy to make your own.
+
+The first extra formatter is called `compressed`. It compresses the output by
+removing any extra whitespace.
+
+We use the `setFormatter` method set the formatter that should be used. Just
+pass the name of the formatter:
+
+    ```php
+    $less = new lessc("myfile.less");
+
+    $less->setFormatter("compressed");
+
+    $css = $less->parse();
+    ```
+
+The second formatter is called `indent`. It will indent CSS blocks based on how
+they were nested in the LESS code.
+
+#### Custom Formatter
+
+The easiest way to customize is to create your own instance of the formatter
+and alter its public properties before passing it off to **lessphp**. The
+`setFormatter` method can also take an instance of a formatter.
+
+For example, let's use tabs instead of the default two spaces to indent:
+
+    ```php
+    $formatter = new lessc_formatter;
+    $formatter->indentChar = "\t";
+
+    $less = new lessc("myfile.less");
+    $less->setFormatter($formatter);
+    $css = $less->parse();
+    ```
+
+For more information about what can be configured with the formatter consult
+the sourcecode.
+
 ### Compiling Automatically
 
 Often, you want to write the compiled CSS to a file, and only recompile when
@@ -860,13 +1015,12 @@ associative array of names and values. The values will parsed as CSS values:
         ));
     ```
 
-You can also do this when loading from a file, but remember to set the first
-argument of the parse function to `null`, otherwise it will try to compile that
-instead of the file:
+You can also do this when loading from a file. If the first argument of `parse`
+is an array it will be used an array of variables to set.
 
     ```php
     $less = new lessc("myfile.less");
-    echo $less->parse(null, array('color' => 'blue'));
+    echo $less->parse(array('color' => 'blue'));
     ```
 
 ### Custom Functions

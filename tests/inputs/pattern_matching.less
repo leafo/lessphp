@@ -1,15 +1,15 @@
 
-.mixin (light, @color) {
+.demo (light, @color) {
   color: lighten(@color, 10%);
 }
-.mixin (@_, @color) {
+.demo (@_, @color) {
   display: block;
 }
 
 @switch: light;
 
 .class {
-  .mixin(@switch, #888);
+  .demo(@switch, #888);
 }
 
 // by arity
@@ -110,4 +110,58 @@
 .left-right {
     .border-radius(33);
 }
+
+.hola(hello, @hello...) {
+	color: blue;
+}
+
+#hola {
+	.hola(hello, world);
+	.hola(jello, world);
+}
+
+.resty(@hello, @world, @the_rest...) {
+	padding: @hello @world;
+	rest: @the_rest;
+}
+
+#nnn {
+	.body(10, 10, 10, 10, 10);
+	.body(10, 10, 10);
+	.body(10, 10);
+	.body(10);
+	.body();
+}
+
+.defaults(@aa, @bb:e343, @cc: "heah", ...) {
+	height: @aa;
+}
+
+#defaults_1 {
+	.defaults();
+	.defaults(one);
+	.defaults(two, one);
+	.defaults(three, two, one);
+	.defaults(four, three, two, one);
+}
+
+
+.thing() { color: green; }
+.thing(...) { color: blue; }
+.thing { color: red; }
+
+#aa {
+	.thing();
+}
+
+#bb {
+	.thing;
+}
+
+
+#cc {
+	.thing(1);
+}
+
+
 

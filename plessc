@@ -1,8 +1,42 @@
 #!/usr/bin/php -q
 <?php
-//
-// command line utility to compile less to stdout
-// leaf corcoran <leafo.net>
+// Command line utility to compile LESS to STDOUT
+// Leaf Corcoran <leafot@gmail.com>, 2012
+
+$exe = array_shift($argv); // remove filename
+
+$HELP = <<<EOT
+Usage: $exe [options] input-file [output-file]
+
+Options include:
+
+    -h, --help  Show this message
+    -v          Print the version
+    -f=format   Set the output format, includes "default", "compressed"
+    -r          Read from STDIN instead of input-file
+    -w          Watch input-file, and compile to output-file if it is changed
+    -T          Dump formatted parse tree
+    -X          Dump raw parse tree
+
+
+EOT;
+
+$opts = getopt('hvrwnXTf:', array('help'));
+while (count($argv) > 0 && preg_match('/^-([-hvrwnXT]$|[f]=)/', $argv[0])) {
+	array_shift($argv);
+}
+
+function has() {
+	global $opts;
+	foreach (func_get_args() as $arg) {
+		if (isset($opts[$arg])) return true;
+	}
+	return false;
+}
+
+if (has("h", "help")) {
+	exit($HELP);
+}
 
 error_reporting(E_ALL);
 $path  = realpath(dirname(__FILE__)).'/';
@@ -20,13 +54,25 @@ if (php_sapi_name() != "cli") {
 	err($fa.$argv[0]." must be run in the command line.");
 	exit(1);
 }
-$exe = array_shift($argv); // remove filename
+
+function make_less($fname = null) {
+	global $opts;
+	$l = new lessc($fname);
+
+	if (has("f")) {
+		$format = $opts["f"];
+		if ($format != "default") $l->setFormatter($format);
+	}
+
+	return $l;
+}
 
 function process($data, $import = null) {
 	global $fa;
 
-	$l = new lessc();
+	$l = make_less();
 	if ($import) $l->importDir = $import;
+
 	try {
 		echo $l->parse($data);
 		exit(0);
@@ -37,43 +83,20 @@ function process($data, $import = null) {
 	}
 }
 
-// process args
-$opts = array();
-foreach ($argv as $loc => $a) {
-	if (preg_match("/^-([a-zA-Z]+)$/", $a, $m)) {
-		$m = $m[1];
-		for ($i = 0; $i < strlen($m); $i++)
-			$opts[$m{$i}] = $loc;
-		unset($argv[$loc]);
-	}
-}
-
-function has($o, &$loc = null) {
-	global $opts;
-	if (!isset($opts[$o])) return false;
-	$loc = $opts[$o];
-	return true;
-}
-
-function hasValue($o, &$value = null) {
-	global $argv;
-	if (!has($o,$loc)) return false;
-	if (!isset($argv[$loc+1])) return false;
-	$value = $argv[$loc+1];
-	return true;
-}
-
 if (has("v")) {
 	exit($VERSION."\n");
 }
 
-if (has("r", $loc)) {
-	if (!hasValue("r", $data)) {
+if (has("r")) {
+	if (!empty($argv)) {
+		$data = $argv[0];
+	} else {
+		$data = "";
 		while (!feof(STDIN)) {
 			$data .= fread(STDIN, 8192);
 		}
 	}
-	return process($data);
+	exit(process($data));
 }
 
 if (has("w")) {
@@ -91,7 +114,7 @@ if (has("w")) {
 
 	$cache = $in;
 	$last_action = 0;
-	while (1) {
+	while (true) {
 		clearstatcache();
 
 		// check if anything has changed since last fail
@@ -117,7 +140,8 @@ if (has("w")) {
 					exit(1);
 				}
 			} catch (exception $ex) {
-				echo "\nFatal Error:\n".str_repeat('=', 20)."\n".$ex->getMessage()."\n\n";
+				echo "\nFatal Error:\n".str_repeat('=', 20)."\n".
+					$ex->getMessage()."\n\n";
 
 				if (has("n")) {
 					`notify-send -u critical "compile failed" "{$ex->getMessage()}"`;
@@ -131,7 +155,7 @@ if (has("w")) {
 }
 
 if (!$fname = array_shift($argv)) {
-	echo "Usage: ".$exe." input-file [output-file]\n";
+	echo $HELP;
 	exit(1);
 }
 
@@ -167,8 +191,8 @@ function dumpValue($node, $depth = 0) {
 }
 
 try {
-	$l = new lessc($fname);
-	if (has("T") || has("X")) {
+	$l = make_less($fname);
+	if (has("T", "X")) {
 		$t = $l->parseTree();
 		if (has("X"))
 			$out = print_r($t, 1);
