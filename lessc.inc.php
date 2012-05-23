@@ -1287,7 +1287,7 @@ class lessc {
 	// inject array of unparsed strings into environment as variables
 	protected function injectVariables($args) {
 		$this->pushEnv();
-		$parser = new lessc_parser();
+		$parser = new lessc_parser($this, __METHOD__);
 		foreach ($args as $name => $str_value) {
 			if ($name{0} != '@') $name = '@'.$name;
 			$parser->count = 0;
