@@ -4,3 +4,5 @@
 /*.css
 tests/bootstrap
 tests/tmp
+vendor
+composer.lock
