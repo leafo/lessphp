@@ -1287,7 +1287,7 @@ class lessc {
 	// inject array of unparsed strings into environment as variables
 	protected function injectVariables($args) {
 		$this->pushEnv();
-		$parser = new lessc();
+		$parser = new lessc_parser();
 		foreach ($args as $name => $str_value) {
 			if ($name{0} != '@') $name = '@'.$name;
 			$parser->count = 0;
@@ -2023,7 +2023,7 @@ class lessc_parser {
 	}
 
 	// consume a list of values for a property
-	protected function propertyValue(&$value, $keyName=null) {
+	public function propertyValue(&$value, $keyName=null) {
 		$values = array();
 
 		if (!is_null($keyName)) $this->env->currentProperty = $keyName;
