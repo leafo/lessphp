@@ -3,14 +3,18 @@
     "type": "library",
     "description": "lessphp is a compiler for LESS written in PHP.",
     "homepage": "http://leafo.net/lessphp/",
-    "license": "MIT",
+    "license": [
+      "MIT",
+      "GPL-3.0"
+    ],
     "authors": [
         {
-            "name": "leafo",
+            "name": "Leaf Corcoran",
+            "email": "leafot@gmail.com",
             "homepage": "http://leafo.net"
         }
     ],
     "autoload": {
-        "classmap": ["lessc.inc.php", "lessify.inc.php"]
+        "classmap": ["lessc.inc.php"]
     }
 }
