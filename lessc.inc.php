@@ -458,7 +458,7 @@ class lessc {
 			$_blocks[] = $this->compileBlock($child, $tags);
 			break;
 		case 'mixin':
-			list(, $path, $args) = $prop;
+			list(, $path, $args, $suffix) = $prop;
 
 			$args = array_map(array($this, "reduce"), (array)$args);
 			$mixins = $this->findBlocks($block, $path, $args);
@@ -485,6 +485,13 @@ class lessc {
 				if ($mixin != $block) $mixin->parent = $block;
 
 				foreach ($this->sortProps($mixin->props) as $sub_prop) {
+					if($suffix !== null) {
+						$sub_prop[2] = array(
+							'list', ' ',
+							array($sub_prop[2], array('keyword', $suffix))
+						);
+					}
+
 					$this->compileProp($sub_prop, $mixin, $tags, $_lines, $_blocks);
 				}
 
@@ -1904,10 +1911,11 @@ class lessc_parser {
 
 		// mixin
 		if ($this->mixinTags($tags) &&
-			($this->argumentValues($argv) || true) && $this->end())
+			($this->argumentValues($argv) || true) &&
+			($this->keyword($suffix) || true) && $this->end())
 		{
 			$tags = $this->fixTags($tags);
-			$this->append(array('mixin', $tags, $argv), $s);
+			$this->append(array('mixin', $tags, $argv, $suffix), $s);
 			return true;
 		} else {
 			$this->seek($s);
