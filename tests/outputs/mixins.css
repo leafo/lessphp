@@ -40,6 +40,7 @@ body b { color:blue; }
   bar:100 land;
 }
 #hello { cool:one two three cool; }
+#hello-important { cool:one two three cool !important; }
 #world { cool:"world"; }
 #another {
   things:red blue green;
