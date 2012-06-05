@@ -65,6 +65,16 @@ class lessc {
 
 	// attempts to find the path of an import url, returns null for css files
 	function findImport($url) {
+		if ($this->isRemoteFile($url)) {
+			// The import is a remote file. Let's try to just open it to check for its existence.
+			$handle = @fopen($url, 'rb');
+			if ($handle) {
+				fclose($handle);
+				return $url;
+			}
+			return null;
+		}
+		
 		foreach ((array)$this->importDir as $dir) {
 			$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
 			if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
@@ -1362,13 +1372,21 @@ class lessc {
 	 */
 	function __construct($fname = null, $opts = null) {
 		if ($fname) {
-			if (!is_file($fname)) {
+			$this->fileName = $fname;
+			if ($this->isRemoteFile($fname)) {
+				$rc = $this->fetchRemoteFile($fname);
+				if (is_null($rc)) {
+					throw new Exception('load error: failed to read remote file '.$fname);
+				}
+				$this->buffer = $rc;
+			} elseif (is_file($fname)) {
+				$pi = pathinfo($fname);
+				$this->importDir = $pi['dirname'].'/';
+				$this->buffer = file_get_contents($fname);
+			} else {
 				throw new Exception('load error: failed to find '.$fname);
 			}
-			$pi = pathinfo($fname);
-
-			$this->fileName = $fname;
-			$this->importDir = $pi['dirname'].'/';
+			
 			$this->addParsedFile($fname);
 		}
 	}
@@ -1383,7 +1401,11 @@ class lessc {
 
 	public function allParsedFiles() { return $this->allParsedFiles; }
 	protected function addParsedFile($file) {
-		$this->allParsedFiles[realpath($file)] = filemtime($file);
+		if ($this->isRemoteFile($file)) {
+			$this->allParsedFiles[$file] = $this->getRemoteFileLastModified($file);
+		} else {
+			$this->allParsedFiles[realpath($file)] = filemtime($file);
+		}
 	}
 
 
@@ -1463,6 +1485,76 @@ class lessc {
 			return $in;
 		}
 
+	}
+	
+	
+	/**
+	 * Gets the modification time of a remote $url.
+	 * Based on: http://www.php.net/manual/en/function.filemtime.php#81194
+	 * @param type $url
+	 * @return The last modified time of the $url file, in Unix timestamp, or null if it can't be read.
+	 */
+	function getRemoteFileLastModified($url) {
+		// default
+		$unixtime = 0;
+
+		$fp = @fopen($url, 'rb');
+		if (!$fp) {
+			return null;
+		}
+
+		$metadata = stream_get_meta_data($fp);
+		foreach ($metadata['wrapper_data'] as $response) {
+			// case: redirection
+			if (substr(strtolower($response), 0, 10) == 'location: ') {
+				$newUri = substr($response, 10);
+				fclose($fp);
+				return $this->getRemoteFileLastModified($newUri);
+			}
+			// case: last-modified
+			elseif (substr(strtolower($response), 0, 15) == 'last-modified: ') {
+				$unixtime = strtotime(substr($response, 15));
+				break;
+			}
+		}
+		
+		fclose($fp);
+		return $unixtime;
+	}
+
+	/**
+	 * Gets the contents of a remote file
+	 * @param string $url 
+	 * @return string The contents of the $url file of null if it can't be read.
+	 */
+	function fetchRemoteFile($url) {
+		$handle = @fopen($url, 'rb');
+		if ($handle) {
+			$content = stream_get_contents($handle);
+			fclose($handle);
+			return $content;
+		}
+		
+		return null;
+	}
+
+	/**
+	 * Checks if a string represents a remote file
+	 * @param string $url
+	 * @return boolean If $target is a handable remote resource.
+	 */
+	function isRemoteFile($url) {
+		// Patterns for matching readable remote resources.
+		// Make sure that any included pattern will be accepted by fopen() as well.
+		$remotePatterns = array(
+			'/^https?:\/\//i'
+		);
+		foreach ($remotePatterns as $pattern) {
+			if (preg_match($pattern, $url)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	static protected $cssColors = array(
@@ -2757,7 +2849,6 @@ class lessc_parser {
 
 		return $out.$text;
 	}
-
 }
 
 class lessc_formatter {
