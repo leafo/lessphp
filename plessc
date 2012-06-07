@@ -191,15 +191,16 @@ function dumpValue($node, $depth = 0) {
 }
 
 try {
-	$l = make_less($fname);
+	$less = make_less($fname);
 	if (has("T", "X")) {
-		$t = $l->parseTree();
+		$parser = new lessc_parser($less, $fname);
+		$tree = $parser->parse(file_get_contents($fname));
 		if (has("X"))
-			$out = print_r($t, 1);
+			$out = print_r($tree, 1);
 		else
-			$out = dumpValue($t)."\n";
+			$out = dumpValue($tree)."\n";
 	} else {
-		$out = $l->parse();
+		$out = $less->parse();
 	}
 
 	if (!$fout = array_shift($argv)) {
@@ -212,6 +213,5 @@ try {
 	err($fa.$ex->getMessage());
 	exit(1);
 }
-
 
 ?>
