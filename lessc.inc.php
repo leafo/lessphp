@@ -566,7 +566,16 @@ class lessc {
 			if (count($value) == 5 && $value[4] != 1) { // rgba
 				return 'rgba('.$r.','.$g.','.$b.','.$value[4].')';
 			}
-			return sprintf("#%02x%02x%02x", $r, $g, $b);
+
+			$h = sprintf("#%02x%02x%02x", $r, $g, $b);
+
+			// Converting hex color to short notation (e.g. #003399 to #039) when possible.
+			if ($h[1] === $h[2] && $h[3] === $h[4] && $h[5] === $h[6]) {
+				$h = '#' . $h[1] . $h[3] . $h[5];
+			}
+
+			return $h;
+
 		case 'function':
 			// [1] - function name
 			// [2] - some array value representing arguments, either ['string', value] or ['list', ',', values[]]
