@@ -261,7 +261,7 @@ class lessc {
 			foreach ($current as $tag) {
 				// inject parent in place of parent selector, ignoring escaped values
 				$count = 0;
-				$parts = explode("&&", $tag);
+				$parts = explode("$&$", $tag);
 
 				foreach ($parts as $i => $chunk) {
 					$parts[$i] = str_replace($this->parentSelector, $ptag, $chunk, $c);
@@ -2419,8 +2419,8 @@ class lessc_parser {
 			// whitespace?
 			if ($this->match('', $_)) $value .= $_[0];
 
-			// escape parent selector
-			$value = str_replace($this->lessc->parentSelector, "&&", $value);
+			// escape parent selector, (yuck)
+			$value = str_replace($this->lessc->parentSelector, "$&$", $value);
 			return true;
 		}
 
