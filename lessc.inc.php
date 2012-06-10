@@ -1663,14 +1663,6 @@ class lessc_parser {
 	);
 
 	/**
-	 * if we are in an expression then we don't need to worry about parsing
-	 * font shorthand
-	 * $inExp becomes true after the first value in an expression, or if we
-	 * enter parens
-	 */
-	protected $inExp = false;
-
-	/**
 	 * if we are in parens we can be more liberal with whitespace around
 	 * operators because it must evaluate to a single value and thus is less
 	 * ambiguous.
@@ -1956,18 +1948,18 @@ class lessc_parser {
 	 */
 	protected function expression(&$out) {
 		$s = $this->seek();
-		if ($this->literal('(') && ($this->inExp = $this->inParens = true) && $this->expression($exp) && $this->literal(')')) {
+		if ($this->literal('(') && ($this->inParens = true) && $this->expression($exp) && $this->literal(')')) {
 			$lhs = $exp;
 		} elseif ($this->seek($s) && $this->value($val)) {
 			$lhs = $val;
 		} else {
-			$this->inParens = $this->inExp = false;
+			$this->inParens = false;
 			$this->seek($s);
 			return false;
 		}
 
 		$out = $this->expHelper($lhs, 0);
-		$this->inParens = $this->inExp = false;
+		$this->inParens = false;
 		return true;
 	}
 
