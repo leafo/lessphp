@@ -1,7 +1,7 @@
 <?php
 
 /**
- * lessphp v0.3.4-2
+ * lessphp v0.3.5
  * http://leafo.net/lessphp
  *
  * LESS css compiler, adapted from http://lesscss.org
@@ -29,7 +29,7 @@
  * controlling things like whitespace and line-breaks.
  */
 class lessc {
-	static public $VERSION = "v0.3.4-2";
+	static public $VERSION = "v0.3.5";
 	static protected $TRUE = array("keyword", "true");
 	static protected $FALSE = array("keyword", "false");
 
