@@ -14,23 +14,19 @@
 /**
  * The less compiler and parser.
  *
- * Converting LESS to CSS is a two stage process. First the incoming document
- * must be parsed. Parsing creates a tree in memory that represents the
- * structure of the document. Then, the tree of the document is recursively
- * compiled into the CSS text. The compile step has an implicit step called
- * reduction, where values are brought to their lowest form before being
- * turned to text, eg. mathematical equations are solved, and variables are
- * dereferenced.
+ * Converting LESS to CSS is a two stage process. The incoming file is parsed
+ * by `lessc_parser` into a tree, then compiled to CSS text by `lessc`. The
+ * compile step has an implicit step called reduction, where values are brought
+ * to their lowest form before being turned to text, eg. mathematical equations
+ * are solved, and variables are dereferenced.
  *
- * The parsing stage produces the final structure of the document, for this
- * reason mixins are mixed in and attribute accessors are referenced during
- * the parse step. A reduction is done on the mixed in block as it is mixed in.
+ * The `lessc` class creates an intstance of the parser, feeds it LESS code, then
+ * compiles the resulting tree to CSS
  *
- *  See the following:
- *    - entry point for parsing and compiling: lessc::parse()
- *    - parsing: lessc::parseChunk()
- *    - compiling: lessc::compileBlock()
+ * The `lessc_parser` class is only concerned with parsing its input.
  *
+ * The `lessc_formatter` classes are used to format the output of the CSS,
+ * controlling things like whitespace and line-breaks.
  */
 class lessc {
 	static public $VERSION = "v0.3.4-2";
@@ -536,7 +532,8 @@ class lessc {
 	 *
 	 *     array(type, contents [, additional_contents]*)
 	 *
-	 * Will not work on non reduced values (expressions, variables, etc)
+	 * The input is expected to be reduced. This function will not work on
+	 * things like expressions and variables.
 	 */
 	function compileValue($value) {
 		switch ($value[0]) {
@@ -1734,8 +1731,9 @@ class lessc_parser {
 	}
 
 	/**
-	 * Parse a single chunk off the head of the buffer and place it.
-	 * @return false when the buffer is empty, or when there is an error.
+	 * Parse a single chunk off the head of the buffer and append it to the
+	 * current parse environment.
+	 * Returns false when the buffer is empty, or when there is an error.
 	 *
 	 * This function is called repeatedly until the entire document is
 	 * parsed.
