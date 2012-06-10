@@ -613,7 +613,7 @@ class lessc {
 	}
 
 	function lib_isnumber($value) {
-		return $this->toBool(is_numeric($value[1]));
+		return $this->toBool(is_numeric($value[1]) && $value[0] != "color");
 	}
 
 	function lib_isstring($value) {
