@@ -420,7 +420,7 @@ class lessc {
 		$last = end($args);
 		if ($last[0] == "rest") {
 			$rest = array_slice($values, count($args) - 1);
-			$this->set($last[1], $this->reduce(array("list", " ", $rest)));
+			$this->set($last[1], $this->reduce(array("list", ", ", $rest)));
 		}
 
 		$this->env->arguments = $assigned_values;

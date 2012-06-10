@@ -12,3 +12,11 @@ body {
   margin:4px 12px 2px 1px;
   color:red;
 }
+.gradientOneColor {
+  background-size:100% 100%;
+  background:linear-gradient(center bottom,#2b5191 0%) no-repeat bottom;
+}
+.gradientMultiColor {
+  background-size:100% 100%;
+  background:linear-gradient(center bottom,#2b5191 0%, #284c88 25%, #325ea9 100%) no-repeat bottom;
+}
