@@ -76,8 +76,18 @@ class lessc {
 	}
 
 	function fileExists($name) {
+        if (file_exists($name)) {
+            return $name;
+        }
+
 		// sym link workaround
-		return file_exists($name) || file_exists(realpath(preg_replace('/\w+\/\.\.\//', '', $name)));
+        $pattern = '/([^.][^\/]*\/|\.[^.\/][^\/]*\/|\.\.[^\/]+\/)\.\.\//';
+        while (preg_match($pattern, $name, $matches)) {
+            $name = preg_replace($pattern, '/', $name);
+        }
+        if (file_exists(realpath($name))) {
+            return realpath($name);
+        }
 	}
 
 	static function compressList($items, $delim) {
