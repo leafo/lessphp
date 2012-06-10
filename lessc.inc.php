@@ -1815,11 +1815,23 @@ class lessc_parser {
 			} else {
 				$this->seek($s);
 			}
+
+			if ($this->literal("@page") &&
+				($this->match('(:(left|right))', $m) || true) &&
+				$this->literal("{"))
+			{
+				$name = "@page";
+				if ($m) $name = $name . " " . $m[1];
+				$this->pushSpecialBlock($name);
+				return true;
+			} else {
+				$this->seek($s);
+			}
 		}
 
 		if (isset($this->env->keyframes)) {
-			if ($this->keyframeTags($tags) && $this->literal('{')) {
-				$this->pushSpecialBlock($tags);
+			if ($this->keyframeTags($ktags) && $this->literal('{')) {
+				$this->pushSpecialBlock($ktags);
 				return true;
 			} else {
 				$this->seek($s);

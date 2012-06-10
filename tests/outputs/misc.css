@@ -29,3 +29,12 @@ color:"aaa, bbb";
 .hi pre { color:blue; }
 .rad pre { color:red; }
 .rad pre { color:blue; }
+@page :left {
+  margin-left:4cm;
+}
+@page :right {
+  margin-left:3cm;
+}
+@page {
+  margin:2cm;
+}
