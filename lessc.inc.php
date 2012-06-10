@@ -1959,6 +1959,19 @@ class lessc_parser {
 		}
 
 		$out = $this->expHelper($lhs, 0);
+
+		// look for / shorthand
+		if (!empty($this->env->supressedDivision)) {
+			unset($this->env->supressedDivision);
+			$s = $this->seek();
+			if ($this->literal("/") && $this->value($rhs)) {
+				$out = array("list", "",
+					array($out, array("keyword", "/"), $rhs));
+			} else {
+				$this->seek($s);
+			}
+		}
+
 		$this->inParens = false;
 		return true;
 	}
@@ -1980,7 +1993,7 @@ class lessc_parser {
 
 		// try to find a valid operator
 		while ($this->match(self::$operatorString.($needWhite ? '\s' : ''), $m) && self::$precedence[$m[1]] >= $minP) {
-			if (!$this->inParens && isset($this->env->currentProperty) && $m[1] == "/") {
+			if (!$this->inParens && isset($this->env->currentProperty) && $m[1] == "/" && empty($this->env->supressedDivision)) {
 				foreach (self::$supressDivisionProps as $pattern) {
 					if (preg_match($pattern, $this->env->currentProperty)) {
 						$this->env->supressedDivision = true;
@@ -2118,15 +2131,6 @@ class lessc_parser {
 			return true;
 		} else {
 			$this->seek($s);
-		}
-
-		// the spare / when supressing division
-		if (!empty($this->env->supressedDivision)) {
-			unset($this->env->supressedDivision);
-			if ($this->literal("/")) {
-				$value = array('keyword', '/');
-				return true;
-			}
 		}
 
 		return false;

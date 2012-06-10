@@ -9,13 +9,13 @@
   mul:50;
 }
 .supress-division {
-  border-radius:10px / 10px;
-  border-radius:10px / 10px;
-  border-radius:hello(10px / 10px) world;
-  font:10px / 30 sans-serif;
-  font:10px / 20px sans-serif;
-  font:10px / 20px sans-serif;
-  border-radius:0 15px 15px 15px / 0 50% 50% 50%;
+  border-radius:10px/10px;
+  border-radius:10px/10px;
+  border-radius:hello(10px/10px) world;
+  font:10px/30 sans-serif;
+  font:10px/20px sans-serif;
+  font:10px/20px sans-serif;
+  border-radius:0 15px 15px 15px/0 50% 50% 50%;
 }
 .parens {
   sub:5;
