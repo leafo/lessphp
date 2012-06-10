@@ -252,24 +252,35 @@ class lessc {
 		return $out;
 	}
 
+	function expandParentSelectors(&$tag, $replace) {
+		$parts = explode("$&$", $tag);
+		$count = 0;
+		foreach ($parts as &$part) {
+			$part = str_replace($this->parentSelector, $replace, $part, $c);
+			$count += $c;
+		}
+		$tag = implode($this->parentSelector, $parts);
+		return $count;
+	}
+
 	// find the fully qualified tags for a block and its parent's tags
 	function multiplyTags($parents, $current) {
-		if ($parents == null) return $current;
+		if ($parents == null) {
+			if (is_array($current)) {
+				// get rid of parent selectors and escapes in top level tag
+				foreach ($current as &$tag) {
+					$this->expandParentSelectors($tag, "");
+				}
+			}
+			return $current;
+		}
 
 		$tags = array();
 		foreach ($parents as $ptag) {
 			foreach ($current as $tag) {
-				// inject parent in place of parent selector, ignoring escaped values
-				$count = 0;
-				$parts = explode("$&$", $tag);
+				$count = $this->expandParentSelectors($tag, $ptag);
 
-				foreach ($parts as $i => $chunk) {
-					$parts[$i] = str_replace($this->parentSelector, $ptag, $chunk, $c);
-					$count += $c;
-				}
-
-				$tag = implode("&", $parts);
-
+				// don't prepend the parent tag if & was used
 				if ($count > 0) {
 					$tags[] = trim($tag);
 				} else {
