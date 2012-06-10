@@ -1,7 +1,7 @@
 default .underline { border-bottom:1px solid green; }
 default #header {
   color:black;
-  border:1px solid #dd44dd;
+  border:1px solid #d4d;
 }
 default #header .navigation { font-size:12px; }
 default #header .navigation a { border-bottom:1px solid green; }
@@ -10,7 +10,7 @@ default #header .logo:hover { text-decoration:none; }
 variables .variables {
   width:14cm;
   height:24px;
-  color:#888888;
+  color:#888;
   background:#6c94be;
   font-family:"Trebuchet MS", Verdana, sans-serif;
 }
@@ -19,7 +19,7 @@ mixins .bordered {
   border-bottom:solid 2px black;
 }
 mixins #menu a {
-  color:#111111;
+  color:#111;
   border-top:dotted 1px black;
   border-bottom:solid 2px black;
 }

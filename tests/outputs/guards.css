@@ -16,8 +16,8 @@ body {
 div { color:blue; }
 link {
   color:true red;
-  color:true #ffffff;
+  color:true #fff;
   color:true #fffddd;
-  color:true #000000;
+  color:true #000;
   color:true rgba(0,0,0,0.34);
 }
