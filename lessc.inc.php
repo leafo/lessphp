@@ -1818,8 +1818,8 @@ class lessc_parser {
 		}
 
 		if (isset($this->env->keyframes)) {
-			if ($this->match("(to|from|[0-9]+%)", $m) && $this->literal('{')) {
-				$this->pushSpecialBlock($m[1]);
+			if ($this->keyframeTags($tags) && $this->literal('{')) {
+				$this->pushSpecialBlock($tags);
 				return true;
 			} else {
 				$this->seek($s);
@@ -1934,6 +1934,22 @@ class lessc_parser {
 				$tag[0] = $this->lessc->mPrefix;
 		}
 		return $tags;
+	}
+
+	protected function keyframeTags(&$tags) {
+		$s = $this->seek();
+		$tags = array();
+		while($this->match("(to|from|[0-9]+%)", $m)) {
+			$tags[] = $m[1];
+			if (!$this->literal(",")) break;
+		}
+
+		if (count($tags) == 0) {
+			$this->seek($s);
+			return false;
+		}
+
+		return true;
 	}
 
 	// a list of expressions

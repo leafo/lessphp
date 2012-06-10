@@ -24,7 +24,11 @@
 	}
 }
 
-
+@-webkit-keyframes flowouttoleft {
+	0% { -webkit-transform: translateX(0) scale(1); }
+	60%, 70% { -webkit-transform: translateX(0) scale(.7); }
+	100% { -webkit-transform: translateX(-100%) scale(.7); }
+}
 
 div {
 	animation-name: 'diagonal-slide';
