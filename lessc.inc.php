@@ -76,8 +76,7 @@ class lessc {
 	}
 
 	function fileExists($name) {
-		// sym link workaround
-		return file_exists($name) || file_exists(realpath(preg_replace('/\w+\/\.\.\//', '', $name)));
+		return is_file($name);
 	}
 
 	static function compressList($items, $delim) {
