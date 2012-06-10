@@ -612,6 +612,28 @@ These are `isnumber`, `iscolor`, `iskeyword`, `isstring`, `ispixel`,
     }
     ```
 
+#### !important
+
+If you want to apply the `!important` suffix to every property when mixing in a
+mixin, just append `!important` to the end of the call to the mixin:
+
+    ```less
+    .make_bright {
+      color: red;
+      font-weight: bold;
+    }
+
+    .color {
+      color: green;
+    }
+
+    body {
+      .make_bright() !important;
+      .color();
+    }
+
+    ```
+
 ### Selector Expressions
 
 Sometimes we want to dynamically generate the selector of a block based on some
