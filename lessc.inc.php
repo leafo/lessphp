@@ -1440,9 +1440,10 @@ class lessc {
 	 *
 	 * @param mixed $in Input
 	 * @param bool $force Force rebuild?
+	 * @param callable $instance Callback which should return lessc instance
 	 * @return array lessphp cache structure
 	 */
-	public static function cexecute($in, $force = false) {
+	public static function cexecute($in, $force = false, $instanceCallback = null) {
 
 		// assume no root
 		$root = null;
@@ -1473,7 +1474,7 @@ class lessc {
 
 		if ($root !== null) {
 			// If we have a root value which means we should rebuild.
-			$less = new lessc($root);
+			$less = is_callable($instanceCallback) ? call_user_func($instanceCallback, $root) : new lessc($root);
 			$out = array();
 			$out['root'] = $root;
 			$out['compiled'] = $less->parse();
