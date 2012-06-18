@@ -583,9 +583,11 @@ class lessc {
 
 			$h = sprintf("#%02x%02x%02x", $r, $g, $b);
 
-			// Converting hex color to short notation (e.g. #003399 to #039) 
-			if ($h[1] === $h[2] && $h[3] === $h[4] && $h[5] === $h[6]) {
-				$h = '#' . $h[1] . $h[3] . $h[5];
+			if (!empty($this->formatter->compress_colors)) {
+				// Converting hex color to short notation (e.g. #003399 to #039) 
+				if ($h[1] === $h[2] && $h[3] === $h[4] && $h[5] === $h[6]) {
+					$h = '#' . $h[1] . $h[3] . $h[5];
+				}
 			}
 
 			return $h;
@@ -2820,6 +2822,8 @@ class lessc_formatter {
 	public $disableSingle = false;
 	public $openSingle = " { ";
 	public $closeSingle = " }";
+
+	public $compress_colors = true;
 
 	// returns the amount of indent that should happen for a block
 	function indentAmount($block) {
