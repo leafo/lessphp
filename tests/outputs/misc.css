@@ -1,8 +1,8 @@
 @charset "utf-8";
 color:"aaa, bbb";
 .topbar { background:url(/assets/images/test/topbar.png); }
-.hello { test:empty-function("/assets/images/test/",40%,to(#ffffff)); }
-.css3 { background-image:-webkit-gradient(linear,0% 0%,0% 90%,from(#e9a000),to(#a37000)); }
+.hello { test:empty-function("/assets/images/test/",40%,to(#fff)); }
+.css3 { background-image:-webkit-gradient(linear,0% 0%,0% 90%,from(#E9A000),to(#A37000)); }
 .test, .world {
   border:1px solid red;
   color:url(http://mage-page.com);

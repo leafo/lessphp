@@ -541,6 +541,7 @@ class lessc {
 			// [1] - delimiter
 			// [2] - array of values
 			return implode($value[1], array_map(array($this, 'compileValue'), $value[2]));
+		case 'raw_color';
 		case 'keyword':
 			// [1] - the keyword
 		case 'number':
@@ -731,18 +732,15 @@ class lessc {
 	}
 
 	/**
-	 * Helper function to get arguments for color functions.
-	 * Accepts invalid input, non colors interpreted as being black.
+	 * Helper function to get arguments for color manipulation functions.
+	 * takes a list that contains a color like thing and a percentage
 	 */
 	function colorArgs($args) {
 		if ($args[0] != 'list' || count($args[2]) < 2) {
 			return array(array('color', 0, 0, 0));
 		}
 		list($color, $delta) = $args[2];
-		$color = $this->coerceColor($color);
-		if (is_null($color))
-			$color = array('color', 0, 0, 0);
-
+		$color = $this->assertColor($color);
 		$delta = floatval($delta[1]);
 
 		return array($color, $delta);
@@ -804,27 +802,24 @@ class lessc {
 	}
 
 	function lib_hue($color) {
-		if ($color[0] != 'color') return 0;
-		$hsl = $this->toHSL($color);
+		$hsl = $this->toHSL($this->assertColor($color));
 		return round($hsl[1]);
 	}
 
 	function lib_saturation($color) {
-		if ($color[0] != 'color') return 0;
-		$hsl = $this->toHSL($color);
+		$hsl = $this->toHSL($this->assertColor($color));
 		return round($hsl[2]);
 	}
 
 	function lib_lightness($color) {
-		if ($color[0] != 'color') return 0;
-		$hsl = $this->toHSL($color);
+		$hsl = $this->toHSL($this->assertColor($color));
 		return round($hsl[3]);
 	}
 
 	// get the alpha of a color
 	// defaults to 1 for non-colors or colors without an alpha
 	function lib_alpha($color) {
-		if ($color[0] != 'color') return 1;
+		$color = $this->assertColor($color);
 		return isset($color[4]) ? $color[4] : 1;
 	}
 
@@ -1087,9 +1082,24 @@ class lessc {
 		return $var;
 	}
 
+	// coerce a value for use in color operation
 	function coerceColor($value) {
 		switch($value[0]) {
 			case 'color': return $value;
+			case 'raw_color':
+				$c = array("color", 0, 0, 0);
+				$colorStr = substr($value[1], 1);
+				$num = hexdec($colorStr);
+				$width = strlen($colorStr) == 3 ? 16 : 256;
+
+				for ($i = 3; $i > 0; $i--) { // 3 2 1
+					$t = $num % $width;
+					$num /= $width;
+
+					$c[$i] = $t * (256/$width) + $t * floor(16/$width);
+				}
+
+				return $c;
 			case 'keyword':
 				$name = $value[1];
 				if (isset(self::$cssColors[$name])) {
@@ -2310,26 +2320,8 @@ class lessc_parser {
 
 	// a # color
 	protected function color(&$out) {
-		$color = array('color');
-
-		if ($this->match('(#([0-9a-f]{6})|#([0-9a-f]{3}))', $m)) {
-			if (isset($m[3])) {
-				$num = $m[3];
-				$width = 16;
-			} else {
-				$num = $m[2];
-				$width = 256;
-			}
-
-			$num = hexdec($num);
-			foreach (array(3,2,1) as $i) {
-				$t = $num % $width;
-				$num /= $width;
-
-				$color[$i] = $t * (256/$width) + $t * floor(16/$width);
-			}
-
-			$out = $color;
+		if ($this->match('(#(?:[0-9a-f]{6}|[0-9a-f]{3}))', $m)) {
+			$out = array("raw_color", $m[1]);
 			return true;
 		}
 
