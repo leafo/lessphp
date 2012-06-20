@@ -1,7 +1,7 @@
 body {
   color:#996d33;
   color:rgba(153,109,51,0.3);
-  lighten:#fff;
+  lighten:#ffffff;
   lighten:#7c8df2;
   lighten:rgba(222,140,129,0.5);
   darken:#d6d6d6;
@@ -33,16 +33,16 @@ body {
   what:#dff1da;
   zero:#343434;
   zero:#003468;
-  zero:#000;
-  zero:#fff;
-  zero:#000;
-  zero:#fff;
-  zero:#fff;
-  zero:#fff;
+  zero:#000000;
+  zero:#ffffff;
+  zero:#000000;
+  zero:#ffffff;
+  zero:#ffffff;
+  zero:#ffffff;
   zero:#1d5612;
   zero:#56124b;
-  zero:#000;
-  zero:#fff;
+  zero:#000000;
+  zero:#ffffff;
 }
 alpha {
   g:0;
