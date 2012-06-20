@@ -1660,6 +1660,7 @@ class lessc_parser {
 
 	// regex string to match any of the operators
 	static protected $operatorString;
+	static protected $numberString;
 
 	// these properties will supress division unless it's inside parenthases
 	static protected $supressDivisionProps =
@@ -1699,6 +1700,12 @@ class lessc_parser {
 				'('.implode('|', array_map(array('lessc', 'preg_quote'),
 					array_keys(self::$precedence))).')';
 		}
+
+		if (!self::$numberString) {
+			self::$numberString =
+				'(-?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?))('.implode('|', self::$units).')?';
+		}
+
 	}
 
 	function parse($buffer) {
@@ -2289,13 +2296,10 @@ class lessc_parser {
 	 * Can also consume a font shorthand if it is a simple case.
 	 * $allowed restricts the types that are matched.
 	 */
-	protected function unit(&$unit, $allowed = null) {
-		if (!$allowed) $allowed = self::$units;
-
-		if ($this->match('(-?[0-9]*(\.)?[0-9]+)('.implode('|', $allowed).')?', $m)) {
-			if (!isset($m[3])) $m[3] = 'number';
-			$unit = array($m[3], $m[1]);
-
+	protected function unit(&$unit) {
+		if ($this->match(self::$numberString, $m)) {
+			if (!isset($m[2])) $m[2] = 'number';
+			$unit = array($m[2], $m[1]);
 			return true;
 		}
 
