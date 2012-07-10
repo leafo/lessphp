@@ -585,7 +585,7 @@ class lessc {
 			$h = sprintf("#%02x%02x%02x", $r, $g, $b);
 
 			if (!empty($this->formatter->compress_colors)) {
-				// Converting hex color to short notation (e.g. #003399 to #039) 
+				// Converting hex color to short notation (e.g. #003399 to #039)
 				if ($h[1] === $h[2] && $h[3] === $h[4] && $h[5] === $h[6]) {
 					$h = '#' . $h[1] . $h[3] . $h[5];
 				}
@@ -721,7 +721,12 @@ class lessc {
 	}
 
 	function lib_round($arg) {
-		return array($arg[0], round($arg[1]));
+		if ($arg[0] === 'number') {
+			return array($arg[0], round($arg[1]));
+		}
+		elseif ($arg[0] === 'list' && count($arg[2]) === 2) {
+			return array($arg[2][0][0], round($arg[2][0][1], $arg[2][1][1]));
+		}
 	}
 
 	// is a string surrounded in quotes? returns the quoting char if true
