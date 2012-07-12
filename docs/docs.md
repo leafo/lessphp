@@ -1032,8 +1032,8 @@ associative array of names and values. The values will parsed as CSS values:
     $less = new lessc();
     echo $less->parse(".magic { color: @color;  width: @base - 200; }",
         array(
-            'color' => 'red';
-            'base' => '960px';
+            'color' => 'red',
+            'base' => '960px'
         ));
     ```
 
