@@ -1,3 +1,5 @@
+#!/bin/sh
+
 echo "This script clones twitter bootsrap, compiles it with lessc and lessphp,"
 echo "cleans up results with csstidy, and outputs diff. To run it, you need to"
 echo "have git, csstidy and lessc installed."
