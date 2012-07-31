@@ -29,7 +29,7 @@
  * controlling things like whitespace and line-breaks.
  */
 class lessc {
-	static public $VERSION = "v0.3.5";
+	static public $VERSION = "v0.3.6";
 	static protected $TRUE = array("keyword", "true");
 	static protected $FALSE = array("keyword", "false");
 
@@ -236,16 +236,19 @@ class lessc {
 	}
 
 	function sortProps($props) {
-		$out = array();
-		foreach ($props as $prop) {
-			if ($prop[0] == "assign") $out[] = $prop;
-		}
+		$vars = array();
+		$other = array();
 
 		foreach ($props as $prop) {
-			if ($prop[0] != "assign") $out[] = $prop;
+			if ($prop[0] == "assign" &&
+				substr($prop[1], 0, 1) == $this->vPrefix) {
+					$vars[] = $prop;
+				} else {
+					$other[] = $prop;
+				}
 		}
 
-		return $out;
+		return array_merge($vars, $other);
 	}
 
 	function expandParentSelectors(&$tag, $replace) {
