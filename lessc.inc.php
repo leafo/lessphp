@@ -1982,7 +1982,7 @@ class lessc_parser {
 	protected function keyframeTags(&$tags) {
 		$s = $this->seek();
 		$tags = array();
-		while($this->match("(to|from|[0-9]+%)", $m)) {
+		while($this->match("(to|from|[0-9]+(?:\.[0-9]+)?%)", $m)) {
 			$tags[] = $m[1];
 			if (!$this->literal(",")) break;
 		}
