@@ -2966,13 +2966,14 @@ class lessc_formatter_new {
 	public $break = "\n";
 	public $open = " {";
 	public $close = "}";
-	public $tagSeparator = ", ";
+	public $selectorSeparator = ", ";
 	public $assignSeparator = ":";
 
 	public $openSingle = " { ";
 	public $closeSingle = " }";
 
 	public $disableSingle = false;
+	public $breakSelectors = false;
 
 	public function __construct() {
 		$this->indentLevel = 0;
@@ -2997,8 +2998,14 @@ class lessc_formatter_new {
 		if (!empty($block->selectors)) {
 			$this->indentLevel++;
 
+			if ($this->breakSelectors) {
+				$selectorSeparator = $this->selectorSeparator . $this->break . $pre;
+			} else {
+				$selectorSeparator = $this->selectorSeparator;
+			}
+
 			echo $pre .
-				implode($this->tagSeparator, $block->selectors);
+				implode($selectorSeparator, $block->selectors);
 			if ($isSingle) {
 				echo $this->openSingle;
 				$inner = "";
@@ -3038,6 +3045,7 @@ class lessc_formatter_new {
 
 class lessc_formatter_less extends lessc_formatter_new {
 	public $disableSingle = true;
+	public $breakSelectors = true;
 	public $assignSeparator = ": ";
 }
 
