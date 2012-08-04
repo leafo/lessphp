@@ -35,12 +35,6 @@ class lessc {
 
 	protected $libFunctions = array();
 
-	protected $indentLevel;
-
-	protected $env = null;
-
-	protected $allParsedFiles = array();
-
 	public $vPrefix = '@'; // prefix of abstract properties
 	public $mPrefix = '$'; // prefix of abstract blocks
 	public $parentSelector = '&';
@@ -51,8 +45,6 @@ class lessc {
 
 	public $importDisabled = false;
 	public $importDir = '';
-
-	public $compat = true; // lessjs compatibility mode, does nothing right now
 
 	// set to the parser that generated the current line when compiling
 	// so we know how to create error messages
@@ -178,61 +170,44 @@ class lessc {
 	 * See lessc::compileProp()
 	 *
 	 */
-	function compileBlock($block, $parent_tags = null) {
+	function compileBlock($block) {
 		if (!empty($block->no_multiply)) {
 			$special_block = true;
 			$tags = array();
 		} else {
 			$special_block = false;
-
-			// evaluate expression tags
-			$tags = null;
-			if (is_array($block->tags)) {
-				$tags = array();
-				foreach ($block->tags as $tag) {
-					if (is_array($tag)) {
-						list(, $value) = $tag;
-						$tags[] = $this->compileValue($this->reduce($value));
-					} else {
-						$tags[] = $tag;
-					}
-				}
-			}
-
-			$tags = $this->multiplyTags($parent_tags, $tags);
 		}
 
-		$env = $this->pushEnv();
-		$env->nameDepth = array();
+		$env = $this->pushEnv($block);
 
-		$lines = array();
-		$blocks = array();
-		$this->mixImports($block);
+		// $this->mixImports($block); // TODO: bring me back
 
-		$idelta = $this->formatter->indentAmount($block);
-		$this->indentLevel += $idelta;
+		$out = $this->makeOutputBlock(null, $this->multiplySelectors($env));
+		if (!empty($block->isRoot)) {
+			$this->scope = $out;
+		} else {
+			$this->scope->children[] = $out;
+		}
 
 		foreach ($this->sortProps($block->props) as $prop) {
-			$this->compileProp($prop, $block, $tags, $lines, $blocks);
-		}
-		$this->indentLevel -= $idelta;
-
-		$block->scope = $env;
-
-		$this->pop();
-
-		// override tags if it's a special block
-		if (isset($block->media)) {
-			$tags = $this->compileMedia($block);
-		} elseif (isset($block->keyframes)) {
-			$tags = $block->tags[0]." ".
-				$this->compileValue($this->reduce($block->keyframes));
-		} elseif ($special_block) { // font-face and the like
-			$tags = $block->tags[0];
+			$this->compileProp($prop, $block, $out);
 		}
 
-		return $this->formatter->block($tags, $special_block, $lines,
-			$blocks, $this->indentLevel);
+		$block->scope = $env; // mixins carry scope with them!
+		$this->popEnv();
+
+		// // override tags if it's a special block
+		// if (isset($block->media)) {
+		// 	$tags = $this->compileMedia($block);
+		// } elseif (isset($block->keyframes)) {
+		// 	$tags = $block->tags[0]." ".
+		// 		$this->compileValue($this->reduce($block->keyframes));
+		// } elseif ($special_block) { // font-face and the like
+		// 	$tags = $block->tags[0];
+		// }
+
+		// return $this->formatter->block($tags, $special_block, $lines,
+		// 	$blocks, $this->indentLevel);
 	}
 
 	function sortProps($props) {
@@ -262,7 +237,54 @@ class lessc {
 		return $count;
 	}
 
+
+	function multiplySelectors($env, $childSelectors = null) {
+		if (is_null($env)) {
+			return $childSelectors;
+		}
+
+		if (empty($env->selectors)) {
+			return $this->multiplySelectors($env->parent, $childSelectors);
+		}
+
+		if (is_null($childSelectors)) {
+			$out = $env->selectors;
+		} else {
+			$out = array();
+			foreach ($env->selectors as $parent) {
+				foreach ($childSelectors as $child) {
+					$count = $this->expandParentSelectors($child, $parent);
+
+					if ($count > 0) {
+						$out[] = trim($child);
+					} else {
+						$out[] = trim($parent . " ". $child);
+					}
+				}
+			}
+		}
+
+		return $this->multiplySelectors($env->parent, $out);
+	}
+
+	function compileSelectors($selectors) {
+		$out = array();
+
+		foreach ($selectors as $s) {
+			if (is_array($s)) {
+				list(, $value) = $s;
+				$out[] = $this->compileValue($this->reduce($value));
+			} else {
+				$out[] = $s;
+			}
+		}
+
+		return $out;
+	}
+
+
 	// find the fully qualified tags for a block and its parent's tags
+	// TODO: kill
 	function multiplyTags($parents, $current) {
 		if ($parents == null) {
 			if (is_array($current)) {
@@ -314,7 +336,7 @@ class lessc {
 					$passed = $this->reduce($guard) == self::$TRUE;
 					if ($negate) $passed = !$passed;
 
-					$this->pop();
+					$this->popEnv();
 
 					if ($passed) {
 						$group_passed = true;
@@ -437,7 +459,7 @@ class lessc {
 	}
 
 	// compile a prop and update $lines or $blocks appropriately
-	function compileProp($prop, $block, $tags, &$_lines, &$_blocks) {
+	function compileProp($prop, $block, $out) {
 		// set error position context
 		if (isset($prop[-1])) {
 			if (is_array($prop[-1])) {
@@ -458,13 +480,13 @@ class lessc {
 			if ($name[0] == $this->vPrefix) {
 				$this->set($name, $value);
 			} else {
-				$_lines[] = "$name:".
+				$out->lines[] = "$name:".
 					$this->compileValue($this->reduce($value)).";";
 			}
 			break;
 		case 'block':
 			list(, $child) = $prop;
-			$_blocks[] = $this->compileBlock($child, $tags);
+			$out->children[] = $this->compileBlock($child);
 			break;
 		case 'mixin':
 			list(, $path, $args, $suffix) = $prop;
@@ -501,12 +523,12 @@ class lessc {
 						);
 					}
 
-					$this->compileProp($sub_prop, $mixin, $tags, $_lines, $_blocks);
+					$this->compileProp($sub_prop, $mixin, $out);
 				}
 
 				$mixin->parent = $old_parent;
 
-				if ($have_args) $this->pop();
+				if ($have_args) $this->popEnv();
 
 				if ($old_scope) {
 					$this->env = $old_scope;
@@ -515,11 +537,11 @@ class lessc {
 
 			break;
 		case 'raw':
-			$_lines[] = $prop[1];
+			$out->lines[] = $prop[1];
 			break;
 		case 'charset':
 			list(, $value) = $prop;
-			$_lines[] = '@charset '.$this->compileValue($this->reduce($value)).';';
+			$out->lines[] = '@charset '.$this->compileValue($this->reduce($value)).';';
 			break;
 		default:
 			$this->throwError("unknown op: {$prop[0]}\n");
@@ -588,7 +610,7 @@ class lessc {
 			$h = sprintf("#%02x%02x%02x", $r, $g, $b);
 
 			if (!empty($this->formatter->compress_colors)) {
-				// Converting hex color to short notation (e.g. #003399 to #039) 
+				// Converting hex color to short notation (e.g. #003399 to #039)
 				if ($h[1] === $h[2] && $h[3] === $h[4] && $h[5] === $h[6]) {
 					$h = '#' . $h[1] . $h[3] . $h[5];
 				}
@@ -1270,19 +1292,33 @@ class lessc {
 
 	/* environment functions */
 
-	// used for compiliation variable state
-	function pushEnv() {
+	function makeOutputBlock($type, $selectors) {
+		$b = new stdclass;
+		$b->lines = array();
+		$b->children = array();
+		$b->selectors = (array)$selectors;
+		$b->type = $type;
+		return $b;
+	}
+
+	// the state of execution
+	function pushEnv($block=null) {
 		$e = new stdclass;
 		$e->parent = $this->env;
 
-		$this->store = array();
+		$e->block = $block;
+		$e->store = array();
+
+		if (isset($block->tags)) {
+			$e->selectors = $this->compileSelectors($block->tags);
+		}
 
 		$this->env = $e;
 		return $e;
 	}
 
 	// pop something off the stack
-	function pop() {
+	function popEnv() {
 		$old = $this->env;
 		$this->env = $this->env->parent;
 		return $old;
@@ -1313,12 +1349,12 @@ class lessc {
 		return null;
 	}
 
+
 	// create a child parser (for compiling an import)
 	protected function createChild($fname) {
 		$less = new lessc($fname);
 		$less->importDir = array_merge((array)$less->importDir, (array)$this->importDir);
 		$less->formatter = $this->formatter;
-		$less->compat = $this->compat;
 		return $less;
 	}
 
@@ -1362,9 +1398,20 @@ class lessc {
 
 		$this->formatter = $this->newFormatter();
 
-		if ($initialVariables) $this->injectVariables($initialVariables);
+		$this->env = null;
+		$this->scope = null;
+		$this->allParsedFiles = array();
 		$this->indentLevel = -1;
-		$out = $this->compileBlock($root);
+
+		if ($initialVariables) $this->injectVariables($initialVariables);
+		$this->compileBlock($root);
+
+
+		ob_start();
+		$formatter = new lessc_formatter_new();
+		$formatter->block($this->scope);
+		$out = ob_get_clean();
+
 		setlocale(LC_NUMERIC, $locale);
 		return $out;
 	}
@@ -2912,4 +2959,77 @@ class lessc_formatter_indent extends lessc_formatter {
 		return $numLines > 0 ? 1 : 0;
 	}
 }
+
+class lessc_formatter_new {
+	public $indentChar = "  ";
+
+	public $break = "\n";
+	public $open = " {";
+	public $close = "}";
+	public $tagSeparator = ", ";
+	public $assignSeparator = ": ";
+
+	public $openSingle = " { ";
+	public $closeSingle = " }";
+
+	public function __construct() {
+		$this->indentLevel = 0;
+	}
+
+	public function indentStr($n = 0) {
+		return str_repeat($this->indentChar, max($this->indentLevel + $n, 0));
+	}
+
+	public function property($name, $value) {
+		return $name . $this->assignSeparator . $value . ";";
+	}
+
+	public function block($block) {
+		if (empty($block->lines) && empty($block->children)) return;
+
+		$inner = $pre = $this->indentStr();
+
+		$isSingle = is_null($block->type) && count($block->lines) == 1;
+
+		if (!empty($block->selectors)) {
+			$this->indentLevel++;
+
+			echo $pre .
+				implode($this->tagSeparator, $block->selectors);
+			if ($isSingle) {
+				echo $this->openSingle;
+				$inner = "";
+			} else {
+				echo $this->open . $this->break;
+				$inner = $this->indentStr();
+			}
+
+		}
+
+		if (!empty($block->lines)) {
+			$glue = $this->break.$inner;
+			echo $inner . implode($glue, $block->lines);
+			if (!$isSingle && !empty($block->children)) {
+				echo $this->break;
+			}
+		}
+
+		foreach ($block->children as $child) {
+			$this->block($child);
+		}
+
+		if (!empty($block->selectors)) {
+			if (empty($block->children)) echo $this->break;
+
+			if ($isSingle) {
+				echo $this->closeSingle . $this->break;
+			} else {
+				echo $pre . $this->close . $this->break;
+			}
+
+			$this->indentLevel--;
+		}
+	}
+}
+
 
