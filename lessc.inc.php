@@ -480,13 +480,13 @@ class lessc {
 			if ($name[0] == $this->vPrefix) {
 				$this->set($name, $value);
 			} else {
-				$out->lines[] = "$name:".
-					$this->compileValue($this->reduce($value)).";";
+				$out->lines[] = $this->formatter->property($name,
+						$this->compileValue($this->reduce($value)));
 			}
 			break;
 		case 'block':
 			list(, $child) = $prop;
-			$out->children[] = $this->compileBlock($child);
+			$this->compileBlock($child);
 			break;
 		case 'mixin':
 			list(, $path, $args, $suffix) = $prop;
@@ -501,8 +501,8 @@ class lessc {
 			foreach ($mixins as $mixin) {
 				$old_scope = null;
 				if (isset($mixin->parent->scope)) {
-					$old_scope = $this->env;
-					$this->env = $mixin->parent->scope;
+					$mixinParentEnv = $this->pushEnv();
+					$mixinParentEnv->storeParent = $mixin->parent->scope;
 				}
 
 				$have_args = false;
@@ -530,8 +530,8 @@ class lessc {
 
 				if ($have_args) $this->popEnv();
 
-				if ($old_scope) {
-					$this->env = $old_scope;
+				if (isset($mixinParentEnv)) {
+					$this->popEnv();
 				}
 			}
 
@@ -687,8 +687,8 @@ class lessc {
 	}
 
 	function lib_argb($color){
-            return $this->lib_rgbahex($color);
-        }
+		return $this->lib_rgbahex($color);
+	}
 
 	// utility func to unquote a string
 	function lib_e($arg) {
@@ -1342,8 +1342,10 @@ class lessc {
 
 			if (isset($current->store[$name]))
 				return $current->store[$name];
-			else
-				$current = $current->parent;
+			else {
+				$current = isset($current->storeParent) ?
+					$current->storeParent : $current->parent;
+			}
 		}
 
 		return null;
@@ -1396,20 +1398,18 @@ class lessc {
 		$this->parser = new lessc_parser($this, $name);
 		$root = $this->parser->parse($str);
 
-		$this->formatter = $this->newFormatter();
-
 		$this->env = null;
 		$this->scope = null;
 		$this->allParsedFiles = array();
 		$this->indentLevel = -1;
 
+		$this->formatter = new lessc_formatter_new();
+
 		if ($initialVariables) $this->injectVariables($initialVariables);
 		$this->compileBlock($root);
 
-
 		ob_start();
-		$formatter = new lessc_formatter_new();
-		$formatter->block($this->scope);
+		$this->formatter->block($this->scope);
 		$out = ob_get_clean();
 
 		setlocale(LC_NUMERIC, $locale);
@@ -2967,10 +2967,12 @@ class lessc_formatter_new {
 	public $open = " {";
 	public $close = "}";
 	public $tagSeparator = ", ";
-	public $assignSeparator = ": ";
+	public $assignSeparator = ":";
 
 	public $openSingle = " { ";
 	public $closeSingle = " }";
+
+	public $disableSingle = false;
 
 	public function __construct() {
 		$this->indentLevel = 0;
@@ -2989,7 +2991,8 @@ class lessc_formatter_new {
 
 		$inner = $pre = $this->indentStr();
 
-		$isSingle = is_null($block->type) && count($block->lines) == 1;
+		$isSingle = !$this->disableSingle &&
+			is_null($block->type) && count($block->lines) == 1;
 
 		if (!empty($block->selectors)) {
 			$this->indentLevel++;
@@ -3019,7 +3022,7 @@ class lessc_formatter_new {
 		}
 
 		if (!empty($block->selectors)) {
-			if (empty($block->children)) echo $this->break;
+			if (!$isSingle && empty($block->children)) echo $this->break;
 
 			if ($isSingle) {
 				echo $this->closeSingle . $this->break;
@@ -3030,6 +3033,12 @@ class lessc_formatter_new {
 			$this->indentLevel--;
 		}
 	}
+}
+
+
+class lessc_formatter_less extends lessc_formatter_new {
+	public $disableSingle = true;
+	public $assignSeparator = ": ";
 }
 
 
