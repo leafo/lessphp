@@ -178,11 +178,17 @@ class lessc {
 			$special_block = false;
 		}
 
-		$env = $this->pushEnv($block);
-
+		$env = $this->pushEnv();
 		// $this->mixImports($block); // TODO: bring me back
 
-		$out = $this->makeOutputBlock(null, $this->multiplySelectors($env));
+		if (isset($block->tags)) {
+			$selectors = $this->compileSelectors($block->tags);
+			$env->selectors = $this->multiplySelectors($selectors);
+			$out = $this->makeOutputBlock(null, $env->selectors);
+		} else {
+			$out = $this->makeOutputBlock("other"); // TODO: figure this out later
+		}
+
 		if (!empty($block->isRoot)) {
 			$this->scope = $out;
 		} else {
@@ -238,35 +244,47 @@ class lessc {
 	}
 
 
-	function multiplySelectors($env, $childSelectors = null) {
-		if (is_null($env)) {
-			return $childSelectors;
+	// multiply $selectors against the nearest selectors in env
+	function multiplySelectors($selectors) {
+		// find parent selectors
+
+		$env = $this->env;
+		$parentSelectors = null;
+		while (!is_null($env)) {
+			if (isset($env->selectors)) {
+				$parentSelectors = $env->selectors;
+				break;
+			}
+			$env = $env->parent;
 		}
 
-		if (empty($env->selectors)) {
-			return $this->multiplySelectors($env->parent, $childSelectors);
+		if (is_null($parentSelectors)) {
+			// kill parent reference in top level selector
+			foreach ($selectors as &$s) {
+				$this->expandParentSelectors($s, "");
+			}
+
+			return $selectors;
 		}
 
-		if (is_null($childSelectors)) {
-			$out = $env->selectors;
-		} else {
-			$out = array();
-			foreach ($env->selectors as $parent) {
-				foreach ($childSelectors as $child) {
-					$count = $this->expandParentSelectors($child, $parent);
+		$out = array();
+		foreach ($parentSelectors as $parent) {
+			foreach ($selectors as $child) {
+				$count = $this->expandParentSelectors($child, $parent);
 
-					if ($count > 0) {
-						$out[] = trim($child);
-					} else {
-						$out[] = trim($parent . " ". $child);
-					}
+				// don't prepend the parent tag if & was used
+				if ($count > 0) {
+					$out[] = trim($child);
+				} else {
+					$out[] = trim($parent . ' ' . $child);
 				}
 			}
 		}
 
-		return $this->multiplySelectors($env->parent, $out);
+		return $out;
 	}
 
+	// reduces selector expressions
 	function compileSelectors($selectors) {
 		$out = array();
 
@@ -1292,26 +1310,20 @@ class lessc {
 
 	/* environment functions */
 
-	function makeOutputBlock($type, $selectors) {
+	function makeOutputBlock($type, $selectors = null) {
 		$b = new stdclass;
 		$b->lines = array();
 		$b->children = array();
-		$b->selectors = (array)$selectors;
+		$b->selectors = $selectors;
 		$b->type = $type;
 		return $b;
 	}
 
 	// the state of execution
-	function pushEnv($block=null) {
+	function pushEnv() {
 		$e = new stdclass;
 		$e->parent = $this->env;
-
-		$e->block = $block;
 		$e->store = array();
-
-		if (isset($block->tags)) {
-			$e->selectors = $this->compileSelectors($block->tags);
-		}
 
 		$this->env = $e;
 		return $e;
