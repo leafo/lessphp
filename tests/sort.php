@@ -11,47 +11,47 @@ if (!$fname = array_shift($argv)) {
 	$fname = "php://stdin";
 }
 
-// also sorts the tags in the block
-function sort_key($block) {
-	if (!isset($block->sort_key)) {
-		sort($block->tags, SORT_STRING);
-		$block->sort_key = implode(",", $block->tags);
-	}
+class lesscNormalized extends lessc {
+	public $numberPrecision = 3;
 
-	return $block->sort_key;
-}
-
-class sort_css extends lessc {
-	function __construct() {
-		parent::__construct();
-	}
-
-	// normalize numbers
-	function compileValue($value) {
-		$ignore = array('list', 'keyword', 'string', 'color', 'function');
-		if ($value[0] == 'number' || !in_array($value[0], $ignore)) {
-			$value[1] = $value[1] + 0; // convert to either double or int
+	public function compileValue($value) {
+		if ($value[0] == "raw_color") {
+			$value = $this->coerceColor($value);
 		}
 
 		return parent::compileValue($value);
 	}
+}
 
-	function parse_and_sort($str) {
-		$root = $this->parseTree($str);
+class SortingFormatter extends lessc_formatter_lessjs {
+	function sortKey($block) {
+		if (!isset($block->sortKey)) {
+			sort($block->selectors, SORT_STRING);
+			$block->sortKey = implode(",", $block->selectors);
+		}
 
-		$less = $this;
-		usort($root->props, function($a, $b) use ($less) {
+		return $block->sortKey;
+	}
 
-			$sort = strcmp(sort_key($a[1]), sort_key($b[1]));
-			if ($sort == 0)
-				return strcmp($less->compileBlock($a[1]), $less->compileBlock($b[1]));
+	function sortBlock($block) {
+		usort($block->children, function($a, $b) {
+			$sort = strcmp($this->sortKey($a), $this->sortKey($b));
+			if ($sort == 0) {
+				// TODO
+			}
 			return $sort;
 		});
 
-		return $this->compileBlock($root);
 	}
+
+	function block($block) {
+		$this->sortBlock($block);
+		return parent::block($block);
+	}
+
 }
 
-$sorter = new sort_css;
-echo $sorter->parse_and_sort(file_get_contents($fname));
+$less = new lesscNormalized();
+$less->setFormatter(new SortingFormatter);
+echo $less->parse(file_get_contents($fname));
 

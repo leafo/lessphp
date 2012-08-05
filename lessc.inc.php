@@ -52,7 +52,7 @@ class lessc {
 	public $importDisabled = false;
 	public $importDir = '';
 
-	static protected $numberPrecision = null;
+	protected $numberPrecision = null;
 
 	// set to the parser that generated the current line when compiling
 	// so we know how to create error messages
@@ -683,8 +683,8 @@ class lessc {
 			list(, $num, $unit) = $value;
 			// [1] - the number
 			// [2] - the unit
-			if (!is_null(self::$numberPrecision)) {
-				$num = round($num, self::$numberPrecision);
+			if (!is_null($this->numberPrecision)) {
+				$num = round($num, $this->numberPrecision);
 			}
 			return $num . $unit;
 		case 'string':
@@ -1498,9 +1498,7 @@ class lessc {
 			$str = file_get_contents($this->fileName);
 		}
 
-		$this->parser = new lessc_parser($this, $name);
-		$this->parser->writeComments = $this->preserveComments;
-
+		$this->parser = $this->makeParser($name);
 		$root = $this->parser->parse($str);
 
 		$this->env = null;
@@ -1518,6 +1516,13 @@ class lessc {
 
 		setlocale(LC_NUMERIC, $locale);
 		return $out;
+	}
+
+	protected function makeParser($name) {
+		$parser = new lessc_parser($this, $name);
+		$parser->writeComments = $this->preserveComments;
+
+		return $parser;
 	}
 
 	public function setFormatter($name) {
@@ -3110,6 +3115,8 @@ class lessc_formatter_classic {
 
 	public $disableSingle = false;
 	public $breakSelectors = false;
+
+	public $compressColors = false;
 
 	public function __construct() {
 		$this->indentLevel = 0;

@@ -8,5 +8,6 @@ From the root you can run `make` to run all the tests.
 ## bootstrap.sh
 
 Clones twitter bootsrap, compiles it with lessc and lessphp, cleans up results
-with csstidy and sort.php, then outputs the diff. To run it, you need to have
-git, csstidy and lessc installed to your system.
+with sort.php, and outputs diff. To run it, you need to have git and lessc
+installed.
+
