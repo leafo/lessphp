@@ -928,6 +928,23 @@ For example, let's use tabs instead of the default two spaces to indent:
 For more information about what can be configured with the formatter consult
 the sourcecode.
 
+### Preserving Comments
+
+By default, all comments in the source LESS file are thrown out when compiling.
+Sometimes you might want to keep the `/* */` comments in the output though. For
+example you need to bundle a license in your file.
+
+To enable comment preservation, just use the `setPreserveComments` method:
+
+    ```php
+    $less = new lessc();
+    $less->setPreserveComments(true);
+    echo $less->parse("/* hello! */");
+    ```
+
+Comments are disabled by default because they hurt the performance of the
+parser, and in most cases comments are not required.
+
 ### Compiling Automatically
 
 Often, you want to write the compiled CSS to a file, and only recompile when

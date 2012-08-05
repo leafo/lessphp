@@ -13,6 +13,7 @@ Options include:
     -h, --help  Show this message
     -v          Print the version
     -f=format   Set the output format, includes "default", "compressed"
+    -c          Keep /* */ comments in output
     -r          Read from STDIN instead of input-file
     -w          Watch input-file, and compile to output-file if it is changed
     -T          Dump formatted parse tree
@@ -21,8 +22,8 @@ Options include:
 
 EOT;
 
-$opts = getopt('hvrwnXTf:', array('help'));
-while (count($argv) > 0 && preg_match('/^-([-hvrwnXT]$|[f]=)/', $argv[0])) {
+$opts = getopt('hvrwncXTf:', array('help'));
+while (count($argv) > 0 && preg_match('/^-([-hvrwncXT]$|[f]=)/', $argv[0])) {
 	array_shift($argv);
 }
 
@@ -62,6 +63,10 @@ function make_less($fname = null) {
 	if (has("f")) {
 		$format = $opts["f"];
 		if ($format != "default") $l->setFormatter($format);
+	}
+
+	if (has("c")) {
+		$l->setPreserveComments(true);
 	}
 
 	return $l;
