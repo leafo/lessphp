@@ -77,6 +77,7 @@ dd { background-color:#f5f5f5; }
   c:#020002;
   c:#ffffff;
   c:#fb8173;
-  c:#ff0000;
-  c:#ff0000;
+  c:132 / #ff0000;
+  c:132 - #ff0000;
+  c:132- #ff0000;
 }

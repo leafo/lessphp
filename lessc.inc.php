@@ -42,6 +42,8 @@ class lessc {
 	public $importDisabled = false;
 	public $importDir = '';
 
+	static protected $numberPrecision = null;
+
 	// set to the parser that generated the current line when compiling
 	// so we know how to create error messages
 	protected $sourceParser = null;
@@ -663,9 +665,15 @@ class lessc {
 		case 'raw_color';
 		case 'keyword':
 			// [1] - the keyword
-		case 'number':
-			// [1] - the number
 			return $value[1];
+		case 'number':
+			list(, $num, $unit) = $value;
+			// [1] - the number
+			// [2] - the unit
+			if (!is_null(self::$numberPrecision)) {
+				$num = round($num, self::$numberPrecision);
+			}
+			return $num . $unit;
 		case 'string':
 			// [1] - contents of string (includes quotes)
 			list(, $delim, $content) = $value;
@@ -676,7 +684,7 @@ class lessc {
 			}
 			return $delim . implode($content) . $delim;
 		case 'color':
-			// [1] - red component (either number for a %)
+			// [1] - red component (either number or a %)
 			// [2] - green component
 			// [3] - blue component
 			// [4] - optional alpha component
@@ -704,12 +712,12 @@ class lessc {
 			list(, $name, $args) = $value;
 			return $name.'('.$this->compileValue($args).')';
 		default: // assumed to be unit
-			return $value[1].$value[0];
+			$this->throwError("unknown value type: $value[0]");
 		}
 	}
 
 	function lib_isnumber($value) {
-		return $this->toBool(is_numeric($value[1]) && $value[0] != "color");
+		return $this->toBool($value[0] == "number");
 	}
 
 	function lib_isstring($value) {
@@ -725,15 +733,15 @@ class lessc {
 	}
 
 	function lib_ispixel($value) {
-		return $this->toBool($value[0] == "px");
+		return $this->toBool($value[0] == "number" && $value[2] == "px");
 	}
 
 	function lib_ispercentage($value) {
-		return $this->toBool($value[0] == "%");
+		return $this->toBool($value[0] == "number" && $value[2] == "%");
 	}
 
 	function lib_isem($value) {
-		return $this->toBool($value[0] == "em");
+		return $this->toBool($value[0] == "number" && $value[2] == "em");
 	}
 
 	function lib_rgbahex($color) {
@@ -793,15 +801,18 @@ class lessc {
 	}
 
 	function lib_floor($arg) {
-		return array($arg[0], floor($arg[1]));
+		$value = $this->assertNumber($arg);
+		return array("number", floor($value), $arg[2]);
 	}
 
 	function lib_ceil($arg) {
-		return array($arg[0], ceil($arg[1]));
+		$value = $this->assertNumber($arg);
+		return array("number", ceil($value), $arg[2]);
 	}
 
 	function lib_round($arg) {
-		return array($arg[0], round($arg[1]));
+		$value = $this->assertNumber($arg);
+		return array("number", round($value), $arg[2]);
 	}
 
 	/**
@@ -903,8 +914,9 @@ class lessc {
 		return $color;
 	}
 
-	function lib_percentage($number) {
-		return array('%', $number[1]*100);
+	function lib_percentage($arg) {
+		$num = $this->assertNumber($arg);
+		return array("number", $num*100, "%");
 	}
 
 	// mixes two colors by weight
@@ -945,6 +957,11 @@ class lessc {
 		$color = $this->coerceColor($value);
 		if (is_null($color)) $this->throwError($error);
 		return $color;
+	}
+
+	protected function assertNumber($value, $error = "expecting number") {
+		if ($value[0] == "number") return $value[1];
+		$this->throwError($error);
 	}
 
 	function toHSL($color) {
@@ -1061,11 +1078,17 @@ class lessc {
 			foreach	($rawComponents as $c) {
 				$c = $this->reduce($c);
 				if ($i < 4) {
-					if ($c[0] == '%') $components[] = 255 * ($c[1] / 100);
-					else $components[] = floatval($c[1]);
+					if ($c[0] == "number" && $c[2] == "%") {
+						$components[] = 255 * ($c[1] / 100);
+					} else {
+						$components[] = floatval($c[1]);
+					}
 				} elseif ($i == 4) {
-					if ($c[0] == '%') $components[] = 1.0 * ($c[1] / 100);
-					else $components[] = floatval($c[1]);
+					if ($c[0] == "number" && $c[2] == "%") {
+						$components[] = 1.0 * ($c[1] / 100);
+					} else {
+						$components[] = floatval($c[1]);
+					}
 				} else break;
 
 				$i++;
@@ -1103,9 +1126,7 @@ class lessc {
 			}
 			return $value;
 		case "expression":
-			return $this->evaluate($value[1], $value[2], $value[3]);
-		case "lookup":
-			return array("number", 0);
+			return $this->evaluate($value);
 		case "string":
 			foreach ($value[2] as &$part) {
 				if (is_array($part)) {
@@ -1134,7 +1155,7 @@ class lessc {
 				$ret = call_user_func($f, $this->reduce($args), $this);
 
 				// convert to a typed value if the result is a php primitive
-				if (is_numeric($ret)) $ret = array('number', $ret);
+				if (is_numeric($ret)) $ret = array('number', $ret, "");
 				elseif (!is_array($ret)) $ret = array('keyword', $ret);
 
 				return $ret;
@@ -1143,12 +1164,20 @@ class lessc {
 			// plain function, reduce args
 			$value[2] = $this->reduce($value[2]);
 			return $value;
-		case "negative":
-			$value = $this->reduce($value[1]);
-			if (is_numeric($value[1])) {
-				$value[1] = -1*$value[1];
+		case "unary":
+			list(, $op, $exp) = $value;
+			$exp = $this->reduce($exp);
+
+			if ($exp[0] == "number") {
+				switch ($op) {
+				case "+":
+					return $exp;
+				case "-":
+					$exp[1] *= -1;
+					return $exp;
+				}
 			}
-			return $value;
+			return array("string", "", array($op, $exp));
 		default:
 			return $value;
 		}
@@ -1200,7 +1229,9 @@ class lessc {
 	}
 
 	// evaluate an expression
-	function evaluate($op, $left, $right) {
+	function evaluate($exp) {
+		list(, $op, $left, $right, $whiteBefore, $whiteAfter) = $exp;
+
 		$left = $this->reduce($left);
 		$right = $this->reduce($right);
 
@@ -1212,6 +1243,10 @@ class lessc {
 			$right = $rightColor;
 		}
 
+		$ltype = $left[0];
+		$rtype = $right[0];
+
+		// operators that work on all types
 		if ($op == "and") {
 			return $this->toBool($left == self::$TRUE && $right == self::$TRUE);
 		}
@@ -1220,34 +1255,23 @@ class lessc {
 			return $this->toBool($this->eq($left, $right) );
 		}
 
-		if ($left[0] == 'color' && $right[0] == 'color') {
-			$out = $this->op_color_color($op, $left, $right);
-			return $out;
-		}
-
-		if ($left[0] == 'color') {
-			return $this->op_color_number($op, $left, $right);
-		}
-
-		if ($right[0] == 'color') {
-			return $this->op_number_color($op, $left, $right);
-		}
-
 		if ($op == "+" && !is_null($str = $this->stringConcatenate($left, $right))) {
 			return $str;
 		}
 
-		// TODO fix this up
-		if ($left[0] == 'keyword' || $right[0] == 'keyword' ||
-			$left[0] == 'string' || $right[0] == 'string')
-		{
-			// look for negative op
-			if ($op == '-') $right[1] = '-'.$right[1];
-			return array('keyword', $this->compileValue($left) .' '. $this->compileValue($right));
+		// type based operators
+		$fname = "op_${ltype}_${rtype}";
+		if (is_callable(array($this, $fname))) {
+			$out = $this->$fname($op, $left, $right);
+			if (!is_null($out)) return $out;
 		}
 
-		// default to number operation
-		return $this->op_number_number($op, $left, $right);
+		// make the expression look it did before being parsed
+		$paddedOp = $op;
+		if ($whiteBefore) $paddedOp = " " . $paddedOp;
+		if ($whiteAfter) $paddedOp .= " ";
+
+		return array("string", "", array($left, $paddedOp, $right));
 	}
 
 	protected function stringConcatenate($left, $right) {
@@ -1260,9 +1284,6 @@ class lessc {
 		}
 
 		if ($strRight = $this->coerceString($right)) {
-			if ($left[0] == "string") {
-				$left[1] = "";
-			}
 			array_unshift($strRight[2], $left);
 			return $strRight;
 		}
@@ -1280,7 +1301,7 @@ class lessc {
 	}
 
 	function op_number_color($op, $lft, $rgt) {
-		if ($op == '+' || $op = '*') {
+		if ($op == '+' || $op == '*') {
 			return $this->op_color_number($op, $rgt, $lft);
 		}
 	}
@@ -1324,8 +1345,7 @@ class lessc {
 
 	// operator on two numbers
 	function op_number_number($op, $left, $right) {
-		$type = is_null($left) ? "number" : $left[0];
-		if ($type == "number") $type = $right[0];
+		$unit = empty($left[2]) ? $right[2] : $left[2];
 
 		$value = 0;
 		switch ($op) {
@@ -1357,7 +1377,7 @@ class lessc {
 			$this->throwError('parse error: unknown number operator: '.$op);
 		}
 
-		return array($type, $value);
+		return array("number", $value, $unit);
 	}
 
 
@@ -1779,23 +1799,10 @@ class lessc_parser {
 
 	// regex string to match any of the operators
 	static protected $operatorString;
-	static protected $numberString;
 
 	// these properties will supress division unless it's inside parenthases
 	static protected $supressDivisionProps =
 		array('/border-radius$/i', '/^font$/i');
-
-	/**
-	 * @link http://www.w3.org/TR/css3-values/
-	 */
-	static protected $units = array(
-		'em', 'ex', 'px', 'gd', 'rem', 'vw', 'vh', 'vm', 'ch', // Relative length units
-		'in', 'cm', 'mm', 'pt', 'pc', // Absolute length units
-		'%', // Percentages
-		'deg', 'grad', 'rad', 'turn', // Angles
-		'ms', 's', // Times
-		'Hz', 'kHz', //Frequencies
-	);
 
 	protected $blockDirectives = array("font-face", "keyframes", "page");
 	protected $lineDirectives = array("charset");
@@ -1823,12 +1830,6 @@ class lessc_parser {
 				'('.implode('|', array_map(array('lessc', 'preg_quote'),
 					array_keys(self::$precedence))).')';
 		}
-
-		if (!self::$numberString) {
-			self::$numberString =
-				'(-?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?))('.implode('|', self::$units).')?';
-		}
-
 	}
 
 	function parse($buffer) {
@@ -2094,33 +2095,24 @@ class lessc_parser {
 	 * @link http://en.wikipedia.org/wiki/Operator-precedence_parser#Pseudo-code
 	 */
 	protected function expression(&$out) {
-		$s = $this->seek();
-		if ($this->literal('(') && ($this->inParens = true) && $this->expression($exp) && $this->literal(')')) {
-			$lhs = $exp;
-		} elseif ($this->seek($s) && $this->value($val)) {
-			$lhs = $val;
-		} else {
-			$this->inParens = false;
-			$this->seek($s);
-			return false;
-		}
+		if ($this->value($lhs)) {
+			$out = $this->expHelper($lhs, 0);
 
-		$out = $this->expHelper($lhs, 0);
-
-		// look for / shorthand
-		if (!empty($this->env->supressedDivision)) {
-			unset($this->env->supressedDivision);
-			$s = $this->seek();
-			if ($this->literal("/") && $this->value($rhs)) {
-				$out = array("list", "",
-					array($out, array("keyword", "/"), $rhs));
-			} else {
-				$this->seek($s);
+			// look for / shorthand
+			if (!empty($this->env->supressedDivision)) {
+				unset($this->env->supressedDivision);
+				$s = $this->seek();
+				if ($this->literal("/") && $this->value($rhs)) {
+					$out = array("list", "",
+						array($out, array("keyword", "/"), $rhs));
+				} else {
+					$this->seek($s);
+				}
 			}
-		}
 
-		$this->inParens = false;
-		return true;
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -2130,53 +2122,44 @@ class lessc_parser {
 		$this->inExp = true;
 		$ss = $this->seek();
 
-		// if there was whitespace before the operator, then we require whitespace after
-		// the operator for it to be a mathematical operator.
+		while (true) {
+			$whiteBefore = isset($this->buffer[$this->count - 1]) &&
+				ctype_space($this->buffer[$this->count - 1]);
 
-		$needWhite = false;
-		if (!$this->inParens && preg_match('/\s/', $this->buffer{$this->count - 1})) {
-			$needWhite = true;
-		}
+			// If there is whitespace before the operator, then we require
+			// whitespace after the operator for it to be an expression
+			$needWhite = $whiteBefore && !$this->inParens;
 
-		// try to find a valid operator
-		while ($this->match(self::$operatorString.($needWhite ? '\s' : ''), $m) && self::$precedence[$m[1]] >= $minP) {
-			if (!$this->inParens && isset($this->env->currentProperty) && $m[1] == "/" && empty($this->env->supressedDivision)) {
-				foreach (self::$supressDivisionProps as $pattern) {
-					if (preg_match($pattern, $this->env->currentProperty)) {
-						$this->env->supressedDivision = true;
-						break 2;
+			if ($this->match(self::$operatorString.($needWhite ? '\s' : ''), $m) && self::$precedence[$m[1]] >= $minP) {
+				if (!$this->inParens && isset($this->env->currentProperty) && $m[1] == "/" && empty($this->env->supressedDivision)) {
+					foreach (self::$supressDivisionProps as $pattern) {
+						if (preg_match($pattern, $this->env->currentProperty)) {
+							$this->env->supressedDivision = true;
+							break 2;
+						}
 					}
 				}
-			}
 
-			// get rhs
-			$s = $this->seek();
-			$p = $this->inParens;
-			if ($this->literal('(') && ($this->inParens = true) && $this->expression($exp) && $this->literal(')')) {
-				$this->inParens = $p;
-				$rhs = $exp;
-			} else {
-				$this->inParens = $p;
-				if ($this->seek($s) && $this->value($val)) {
-					$rhs = $val;
-				} else {
-					break;
+
+				$whiteAfter = isset($this->buffer[$this->count - 1]) &&
+					ctype_space($this->buffer[$this->count - 1]);
+
+				if (!$this->value($rhs)) break;
+
+				// peek for next operator to see what to do with rhs
+				if ($this->peek(self::$operatorString, $next) && self::$precedence[$next[1]] > self::$precedence[$m[1]]) {
+					$rhs = $this->expHelper($rhs, self::$precedence[$next[1]]);
 				}
+
+				$lhs = array('expression', $m[1], $lhs, $rhs, $whiteBefore, $whiteAfter);
+				$ss = $this->seek();
+
+				continue;
 			}
 
-			// peek for next operator to see what to do with rhs
-			if ($this->peek(self::$operatorString, $next) && self::$precedence[$next[1]] > self::$precedence[$m[1]]) {
-				$rhs = $this->expHelper($rhs, self::$precedence[$next[1]]);
-			}
-
-			$lhs = array('expression', $m[1], $lhs, $rhs);
-			$ss = $this->seek();
-
-			$needWhite = false;
-			if (!$this->inParens && preg_match('/\s/', $this->buffer{$this->count - 1})) {
-				$needWhite = true;
-			}
+			break;
 		}
+
 		$this->seek($ss);
 
 		return $lhs;
@@ -2205,42 +2188,47 @@ class lessc_parser {
 		return true;
 	}
 
+	protected function parenValue(&$out) {
+		$s = $this->seek();
+
+		$inParens = $this->inParens;
+		if ($this->literal("(") &&
+			($this->inParens = true) && $this->expression($exp) &&
+			$this->literal(")"))
+		{
+			$out = $exp;
+			$this->inParens = $inParens;
+			return true;
+		} else {
+			$this->inParens = $inParens;
+			$this->seek($s);
+		}
+
+		return false;
+	}
+
 	// a single value
 	protected function value(&$value) {
-		// try a unit
-		if ($this->unit($value)) return true;
-
-		// see if there is a negation
 		$s = $this->seek();
-		if ($this->literal('-', false)) {
-			$value = null;
-			if ($this->variable($var)) {
-				$value = array('variable', $var);
-			} elseif ($this->buffer{$this->count} == "(" && $this->expression($exp)) {
-				$value = $exp;
-			} else {
-				$this->seek($s);
-			}
 
-			if (!is_null($value)) {
-				$value = array('negative', $value);
-				return true;
-			}
+		// negation
+		if ($this->literal("-", false) &&
+			(($this->variable($inner) && $inner = array("variable", $inner)) ||
+			$this->unit($inner) ||
+			$this->parenValue($inner)))
+		{
+			$value = array("unary", "-", $inner);
+			return true;
 		} else {
 			$this->seek($s);
 		}
 
-		// color
+		if ($this->parenValue($value)) return true;
+		if ($this->unit($value)) return true;
 		if ($this->color($value)) return true;
-
-		// css function
-		// must be done after color
 		if ($this->func($value)) return true;
-
-		// string
 		if ($this->string($value)) return true;
 
-		// try a keyword
 		if ($this->keyword($word)) {
 			$value = array('keyword', $word);
 			return true;
@@ -2252,7 +2240,7 @@ class lessc_parser {
 			return true;
 		}
 
-		// unquote string
+		// unquote string (should this work on any type?
 		if ($this->literal("~") && $this->string($str)) {
 			$value = array("escape", $str);
 			return true;
@@ -2499,18 +2487,11 @@ class lessc_parser {
 		return false;
 	}
 
-	/**
-	 * Consume a number and optionally a unit.
-	 * Can also consume a font shorthand if it is a simple case.
-	 * $allowed restricts the types that are matched.
-	 */
 	protected function unit(&$unit) {
-		if ($this->match(self::$numberString, $m)) {
-			if (!isset($m[2])) $m[2] = 'number';
-			$unit = array($m[2], $m[1]);
+		if ($this->match('([0-9]+(?:\.[0-9]*)?|\.[0-9]+)([%a-zA-Z]+)?', $m)) {
+			$unit = array("number", $m[1], empty($m[2]) ? "" : $m[2]);
 			return true;
 		}
-
 		return false;
 	}
 
@@ -2676,11 +2657,7 @@ class lessc_parser {
 				while ($this->tagBracket($brack)) $tag .= $brack;
 				continue;
 			} elseif ($this->unit($unit)) { // for keyframes
-				if ($unit[0] == "number") {
-					$tag .= $unit[1];
-				} else {
-					$tag .= $unit[1] . $unit[0];
-				}
+				$tag .= $unit[1] . $unit[2];
 				continue;
 			}
 			break;
