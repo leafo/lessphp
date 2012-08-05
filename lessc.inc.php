@@ -915,9 +915,10 @@ class lessc {
 
 	// get the alpha of a color
 	// defaults to 1 for non-colors or colors without an alpha
-	protected function lib_alpha($color) {
-		$color = $this->assertColor($color);
-		return isset($color[4]) ? $color[4] : 1;
+	protected function lib_alpha($value) {
+		if (!is_null($color = $this->coerceColor($value))) {
+			return isset($color[4]) ? $color[4] : 1;
+		}
 	}
 
 	// set the alpha of the color
@@ -1166,6 +1167,12 @@ class lessc {
 					$args = self::compressList($args[2], $args[1]);
 
 				$ret = call_user_func($f, $this->reduce($args), $this);
+
+				if (is_null($ret)) {
+					return array("string", "", array(
+						$name, "(", $args, ")"
+					));
+				}
 
 				// convert to a typed value if the result is a php primitive
 				if (is_numeric($ret)) $ret = array('number', $ret, "");
@@ -2534,8 +2541,12 @@ class lessc_parser {
 
 	// a # color
 	protected function color(&$out) {
-		if ($this->match('(#(?:[0-9a-f]{6}|[0-9a-f]{3}))', $m)) {
-			$out = array("raw_color", $m[1]);
+		if ($this->match('(#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3}))', $m)) {
+			if (strlen($m[1]) > 7) {
+				$out = array("string", "", array($m[1]));
+			} else {
+				$out = array("raw_color", $m[1]);
+			}
 			return true;
 		}
 
@@ -2721,7 +2732,7 @@ class lessc_parser {
 				$ss = $this->seek();
 				// this ugly nonsense is for ie filter properties
 				if ($this->keyword($name) && $this->literal('=') && $this->expressionList($value)) {
-					$args[] = array('list', '=', array(array('keyword', $name), $value));
+					$args[] = array("string", "", array($name, "=", $value));
 				} else {
 					$this->seek($ss);
 					if ($this->expressionList($value)) {
