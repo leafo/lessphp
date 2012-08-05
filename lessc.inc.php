@@ -100,7 +100,6 @@ class lessc {
 
 				$parser = new lessc_parser($this, $realPath);
 				$root = $parser->parse(file_get_contents($realPath));
-				$root->isRoot = false;
 				$root->parent = $parentBlock;
 
 				// handle all the imports in the new file
@@ -264,7 +263,7 @@ class lessc {
 	}
 
 	protected function compileProps($block, $out) {
-		// $this->mixImports($block); // TODO: bring me back
+		$this->mixImports($block);
 		foreach ($this->sortProps($block->props) as $prop) {
 			$this->compileProp($prop, $block, $out);
 		}
