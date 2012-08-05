@@ -189,23 +189,7 @@ class lessc {
 		default:
 			$this->throwError("unknown block type: $block->type\n");
 		}
-
-		// kill
-		// TODO: just a reminder of the different kinds of special blocks
-		// // override tags if it's a special block
-		// if (isset($block->media)) {
-		// 	$tags = $this->compileMedia($block);
-		// } elseif (isset($block->keyframes)) {
-		// 	$tags = $block->tags[0]." ".
-		// 		$this->compileValue($this->reduce($block->keyframes));
-		// } elseif ($special_block) { // font-face and the like
-		// 	$tags = $block->tags[0];
-		// }
-
-		// return $this->formatter->block($tags, $special_block, $lines,
-		// 	$blocks, $this->indentLevel);
 	}
-
 
 	protected function compileCSSBlock($block) {
 		$env = $this->pushEnv();
@@ -224,6 +208,7 @@ class lessc {
 	protected function compileMedia($media) {
 		$env = $this->pushEnv($media);
 		$parentScope = $this->mediaParent($this->scope);
+
 		$query = $this->compileMediaQuery($this->multiplyMedia($env));
 
 		$this->scope = $this->makeOutputBlock($media->type, array($query));
@@ -232,10 +217,13 @@ class lessc {
 		$this->compileProps($media, $this->scope);
 
 		if (count($this->scope->lines) > 0) {
-			$orphan = $this->makeOutputBlock(null, $this->findClosestSelectors());
-			$orphan->lines = $this->scope->lines;
-			array_unshift($this->scope->children, $orphan);
-			$this->scope->lines = array();
+			$orphanSelelectors = $this->findClosestSelectors();
+			if (!is_null($orphanSelelectors)) {
+				$orphan = $this->makeOutputBlock(null, $orphanSelelectors);
+				$orphan->lines = $this->scope->lines;
+				array_unshift($this->scope->children, $orphan);
+				$this->scope->lines = array();
+			}
 		}
 
 		$this->scope = $this->scope->parent;
@@ -294,50 +282,63 @@ class lessc {
 		return array_merge($vars, $other);
 	}
 
-	protected function compileMediaQuery($query) {
-		$parts = array();
-		foreach ($query as $q) {
-			switch ($q[0]) {
-			case "mediaType":
-				$parts[] = implode(" ", array_slice($q, 1));
-				break;
-			case "mediaExp":
-				if (isset($q[2])) {
-					$parts[] = "($q[1]: " . $this->compileValue($q[2]) . ")";
-				} else {
-					$parts[] = "($q[1])";
+	protected function compileMediaQuery($queries) {
+		$compiledQueries = array();
+		foreach ($queries as $query) {
+			$parts = array();
+			foreach ($query as $q) {
+				switch ($q[0]) {
+				case "mediaType":
+					$parts[] = implode(" ", array_slice($q, 1));
+					break;
+				case "mediaExp":
+					if (isset($q[2])) {
+						$parts[] = "($q[1]: " .
+							$this->compileValue($this->reduce($q[2])) . ")";
+					} else {
+						$parts[] = "($q[1])";
+					}
+					break;
 				}
-				break;
+			}
+
+			if (count($parts) > 0) {
+				$compiledQueries[] =  implode(" and ", $parts);
 			}
 		}
 
 		$out = "@media";
 		if (!empty($parts)) {
-			$out = $out . " " . implode(" and ", $parts);
+			$out = $out . " " . implode(", ", $compiledQueries);
 		}
 		return $out;
 	}
 
-	protected function multiplyMedia($env, $childMedia = null) {
+	protected function multiplyMedia($env, $childQueries = null) {
 		if (is_null($env) ||
 			!empty($env->block->type) && $env->block->type != "media")
 		{
-			return $childMedia;
+			return $childQueries;
 		}
 
 		// plain old block, skip
 		if (empty($env->block->type)) {
-			return $this->multiplyMedia($env->parent, $childMedia);
+			return $this->multiplyMedia($env->parent, $childQueries);
 		}
 
-		$query = $env->block->query;
-		if ($childMedia == null) {
-			$childMedia = $query;
+		$out = array();
+		$queries = $env->block->queries;
+		if (is_null($childQueries)) {
+			$out = $queries;
 		} else {
-			$childMedia = array_merge($query, $childMedia);
+			foreach ($queries as $parent) {
+				foreach ($childQueries as $child) {
+					$out[] = array_merge($parent, $child);
+				}
+			}
 		}
 
-		return $this->multiplyMedia($env->parent, $childMedia);
+		return $this->multiplyMedia($env->parent, $out);
 	}
 
 	function expandParentSelectors(&$tag, $replace) {
@@ -2002,9 +2003,11 @@ class lessc_parser {
 
 			// media
 			if ($this->literal('@media')) {
-				if ($this->mediaQuery($mediaQuery) && $this->literal('{')) {
+				if (($this->mediaQueryList($mediaQueries) || true)
+					&& $this->literal('{'))
+				{
 					$media = $this->pushSpecialBlock("media");
-					$media->query = $mediaQuery;
+					$media->queries = is_null($mediaQueries) ? array() : $mediaQueries;
 					return true;
 				} else {
 					$this->seek($s);
@@ -2417,6 +2420,14 @@ class lessc_parser {
 		return false;
 	}
 
+	protected function mediaQueryList(&$out) {
+		if ($this->genericList($list, "mediaQuery", ",", false)) {
+			$out = $list[2];
+			return true;
+		}
+		return false;
+	}
+
 	protected function mediaQuery(&$out) {
 		$s = $this->seek();
 
@@ -2439,6 +2450,11 @@ class lessc_parser {
 		} else {
 			$this->genericList($expressions, "mediaExpression", "and", false);
 			if (is_array($expressions)) $parts = array_merge($parts, $expressions[2]);
+		}
+
+		if (count($parts) == 0) {
+			$this->seek($s);
+			return false;
 		}
 
 		$out = $parts;
