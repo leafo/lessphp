@@ -1,7 +1,7 @@
 <?php
 
 /**
- * lessphp v0.3.5
+ * lessphp v0.3.6
  * http://leafo.net/lessphp
  *
  * LESS css compiler, adapted from http://lesscss.org
@@ -14,19 +14,28 @@
 /**
  * The less compiler and parser.
  *
- * Converting LESS to CSS is a two stage process. The incoming file is parsed
- * by `lessc_parser` into a tree, then compiled to CSS text by `lessc`. The
- * compile step has an implicit step called reduction, where values are brought
- * to their lowest form before being turned to text, eg. mathematical equations
- * are solved, and variables are dereferenced.
+ * Converting LESS to CSS is a three stage process. The incoming file is parsed
+ * by `lessc_parser` into a syntax tree, then it is compiled into another tree
+ * representing the CSS structure by `lessc`. The CSS tree is fed into a
+ * formatter, like `lessc_formatter` which then outputs CSS as a string.
  *
- * The `lessc` class creates an intstance of the parser, feeds it LESS code, then
- * compiles the resulting tree to CSS
+ * During the first compile, all values are *reduced*, which means that their
+ * types are brought to the lowest form before being dump as strings. This
+ * handles math equations, variable dereferences, and the like.
+ *
+ * The `parse` function of `lessc` is the entry point.
+ *
+ * In summary:
+ *
+ * The `lessc` class creates an intstance of the parser, feeds it LESS code,
+ * then transforms the resulting tree to a CSS tree. This class also holds the
+ * evaluation context, such as all available mixins and variables at any given
+ * time.
  *
  * The `lessc_parser` class is only concerned with parsing its input.
  *
- * The `lessc_formatter` classes are used to format the output of the CSS,
- * controlling things like whitespace and line-breaks.
+ * The `lessc_formatter` takes a CSS tree, and dumps it to a formatted string,
+ * handling things like indentation.
  */
 class lessc {
 	static public $VERSION = "v0.3.6";
@@ -52,7 +61,7 @@ class lessc {
 	static public $defaultValue = array("keyword", "");
 
 	// attempts to find the path of an import url, returns null for css files
-	function findImport($url) {
+	protected function findImport($url) {
 		foreach ((array)$this->importDir as $dir) {
 			$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
 			if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
@@ -63,22 +72,22 @@ class lessc {
 		return null;
 	}
 
-	function fileExists($name) {
+	protected function fileExists($name) {
 		return is_file($name);
 	}
 
-	static function compressList($items, $delim) {
+	static public function compressList($items, $delim) {
 		if (count($items) == 1) return $items[0];
 		else return array('list', $delim, $items);
 	}
 
-	static function preg_quote($what) {
+	static public function preg_quote($what) {
 		return preg_quote($what, '/');
 	}
 
 	// attempt to import $import into $parentBlock
 	// $props is the property array that will given to $parentBlock at the end
-	function mixImport($import, $parentBlock, &$props) {
+	protected function mixImport($import, $parentBlock, &$props) {
 		list(, $url, $media) = $import;
 
 		if (is_array($url)) {
@@ -126,7 +135,7 @@ class lessc {
 	}
 
 	// import all imports mentioned in the block
-	function mixImports($block, $importDir = null) {
+	protected function mixImports($block, $importDir = null) {
 		$oldImport = $this->importDir;
 		if (!is_null($importDir)) {
 			$this->importDir = array_merge((array)$importDir, (array)$this->importDir);
@@ -147,9 +156,8 @@ class lessc {
 
 	/**
 	 * Recursively compiles a block.
-	 * @param $block the block
 	 *
-	 * A block is analogous to a CSS block in most cases. A single less document
+	 * A block is analogous to a CSS block in most cases. A single LESS document
 	 * is encapsulated in a block when parsed, but it does not have parent tags
 	 * so all of it's children appear on the root level when compiled.
 	 *
@@ -159,6 +167,7 @@ class lessc {
 	 * to be taken, eg. write a property, set a variable, mixin a block.
 	 *
 	 * The children of a block are just all the blocks that are defined within.
+	 * This is used to look up mixins when performing a mixin.
 	 *
 	 * Compiling the block involves pushing a fresh environment on the stack,
 	 * and iterating through the props, compiling each one.
@@ -166,7 +175,7 @@ class lessc {
 	 * See lessc::compileProp()
 	 *
 	 */
-	function compileBlock($block) {
+	protected function compileBlock($block) {
 		switch ($block->type) {
 		case "root":
 			return $this->compileRoot($block);
@@ -261,7 +270,7 @@ class lessc {
 		}
 	}
 
-	function sortProps($props) {
+	protected function sortProps($props) {
 		$vars = array();
 		$other = array();
 
@@ -337,7 +346,7 @@ class lessc {
 		return $this->multiplyMedia($env->parent, $out);
 	}
 
-	function expandParentSelectors(&$tag, $replace) {
+	protected function expandParentSelectors(&$tag, $replace) {
 		$parts = explode("$&$", $tag);
 		$count = 0;
 		foreach ($parts as &$part) {
@@ -348,7 +357,7 @@ class lessc {
 		return $count;
 	}
 
-	function findClosestSelectors() {
+	protected function findClosestSelectors() {
 		$env = $this->env;
 		$selectors = null;
 		while (!is_null($env)) {
@@ -364,7 +373,7 @@ class lessc {
 
 
 	// multiply $selectors against the nearest selectors in env
-	function multiplySelectors($selectors) {
+	protected function multiplySelectors($selectors) {
 		// find parent selectors
 
 		$parentSelectors = $this->findClosestSelectors();
@@ -395,7 +404,7 @@ class lessc {
 	}
 
 	// reduces selector expressions
-	function compileSelectors($selectors) {
+	protected function compileSelectors($selectors) {
 		$out = array();
 
 		foreach ($selectors as $s) {
@@ -410,11 +419,11 @@ class lessc {
 		return $out;
 	}
 
-	function eq($left, $right) {
+	protected function eq($left, $right) {
 		return $left == $right;
 	}
 
-	function patternMatch($block, $callingArgs) {
+	protected function patternMatch($block, $callingArgs) {
 		// match the guards if it has them
 		// any one of the groups must have all its guards pass for a match
 		if (!empty($block->guards)) {
@@ -487,7 +496,7 @@ class lessc {
 		}
 	}
 
-	function patternMatchAll($blocks, $callingArgs) {
+	protected function patternMatchAll($blocks, $callingArgs) {
 		$matches = null;
 		foreach ($blocks as $block) {
 			if ($this->patternMatch($block, $callingArgs)) {
@@ -499,7 +508,7 @@ class lessc {
 	}
 
 	// attempt to find blocks matched by path and args
-	function findBlocks($searchIn, $path, $args, $seen=array()) {
+	protected function findBlocks($searchIn, $path, $args, $seen=array()) {
 		if ($searchIn == null) return null;
 		if (isset($seen[$searchIn->id])) return null;
 		$seen[$searchIn->id] = true;
@@ -527,7 +536,7 @@ class lessc {
 
 	// sets all argument names in $args to either the default value
 	// or the one passed in through $values
-	function zipSetArgs($args, $values) {
+	protected function zipSetArgs($args, $values) {
 		$i = 0;
 		$assignedValues = array();
 		foreach ($args as $a) {
@@ -556,7 +565,7 @@ class lessc {
 	}
 
 	// compile a prop and update $lines or $blocks appropriately
-	function compileProp($prop, $block, $out) {
+	protected function compileProp($prop, $block, $out) {
 		// set error position context
 		if (isset($prop[-1])) {
 			if (is_array($prop[-1])) {
@@ -656,7 +665,7 @@ class lessc {
 	 * The input is expected to be reduced. This function will not work on
 	 * things like expressions and variables.
 	 */
-	function compileValue($value) {
+	protected function compileValue($value) {
 		switch ($value[0]) {
 		case 'list':
 			// [1] - delimiter
@@ -716,35 +725,35 @@ class lessc {
 		}
 	}
 
-	function lib_isnumber($value) {
+	protected function lib_isnumber($value) {
 		return $this->toBool($value[0] == "number");
 	}
 
-	function lib_isstring($value) {
+	protected function lib_isstring($value) {
 		return $this->toBool($value[0] == "string");
 	}
 
-	function lib_iscolor($value) {
+	protected function lib_iscolor($value) {
 		return $this->toBool($this->coerceColor($value));
 	}
 
-	function lib_iskeyword($value) {
+	protected function lib_iskeyword($value) {
 		return $this->toBool($value[0] == "keyword");
 	}
 
-	function lib_ispixel($value) {
+	protected function lib_ispixel($value) {
 		return $this->toBool($value[0] == "number" && $value[2] == "px");
 	}
 
-	function lib_ispercentage($value) {
+	protected function lib_ispercentage($value) {
 		return $this->toBool($value[0] == "number" && $value[2] == "%");
 	}
 
-	function lib_isem($value) {
+	protected function lib_isem($value) {
 		return $this->toBool($value[0] == "number" && $value[2] == "em");
 	}
 
-	function lib_rgbahex($color) {
+	protected function lib_rgbahex($color) {
 		$color = $this->coerceColor($color);
 		if (is_null($color))
 			$this->throwError("color expected for rgbahex");
@@ -754,12 +763,12 @@ class lessc {
 			$color[1],$color[2], $color[3]);
 	}
 
-	function lib_argb($color){
+	protected function lib_argb($color){
 		return $this->lib_rgbahex($color);
 	}
 
 	// utility func to unquote a string
-	function lib_e($arg) {
+	protected function lib_e($arg) {
 		switch ($arg[0]) {
 			case "list":
 				$items = $arg[2];
@@ -777,7 +786,7 @@ class lessc {
 		}
 	}
 
-	function lib__sprintf($args) {
+	protected function lib__sprintf($args) {
 		if ($args[0] != "list") return $args;
 		$values = $args[2];
 		$string = array_shift($values);
@@ -800,17 +809,17 @@ class lessc {
 		return array("string", $d, array($template));
 	}
 
-	function lib_floor($arg) {
+	protected function lib_floor($arg) {
 		$value = $this->assertNumber($arg);
 		return array("number", floor($value), $arg[2]);
 	}
 
-	function lib_ceil($arg) {
+	protected function lib_ceil($arg) {
 		$value = $this->assertNumber($arg);
 		return array("number", ceil($value), $arg[2]);
 	}
 
-	function lib_round($arg) {
+	protected function lib_round($arg) {
 		$value = $this->assertNumber($arg);
 		return array("number", round($value), $arg[2]);
 	}
@@ -819,7 +828,7 @@ class lessc {
 	 * Helper function to get arguments for color manipulation functions.
 	 * takes a list that contains a color like thing and a percentage
 	 */
-	function colorArgs($args) {
+	protected function colorArgs($args) {
 		if ($args[0] != 'list' || count($args[2]) < 2) {
 			return array(array('color', 0, 0, 0), 0);
 		}
@@ -830,7 +839,7 @@ class lessc {
 		return array($color, $delta);
 	}
 
-	function lib_darken($args) {
+	protected function lib_darken($args) {
 		list($color, $delta) = $this->colorArgs($args);
 
 		$hsl = $this->toHSL($color);
@@ -838,7 +847,7 @@ class lessc {
 		return $this->toRGB($hsl);
 	}
 
-	function lib_lighten($args) {
+	protected function lib_lighten($args) {
 		list($color, $delta) = $this->colorArgs($args);
 
 		$hsl = $this->toHSL($color);
@@ -846,7 +855,7 @@ class lessc {
 		return $this->toRGB($hsl);
 	}
 
-	function lib_saturate($args) {
+	protected function lib_saturate($args) {
 		list($color, $delta) = $this->colorArgs($args);
 
 		$hsl = $this->toHSL($color);
@@ -854,7 +863,7 @@ class lessc {
 		return $this->toRGB($hsl);
 	}
 
-	function lib_desaturate($args) {
+	protected function lib_desaturate($args) {
 		list($color, $delta) = $this->colorArgs($args);
 
 		$hsl = $this->toHSL($color);
@@ -862,7 +871,7 @@ class lessc {
 		return $this->toRGB($hsl);
 	}
 
-	function lib_spin($args) {
+	protected function lib_spin($args) {
 		list($color, $delta) = $this->colorArgs($args);
 
 		$hsl = $this->toHSL($color);
@@ -873,48 +882,48 @@ class lessc {
 		return $this->toRGB($hsl);
 	}
 
-	function lib_fadeout($args) {
+	protected function lib_fadeout($args) {
 		list($color, $delta) = $this->colorArgs($args);
 		$color[4] = $this->clamp((isset($color[4]) ? $color[4] : 1) - $delta/100);
 		return $color;
 	}
 
-	function lib_fadein($args) {
+	protected function lib_fadein($args) {
 		list($color, $delta) = $this->colorArgs($args);
 		$color[4] = $this->clamp((isset($color[4]) ? $color[4] : 1) + $delta/100);
 		return $color;
 	}
 
-	function lib_hue($color) {
+	protected function lib_hue($color) {
 		$hsl = $this->toHSL($this->assertColor($color));
 		return round($hsl[1]);
 	}
 
-	function lib_saturation($color) {
+	protected function lib_saturation($color) {
 		$hsl = $this->toHSL($this->assertColor($color));
 		return round($hsl[2]);
 	}
 
-	function lib_lightness($color) {
+	protected function lib_lightness($color) {
 		$hsl = $this->toHSL($this->assertColor($color));
 		return round($hsl[3]);
 	}
 
 	// get the alpha of a color
 	// defaults to 1 for non-colors or colors without an alpha
-	function lib_alpha($color) {
+	protected function lib_alpha($color) {
 		$color = $this->assertColor($color);
 		return isset($color[4]) ? $color[4] : 1;
 	}
 
 	// set the alpha of the color
-	function lib_fade($args) {
+	protected function lib_fade($args) {
 		list($color, $alpha) = $this->colorArgs($args);
 		$color[4] = $this->clamp($alpha / 100.0);
 		return $color;
 	}
 
-	function lib_percentage($arg) {
+	protected function lib_percentage($arg) {
 		$num = $this->assertNumber($arg);
 		return array("number", $num*100, "%");
 	}
@@ -922,7 +931,7 @@ class lessc {
 	// mixes two colors by weight
 	// mix(@color1, @color2, @weight);
 	// http://sass-lang.com/docs/yardoc/Sass/Script/Functions.html#mix-instance_method
-	function lib_mix($args) {
+	protected function lib_mix($args) {
 		if ($args[0] != "list" || count($args[2]) < 3)
 			$this->throwError("mix expects (color1, color2, weight)");
 
@@ -953,7 +962,7 @@ class lessc {
 		return $this->fixColor($new);
 	}
 
-	function assertColor($value, $error = "expected color value") {
+	protected function assertColor($value, $error = "expected color value") {
 		$color = $this->coerceColor($value);
 		if (is_null($color)) $this->throwError($error);
 		return $color;
@@ -964,7 +973,7 @@ class lessc {
 		$this->throwError($error);
 	}
 
-	function toHSL($color) {
+	protected function toHSL($color) {
 		if ($color[0] == 'hsl') return $color;
 
 		$r = $color[1] / 255;
@@ -999,7 +1008,7 @@ class lessc {
 		return $out;
 	}
 
-	function toRGB_helper($comp, $temp1, $temp2) {
+	protected function toRGB_helper($comp, $temp1, $temp2) {
 		if ($comp < 0) $comp += 1.0;
 		elseif ($comp > 1) $comp -= 1.0;
 
@@ -1014,7 +1023,7 @@ class lessc {
 	 * Converts a hsl array into a color value in rgb.
 	 * Expects H to be in range of 0 to 360, S and L in 0 to 100
 	 */
-	function toRGB($color) {
+	protected function toRGB($color) {
 		if ($color == 'color') return $color;
 
 		$H = $color[1] / 360;
@@ -1041,7 +1050,7 @@ class lessc {
 		return $out;
 	}
 
-	function clamp($v, $max = 1, $min = 0) {
+	protected function clamp($v, $max = 1, $min = 0) {
 		return min($max, max($min, $v));
 	}
 
@@ -1049,7 +1058,7 @@ class lessc {
 	 * Convert the rgb, rgba, hsl color literals of function type
 	 * as returned by the parser into values of color type.
 	 */
-	function funcToColor($func) {
+	protected function funcToColor($func) {
 		$fname = $func[1];
 		if ($func[2][0] != 'list') return false; // need a list of arguments
 		$rawComponents = $func[2][2];
@@ -1185,7 +1194,7 @@ class lessc {
 
 
 	// coerce a value for use in color operation
-	function coerceColor($value) {
+	protected function coerceColor($value) {
 		switch($value[0]) {
 			case 'color': return $value;
 			case 'raw_color':
@@ -1223,13 +1232,13 @@ class lessc {
 		return null;
 	}
 
-	function toBool($a) {
+	protected function toBool($a) {
 		if ($a) return self::$TRUE;
 		else return self::$FALSE;
 	}
 
 	// evaluate an expression
-	function evaluate($exp) {
+	protected function evaluate($exp) {
 		list(, $op, $left, $right, $whiteBefore, $whiteAfter) = $exp;
 
 		$left = $this->reduce($left);
@@ -1291,7 +1300,7 @@ class lessc {
 
 
 	// make sure a color's components don't go out of bounds
-	function fixColor($c) {
+	protected function fixColor($c) {
 		foreach (range(1, 3) as $i) {
 			if ($c[$i] < 0) $c[$i] = 0;
 			if ($c[$i] > 255) $c[$i] = 255;
@@ -1300,20 +1309,20 @@ class lessc {
 		return $c;
 	}
 
-	function op_number_color($op, $lft, $rgt) {
+	protected function op_number_color($op, $lft, $rgt) {
 		if ($op == '+' || $op == '*') {
 			return $this->op_color_number($op, $rgt, $lft);
 		}
 	}
 
-	function op_color_number($op, $lft, $rgt) {
+	protected function op_color_number($op, $lft, $rgt) {
 		if ($rgt[0] == '%') $rgt[1] /= 100;
 
 		return $this->op_color_color($op, $lft,
 			array_fill(1, count($lft) - 1, $rgt[1]));
 	}
 
-	function op_color_color($op, $left, $right) {
+	protected function op_color_color($op, $left, $right) {
 		$out = array('color');
 		$max = count($left) > count($right) ? count($left) : count($right);
 		foreach (range(1, $max - 1) as $i) {
@@ -1344,7 +1353,7 @@ class lessc {
 	}
 
 	// operator on two numbers
-	function op_number_number($op, $left, $right) {
+	protected function op_number_number($op, $left, $right) {
 		$unit = empty($left[2]) ? $right[2] : $left[2];
 
 		$value = 0;
@@ -1383,7 +1392,7 @@ class lessc {
 
 	/* environment functions */
 
-	function makeOutputBlock($type, $selectors = null) {
+	protected function makeOutputBlock($type, $selectors = null) {
 		$b = new stdclass;
 		$b->lines = array();
 		$b->children = array();
@@ -1394,7 +1403,7 @@ class lessc {
 	}
 
 	// the state of execution
-	function pushEnv($block = null) {
+	protected function pushEnv($block = null) {
 		$e = new stdclass;
 		$e->parent = $this->env;
 		$e->store = array();
@@ -1405,20 +1414,20 @@ class lessc {
 	}
 
 	// pop something off the stack
-	function popEnv() {
+	protected function popEnv() {
 		$old = $this->env;
 		$this->env = $this->env->parent;
 		return $old;
 	}
 
 	// set something in the current env
-	function set($name, $value) {
+	protected function set($name, $value) {
 		$this->env->store[$name] = $value;
 	}
 
 
 	// get the highest occurrence entry for a name
-	function get($name, $default=null) {
+	protected function get($name, $default=null) {
 		$current = $this->env;
 
 		$isArguments = $name == $this->vPrefix . 'arguments';
@@ -1455,7 +1464,7 @@ class lessc {
 	}
 
 	// parse and compile buffer
-	function parse($str = null, $initialVariables = null) {
+	public function parse($str = null, $initialVariables = null) {
 		if (is_array($str)) {
 			$initialVariables = $str;
 			$str = null;
@@ -1493,11 +1502,11 @@ class lessc {
 		return $out;
 	}
 
-	function setFormatter($name) {
+	public function setFormatter($name) {
 		$this->formatterName = $name;
 	}
 
-	function newFormatter() {
+	protected function newFormatter() {
 		$className = "lessc_formatter";
 		if (!empty($this->formatterName)) {
 			if (!is_string($this->formatterName))
@@ -1511,7 +1520,7 @@ class lessc {
 	/**
 	 * Uses the current value of $this->count to show line and line number
 	 */
-	function throwError($msg = null) {
+	protected function throwError($msg = null) {
 		if ($this->sourceLoc >= 0) {
 			$this->sourceParser->throwError($msg, $this->sourceLoc);
 		}
@@ -1522,7 +1531,7 @@ class lessc {
 	 * Initialize any static state, can initialize parser for a file
 	 * $opts isn't used yet
 	 */
-	function __construct($fname = null, $opts = null) {
+	public function __construct($fname = null, $opts = null) {
 		if ($fname) {
 			if (!is_file($fname)) {
 				throw new Exception('load error: failed to find '.$fname);
@@ -1818,7 +1827,7 @@ class lessc_parser {
 	 */
 	protected $inParens = false;
 
-	function __construct($lessc, $sourceName = null) {
+	public function __construct($lessc, $sourceName = null) {
 		$this->eatWhiteDefault = true;
 		// reference to less needed for vPrefix, mPrefix, and parentSelector
 		$this->lessc = $lessc;
@@ -1832,7 +1841,7 @@ class lessc_parser {
 		}
 	}
 
-	function parse($buffer) {
+	public function parse($buffer) {
 		$this->count = 0;
 		$this->line = 1;
 
@@ -2594,7 +2603,7 @@ class lessc_parser {
 
 	// list of tags of specifying mixin path
 	// optionally separated by > (lazy, accepts extra >)
-	function mixinTags(&$tags) {
+	protected function mixinTags(&$tags) {
 		$s = $this->seek();
 		$tags = array();
 		while ($this->tag($tt, true)) {
@@ -2951,13 +2960,13 @@ class lessc_parser {
 	}
 
 	// append a property to the current block
-	function append($prop, $pos = null) {
+	protected function append($prop, $pos = null) {
 		if (!is_null($pos)) $prop[-1] = $pos;
 		$this->env->props[] = $prop;
 	}
 
 	// pop something off the stack
-	function pop() {
+	protected function pop() {
 		$old = $this->env;
 		$this->env = $this->env->parent;
 		return $old;
