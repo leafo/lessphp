@@ -802,6 +802,11 @@ class lessc {
 				$val = isset($values[$i]) ?
 					$this->reduce($values[$i]) : array('keyword', '');
 
+				// lessjs compat, renders fully expanded color, not raw color
+				if ($color = $this->coerceColor($val)) {
+					$val = $color;
+				}
+
 				$i++;
 				$rep = $this->compileValue($this->lib_e($val));
 				$template = preg_replace('/'.self::preg_quote($match).'/',
