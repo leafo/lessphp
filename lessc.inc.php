@@ -692,7 +692,7 @@ class lessc {
 
 			$h = sprintf("#%02x%02x%02x", $r, $g, $b);
 
-			if (!empty($this->formatter->compress_colors)) {
+			if (!empty($this->formatter->compressColors)) {
 				// Converting hex color to short notation (e.g. #003399 to #039)
 				if ($h[1] === $h[2] && $h[3] === $h[4] && $h[5] === $h[6]) {
 					$h = '#' . $h[1] . $h[3] . $h[5];
@@ -702,15 +702,8 @@ class lessc {
 			return $h;
 
 		case 'function':
-			// [1] - function name
-			// [2] - some array value representing arguments, either ['string', value] or ['list', ',', values[]]
-
-			// see if function evaluates to something else
-			$value = $this->reduce($value);
-			if ($value[0] == 'function') {
-				return $value[1].'('.$this->compileValue($value[2]).')';
-			}
-			else return $this->compileValue($value);
+			list(, $name, $args) = $value;
+			return $name.'('.$this->compileValue($args).')';
 		default: // assumed to be unit
 			return $value[1].$value[0];
 		}
@@ -812,20 +805,13 @@ class lessc {
 		return array($arg[0], round($arg[1]));
 	}
 
-	// is a string surrounded in quotes? returns the quoting char if true
-	function quoted($s) {
-		if (preg_match('/^("|\').*?\1$/', $s, $m))
-			return $m[1];
-		else return false;
-	}
-
 	/**
 	 * Helper function to get arguments for color manipulation functions.
 	 * takes a list that contains a color like thing and a percentage
 	 */
 	function colorArgs($args) {
 		if ($args[0] != 'list' || count($args[2]) < 2) {
-			return array(array('color', 0, 0, 0));
+			return array(array('color', 0, 0, 0), 0);
 		}
 		list($color, $delta) = $args[2];
 		$color = $this->assertColor($color);
@@ -1060,7 +1046,7 @@ class lessc {
 				$val = isset($val[1]) ? floatval($val[1]) : 0;
 
 				if ($i == 0) $clamp = 360;
-				elseif ($i < 4) $clamp = 100;
+				elseif ($i < 3) $clamp = 100;
 				else $clamp = 1;
 
 				$hsl[] = $this->clamp($val, $clamp);
@@ -1091,15 +1077,6 @@ class lessc {
 		}
 
 		return false;
-	}
-
-	function toName($val) {
-		switch($val[0]) {
-		case "string":
-			return substr($val[1], 1, -1);
-		default:
-			return $val[1];
-		}
 	}
 
 	protected function reduce($value) {
@@ -1442,15 +1419,6 @@ class lessc {
 		return $default;
 	}
 
-
-	// create a child parser (for compiling an import)
-	protected function createChild($fname) {
-		$less = new lessc($fname);
-		$less->importDir = array_merge((array)$less->importDir, (array)$this->importDir);
-		$less->formatter = $this->formatter;
-		return $less;
-	}
-
 	// inject array of unparsed strings into environment as variables
 	protected function injectVariables($args) {
 		$this->pushEnv();
@@ -1492,7 +1460,6 @@ class lessc {
 		$this->env = null;
 		$this->scope = null;
 		$this->allParsedFiles = array();
-		$this->indentLevel = -1;
 
 		$this->formatter = $this->newFormatter();
 
@@ -1846,6 +1813,7 @@ class lessc_parser {
 	protected $inParens = false;
 
 	function __construct($lessc, $sourceName = null) {
+		$this->eatWhiteDefault = true;
 		// reference to less needed for vPrefix, mPrefix, and parentSelector
 		$this->lessc = $lessc;
 
@@ -2263,15 +2231,6 @@ class lessc_parser {
 			$this->seek($s);
 		}
 
-		// accessor
-		// must be done before color
-		// this needs negation too
-		if ($this->accessor($a)) {
-			$a[1] = $this->fixTags($a[1]);
-			$value = $a;
-			return true;
-		}
-
 		// color
 		if ($this->color($value)) return true;
 
@@ -2398,37 +2357,6 @@ class lessc_parser {
 
 		$this->seek($s);
 		return false;
-	}
-
-
-	// a scoped value accessor
-	// .hello > @scope1 > @scope2['value'];
-	protected function accessor(&$var) {
-		$s = $this->seek();
-
-		if (!$this->tags($scope, true, '>') || !$this->literal('[')) {
-			$this->seek($s);
-			return false;
-		}
-
-		// either it is a variable or a property
-		// why is a property wrapped in quotes, who knows!
-		if ($this->variable($name)) {
-			// ~
-		} elseif ($this->literal("'") && $this->keyword($name) && $this->literal("'")) {
-			// .. $this->count is messed up if we wanted to test another access type
-		} else {
-			$this->seek($s);
-			return false;
-		}
-
-		if (!$this->literal(']')) {
-			$this->seek($s);
-			return false;
-		}
-
-		$var = array('lookup', $scope, $name);
-		return true;
 	}
 
 	// an unbounded string stopped by $end
@@ -3220,6 +3148,7 @@ class lessc_formatter_compressed extends lessc_formatter {
 	public $selectorSeparator = ",";
 	public $assignSeparator = ":";
 	public $break = "";
+	public $compressColors = true;
 
 	public function indentStr($n = 0) {
 		return "";

@@ -53,11 +53,15 @@ fade {
   f:rgba(255,255,255,0.2);
   f:rgba(34,23,64,0.5);
 }
-.mix { color:#808080; }
+.mix {
+  color:#808080;
+  color:rgba(6,3,2,-0.25);
+}
 .percent { per:50%; }
 .colorz {
   color:#ebebeb;
   color:#ff9100;
+  color:#000000;
 }
 body {
   start:#fcf8e3;
@@ -67,3 +71,12 @@ body {
 }
 pre { spin:#f2dee1; }
 dd { background-color:#f5f5f5; }
+.ops {
+  c:#4d0000;
+  c:#004000;
+  c:#020002;
+  c:#ffffff;
+  c:#fb8173;
+  c:#ff0000;
+  c:#ff0000;
+}

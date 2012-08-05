@@ -59,3 +59,7 @@
   x:40px;
   y:40em;
 }
+.cond {
+  y:false;
+  y:true;
+}

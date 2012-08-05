@@ -1,3 +1,4 @@
+@import url("not-found");
 @import url("something.css") media;
 @import url("something.css") media;
 @import url("something.css") media, screen, print;

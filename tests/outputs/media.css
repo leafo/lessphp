@@ -32,3 +32,10 @@
   div { color:red; }
   div pre { color:orange; }
 }
+@media yeah {
+  @page {
+    @media cool {
+      color:red;
+    }
+  }
+}

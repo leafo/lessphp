@@ -44,3 +44,7 @@ hello {
   numbers:-1.0s -0.1s -.1s -1.s;
   numbers:-1.0 -0.1 -.1 -1.;
 }
+#string {
+  hello:'what\'s going on here';
+  hello:'blah blag @{ blah blah';
+}
