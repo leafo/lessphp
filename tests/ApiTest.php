@@ -7,6 +7,78 @@ class ApiTest extends PHPUnit_Framework_TestCase {
 		$this->less = new lessc();
 	}
 
+	public function testPreserveComments() {
+		$input = <<<EOD
+// what is going on?
+
+/** what the heck **/
+
+/**
+
+Here is a block comment
+
+**/
+
+
+// this is a comment
+
+/*hello*/div /*yeah*/ { //surew
+	border: 1px solid red; // world
+	/* another property */
+	color: url('http://mage-page.com');
+	string: "hello /* this is not a comment */";
+	world: "// neither is this";
+	string: 'hello /* this is not a comment */' /*what if this is a comment */;
+	world: '// neither is this' // hell world;
+	;
+	what-ever: 100px;
+	background: url(/*this is not a comment?*/); // uhh what happens here
+}
+EOD;
+
+
+		$outputWithComments = <<<EOD
+/** what the heck **/
+/**
+
+Here is a block comment
+
+**/
+/*hello*/
+/*yeah*/
+div /*yeah*/ {
+  /* another property */
+  border:1px solid red;
+  color:url('http://mage-page.com');
+  string:"hello /* this is not a comment */";
+  world:"// neither is this";
+  /*what if this is a comment */
+  string:'hello /* this is not a comment */';
+  world:'// neither is this';
+  what-ever:100px;
+  /*this is not a comment?*/
+  background:url();
+}
+EOD;
+
+		$outputWithoutComments = <<<EOD
+div {
+  border:1px solid red;
+  color:url('http://mage-page.com');
+  string:"hello /* this is not a comment */";
+  world:"// neither is this";
+  string:'hello /* this is not a comment */';
+  world:'// neither is this';
+  what-ever:100px;
+  background:url(/*this is not a comment?*/);
+}
+EOD;
+
+		$this->assertEquals($this->compile($input), trim($outputWithoutComments));
+		$this->less->setPreserveComments(true);
+		$this->assertEquals($this->compile($input), trim($outputWithComments));
+	}
+
 	public function testOldInterface() {
 		$this->less = new lessc(__DIR__ . "/inputs/hi.less");
 		$out = $this->less->parse(array("hello" => "10px"));

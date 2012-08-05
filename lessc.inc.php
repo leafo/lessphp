@@ -43,6 +43,7 @@ class lessc {
 	static protected $FALSE = array("keyword", "false");
 
 	protected $libFunctions = array();
+	protected $preserveComments = false;
 
 	public $vPrefix = '@'; // prefix of abstract properties
 	public $mPrefix = '$'; // prefix of abstract blocks
@@ -647,6 +648,9 @@ class lessc {
 		case "directive":
 			list(, $name, $value) = $prop;
 			$out->lines[] = "@$name " . $this->compileValue($this->reduce($value)).';';
+			break;
+		case "comment":
+			$out->lines[] = $prop[1];
 			break;
 		default:
 			$this->throwError("unknown op: {$prop[0]}\n");
@@ -1483,6 +1487,8 @@ class lessc {
 		}
 
 		$this->parser = new lessc_parser($this, $name);
+		$this->parser->writeComments = $this->preserveComments;
+
 		$root = $this->parser->parse($str);
 
 		$this->env = null;
@@ -1515,6 +1521,10 @@ class lessc {
 		}
 
 		return new $className;
+	}
+
+	public function setPreserveComments($preserve) {
+		$this->preserveComments = $preserve;
 	}
 
 	/**
@@ -1806,6 +1816,13 @@ class lessc_parser {
 		'%' => 2,
 	);
 
+	static protected $whitePattern;
+	static protected $commentMulti;
+
+	static protected $commentSingle = "//";
+	static protected $commentMultiLeft = "/*";
+	static protected $commentMultiRight = "*/";
+
 	// regex string to match any of the operators
 	static protected $operatorString;
 
@@ -1834,10 +1851,19 @@ class lessc_parser {
 
 		$this->sourceName = $sourceName; // name used for error messages
 
+		$this->writeComments = false;
+
 		if (!self::$operatorString) {
 			self::$operatorString =
 				'('.implode('|', array_map(array('lessc', 'preg_quote'),
 					array_keys(self::$precedence))).')';
+
+			$commentSingle = lessc::preg_quote(self::$commentSingle);
+			$commentMultiLeft = lessc::preg_quote(self::$commentMultiLeft);
+			$commentMultiRight = lessc::preg_quote(self::$commentMultiRight);
+
+			self::$commentMulti = $commentMultiLeft.'.*?'.$commentMultiRight;
+			self::$whitePattern = '/'.$commentSingle.'[^\n]*\s*|('.self::$commentMulti.')\s*|\s+/Ais';
 		}
 	}
 
@@ -1846,15 +1872,17 @@ class lessc_parser {
 		$this->line = 1;
 
 		$this->env = null; // block stack
-		$this->buffer = $this->removeComments($buffer);
+		$this->buffer = $this->writeComments ? $buffer : $this->removeComments($buffer);
 		$this->pushSpecialBlock("root");
 		$this->eatWhiteDefault = true;
+		$this->seenComments = array();
 
 		// trim whitespace on head
-		if (preg_match('/^\s+/', $this->buffer, $m)) {
-			$this->line += substr_count($m[0], "\n");
-			$this->buffer = ltrim($this->buffer);
-		}
+		// if (preg_match('/^\s+/', $this->buffer, $m)) {
+		// 	$this->line += substr_count($m[0], "\n");
+		// 	$this->buffer = ltrim($this->buffer);
+		// }
+		$this->whitespace();
 
 		// parse the entire file
 		$lastCount = $this->count;
@@ -2487,7 +2515,7 @@ class lessc_parser {
 		{
 			$out = array("variable", $this->lessc->vPrefix . $var);
 			$this->eatWhiteDefault = $oldWhite;
-			if ($this->eatWhiteDefault) $this->match("", $_);
+			if ($this->eatWhiteDefault) $this->whitespace();
 			return true;
 		}
 
@@ -2622,7 +2650,7 @@ class lessc_parser {
 		if ($this->literal('[') && $this->to(']', $c, true) && $this->literal(']', false)) {
 			$value = '['.$c.']';
 			// whitespace?
-			if ($this->match('', $_)) $value .= $_[0];
+			if ($this->whitespace()) $value .= " ";
 
 			// escape parent selector, (yuck)
 			$value = str_replace($this->lessc->parentSelector, "$&$", $value);
@@ -2891,12 +2919,32 @@ class lessc_parser {
 	protected function match($regex, &$out, $eatWhitespace = null) {
 		if (is_null($eatWhitespace)) $eatWhitespace = $this->eatWhiteDefault;
 
-		$r = '/'.$regex.($eatWhitespace ? '\s*' : '').'/Ais';
+		$r = '/'.$regex.($eatWhitespace && !$this->writeComments ? '\s*' : '').'/Ais';
 		if (preg_match($r, $this->buffer, $out, null, $this->count)) {
 			$this->count += strlen($out[0]);
+			if ($eatWhitespace && $this->writeComments) $this->whitespace();
 			return true;
 		}
 		return false;
+	}
+
+	// match some whitespace
+	protected function whitespace() {
+		if ($this->writeComments) {
+			$gotWhite = false;
+			while (preg_match(self::$whitePattern, $this->buffer, $m, null, $this->count)) {
+				if (isset($m[1]) && empty($this->commentsSeen[$this->count])) {
+					$this->append(array("comment", $m[1]));
+					$this->commentsSeen[$this->count] = true;
+				}
+				$this->count += strlen($m[0]);
+				$gotWhite = true;
+			}
+			return $gotWhite;
+		} else {
+			$this->match("", $m);
+			return strlen($m[0]) > 0;
+		}
 	}
 
 	// match something without consuming it
