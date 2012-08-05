@@ -74,13 +74,6 @@ class lessc {
 		return preg_quote($what, '/');
 	}
 
-	// just do a shallow property merge, seems to be what lessjs does
-	function mergeBlock($target, $from) {
-		$target = clone $target;
-		$target->props = array_merge($target->props, $from->props);
-		return $target;
-	}
-
 	// attempt to import $import into $parentBlock
 	// $props is the property array that will given to $parentBlock at the end
 	function mixImport($import, $parentBlock, &$props) {
@@ -309,7 +302,8 @@ class lessc {
 
 		$out = "@media";
 		if (!empty($parts)) {
-			$out = $out . " " . implode(", ", $compiledQueries);
+			$out .= " " .
+				implode($this->formatter->selectorSeparator, $compiledQueries);
 		}
 		return $out;
 	}
@@ -412,37 +406,6 @@ class lessc {
 		}
 
 		return $out;
-	}
-
-
-	// find the fully qualified tags for a block and its parent's tags
-	// TODO: kill
-	function multiplyTags($parents, $current) {
-		if ($parents == null) {
-			if (is_array($current)) {
-				// get rid of parent selectors and escapes in top level tag
-				foreach ($current as &$tag) {
-					$this->expandParentSelectors($tag, "");
-				}
-			}
-			return $current;
-		}
-
-		$tags = array();
-		foreach ($parents as $ptag) {
-			foreach ($current as $tag) {
-				$count = $this->expandParentSelectors($tag, $ptag);
-
-				// don't prepend the parent tag if & was used
-				if ($count > 0) {
-					$tags[] = trim($tag);
-				} else {
-					$tags[] = trim($ptag . ' ' . $tag);
-				}
-			}
-		}
-
-		return $tags;
 	}
 
 	function eq($left, $right) {
@@ -752,22 +715,6 @@ class lessc {
 			return $value[1].$value[0];
 		}
 	}
-
-	// TODO: kill
-	// function compileMedia($block) {
-	// 	$mediaParts = array();
-	// 	foreach ($block->media as $part) {
-	// 		if ($part[0] == "raw") {
-	// 			$mediaParts[] = $part[1];
-	// 		} elseif ($part[0] == "assign") {
-	// 			list(, $propName, $propVal) = $part;
-	// 			$mediaParts[] = "$propName: ".
-	// 				$this->compileValue($this->reduce($propVal));
-	// 		}
-	// 	}
-
-	// 	return "@media ".trim(implode($mediaParts));
-	// }
 
 	function lib_isnumber($value) {
 		return $this->toBool(is_numeric($value[1]) && $value[0] != "color");
@@ -1547,7 +1494,7 @@ class lessc {
 		$this->allParsedFiles = array();
 		$this->indentLevel = -1;
 
-		$this->formatter = new lessc_formatter_new();
+		$this->formatter = $this->newFormatter();
 
 		if ($initialVariables) $this->injectVariables($initialVariables);
 		$this->compileBlock($root);
@@ -2395,31 +2342,6 @@ class lessc_parser {
 		return $this->to(';', $media, false, true);
 	}
 
-	// a list of media types, very lenient
-	// TODO: kill
-	protected function mediaTypes(&$parts) {
-		$parts = array();
-		while ($this->to("(", $chunk, false, "[^{]")) {
-			$parts[] = array('raw', $chunk."(");
-			$s = $this->seek();
-			if ($this->keyword($name) && $this->assign() &&
-				$this->propertyValue($value))
-			{
-				$parts[] = array('assign', $name, $value);
-			} else {
-				$this->seek($s);
-			}
-		}
-
-		if ($this->to('{', $rest, true, true)) {
-			$parts[] = array('raw', $rest);
-			return true;
-		}
-
-		$parts = null;
-		return false;
-	}
-
 	protected function mediaQueryList(&$out) {
 		if ($this->genericList($list, "mediaQuery", ",", false)) {
 			$out = $list[2];
@@ -3203,109 +3125,6 @@ class lessc_formatter {
 	public $break = "\n";
 	public $open = " {";
 	public $close = "}";
-	public $tagSeparator = ", ";
-
-	public $disableSingle = false;
-	public $openSingle = " { ";
-	public $closeSingle = " }";
-
-	public $compress_colors = false;
-
-	// returns the amount of indent that should happen for a block
-	function indentAmount($block) {
-		return isset($block->isRoot) || !empty($block->no_multiply) ? 1 : 0;
-	}
-
-	// an $indentLevel of -1 signifies the root level
-	function block($tags, $wrapChildren, $lines, $children, $indentLevel) {
-		$indent = str_repeat($this->indentChar, max($indentLevel, 0));
-
-		// what $lines is imploded by
-		$nl = $indentLevel == -1 ? $this->break :
-			$this->break.$indent.$this->indentChar;
-
-		ob_start();
-
-		$isSingle = !$this->disableSingle && !$wrapChildren
-			&& count($lines) <= 1;
-
-		$showDelim = !empty($tags) && (count($lines) > 0 || $wrapChildren);
-
-		if ($showDelim) {
-			if (is_array($tags)) {
-				$tags = implode($this->tagSeparator, $tags);
-			}
-
-			echo $indent.$tags;
-			if ($isSingle) echo $this->openSingle;
-			else {
-				echo $this->open;
-				if (!empty($lines)) echo $nl;
-				else echo $this->break;
-			}
-		}
-
-		echo implode($nl, $lines);
-
-		if ($wrapChildren) {
-			if (!empty($lines)) echo $this->break;
-			foreach ($children as $child) echo $child;
-		}
-
-		if ($showDelim) {
-			if ($isSingle) echo $this->closeSingle;
-			else {
-				if (!$wrapChildren) echo $this->break;
-				echo $indent.$this->close;
-			}
-			echo $this->break;
-		} elseif (!empty($lines)) {
-			echo $this->break;
-		}
-
-		if (!$wrapChildren)
-			foreach ($children as $child) echo $child;
-
-		return ob_get_clean();
-	}
-
-	function property($name, $values) {
-		return "";
-	}
-}
-
-class lessc_formatter_compressed extends lessc_formatter {
-	public $indentChar = "";
-
-	public $break = "";
-	public $open = "{";
-	public $close = "}";
-	public $tagSeparator = ",";
-	public $disableSingle = true;
-
-	public $compress_colors = true;
-}
-
-class lessc_formatter_indent extends lessc_formatter {
-	function indentAmount($block) {
-		if (isset($block->isRoot)) return 1;
-		$numLines = 0;
-		foreach ($block->props as $prop) {
-			$t = $prop[0];
-			if ($t != 'block' && $t != 'mixin') {
-				$numLines++;
-			}
-		}
-		return $numLines > 0 ? 1 : 0;
-	}
-}
-
-class lessc_formatter_new {
-	public $indentChar = "  ";
-
-	public $break = "\n";
-	public $open = " {";
-	public $close = "}";
 	public $selectorSeparator = ", ";
 	public $assignSeparator = ":";
 
@@ -3395,8 +3214,19 @@ class lessc_formatter_new {
 	}
 }
 
+class lessc_formatter_compressed extends lessc_formatter {
+	public $disableSingle = true;
+	public $open = "{";
+	public $selectorSeparator = ",";
+	public $assignSeparator = ":";
+	public $break = "";
 
-class lessc_formatter_less extends lessc_formatter_new {
+	public function indentStr($n = 0) {
+		return "";
+	}
+}
+
+class lessc_formatter_lessjs extends lessc_formatter {
 	public $disableSingle = true;
 	public $breakSelectors = true;
 	public $assignSeparator = ": ";
