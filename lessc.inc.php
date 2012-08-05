@@ -148,10 +148,10 @@ class lessc {
 		$this->importDir = $oldImport;
 	}
 
+
 	/**
 	 * Recursively compiles a block.
 	 * @param $block the block
-	 * @param $parentTags the tags of the block that contained this one
 	 *
 	 * A block is analogous to a CSS block in most cases. A single less document
 	 * is encapsulated in a block when parsed, but it does not have parent tags
@@ -171,37 +171,19 @@ class lessc {
 	 *
 	 */
 	function compileBlock($block) {
-		if (!empty($block->no_multiply)) {
-			$special_block = true;
-			$tags = array();
-		} else {
-			$special_block = false;
+		switch ($block->type) {
+		case "root":
+			return $this->compileRoot($block);
+		case null:
+			return $this->compileCSSBlock($block);
+		case "media":
+			return $this->compileMedia($block);
+		default:
+			$this->throwError("unknown block type: $block->type\n");
 		}
 
-		$env = $this->pushEnv();
-		// $this->mixImports($block); // TODO: bring me back
-
-		if (isset($block->tags)) {
-			$selectors = $this->compileSelectors($block->tags);
-			$env->selectors = $this->multiplySelectors($selectors);
-			$out = $this->makeOutputBlock(null, $env->selectors);
-		} else {
-			$out = $this->makeOutputBlock("other"); // TODO: figure this out later
-		}
-
-		if (!empty($block->isRoot)) {
-			$this->scope = $out;
-		} else {
-			$this->scope->children[] = $out;
-		}
-
-		foreach ($this->sortProps($block->props) as $prop) {
-			$this->compileProp($prop, $block, $out);
-		}
-
-		$block->scope = $env; // mixins carry scope with them!
-		$this->popEnv();
-
+		// kill
+		// TODO: just a reminder of the different kinds of special blocks
 		// // override tags if it's a special block
 		// if (isset($block->media)) {
 		// 	$tags = $this->compileMedia($block);
@@ -214,6 +196,78 @@ class lessc {
 
 		// return $this->formatter->block($tags, $special_block, $lines,
 		// 	$blocks, $this->indentLevel);
+	}
+
+
+	protected function compileCSSBlock($block) {
+		$env = $this->pushEnv();
+
+		$selectors = $this->compileSelectors($block->tags);
+		$env->selectors = $this->multiplySelectors($selectors);
+		$out = $this->makeOutputBlock(null, $env->selectors);
+
+		$this->scope->children[] = $out;
+		$this->compileProps($block, $out);
+
+		$block->scope = $env; // mixins carry scope with them!
+		$this->popEnv();
+	}
+
+	protected function compileMedia($media) {
+		$env = $this->pushEnv($media);
+		$parentScope = $this->mediaParent($this->scope);
+		$query = $this->compileMediaQuery($this->multiplyMedia($env));
+
+		$this->scope = $this->makeOutputBlock($media->type, array($query));
+		$parentScope->children[] = $this->scope;
+
+		$this->compileProps($media, $this->scope);
+
+		if (count($this->scope->lines) > 0) {
+			$orphan = $this->makeOutputBlock(null, $this->findClosestSelectors());
+			$orphan->lines = $this->scope->lines;
+			array_unshift($this->scope->children, $orphan);
+			$this->scope->lines = array();
+		}
+
+		$this->scope = $this->scope->parent;
+		$this->popEnv();
+	}
+
+	protected function mediaParent($scope) {
+		while (!empty($scope->parent)) {
+			if (!empty($scope->type) && $scope->type != "media") {
+				break;
+			}
+			$scope = $scope->parent;
+		}
+
+		return $scope;
+	}
+
+	protected function compileNestedBlock($block, $selectors) {
+		$this->pushEnv($block);
+		$this->scope = $this->makeOutputBlock($block->type, $selectors);
+		$this->scope->parent->children[] = $this->scope;
+
+		$this->compileProps($block, $this->scope);
+
+		$this->scope = $this->scope->parent;
+		$this->popEnv();
+	}
+
+	protected function compileRoot($root) {
+		$this->pushEnv();
+		$this->scope = $this->makeOutputBlock($root->type);
+		$this->compileProps($root, $this->scope);
+		$this->popEnv();
+	}
+
+	protected function compileProps($block, $out) {
+		// $this->mixImports($block); // TODO: bring me back
+		foreach ($this->sortProps($block->props) as $prop) {
+			$this->compileProp($prop, $block, $out);
+		}
 	}
 
 	function sortProps($props) {
@@ -232,6 +286,52 @@ class lessc {
 		return array_merge($vars, $other);
 	}
 
+	protected function compileMediaQuery($query) {
+		$parts = array();
+		foreach ($query as $q) {
+			switch ($q[0]) {
+			case "mediaType":
+				$parts[] = implode(" ", array_slice($q, 1));
+				break;
+			case "mediaExp":
+				if (isset($q[2])) {
+					$parts[] = "($q[1]: " . $this->compileValue($q[2]) . ")";
+				} else {
+					$parts[] = "($q[1])";
+				}
+				break;
+			}
+		}
+
+		$out = "@media";
+		if (!empty($parts)) {
+			$out = $out . " " . implode(" and ", $parts);
+		}
+		return $out;
+	}
+
+	protected function multiplyMedia($env, $childMedia = null) {
+		if (is_null($env) ||
+			!empty($env->block->type) && $env->block->type != "media")
+		{
+			return $childMedia;
+		}
+
+		// plain old block, skip
+		if (empty($env->block->type)) {
+			return $this->multiplyMedia($env->parent, $childMedia);
+		}
+
+		$query = $env->block->query;
+		if ($childMedia == null) {
+			$childMedia = $query;
+		} else {
+			$childMedia = array_merge($query, $childMedia);
+		}
+
+		return $this->multiplyMedia($env->parent, $childMedia);
+	}
+
 	function expandParentSelectors(&$tag, $replace) {
 		$parts = explode("$&$", $tag);
 		$count = 0;
@@ -243,21 +343,26 @@ class lessc {
 		return $count;
 	}
 
-
-	// multiply $selectors against the nearest selectors in env
-	function multiplySelectors($selectors) {
-		// find parent selectors
-
+	function findClosestSelectors() {
 		$env = $this->env;
-		$parentSelectors = null;
+		$selectors = null;
 		while (!is_null($env)) {
 			if (isset($env->selectors)) {
-				$parentSelectors = $env->selectors;
+				$selectors = $env->selectors;
 				break;
 			}
 			$env = $env->parent;
 		}
 
+		return $selectors;
+	}
+
+
+	// multiply $selectors against the nearest selectors in env
+	function multiplySelectors($selectors) {
+		// find parent selectors
+
+		$parentSelectors = $this->findClosestSelectors();
 		if (is_null($parentSelectors)) {
 			// kill parent reference in top level selector
 			foreach ($selectors as &$s) {
@@ -651,20 +756,21 @@ class lessc {
 		}
 	}
 
-	function compileMedia($block) {
-		$mediaParts = array();
-		foreach ($block->media as $part) {
-			if ($part[0] == "raw") {
-				$mediaParts[] = $part[1];
-			} elseif ($part[0] == "assign") {
-				list(, $propName, $propVal) = $part;
-				$mediaParts[] = "$propName: ".
-					$this->compileValue($this->reduce($propVal));
-			}
-		}
+	// TODO: kill
+	// function compileMedia($block) {
+	// 	$mediaParts = array();
+	// 	foreach ($block->media as $part) {
+	// 		if ($part[0] == "raw") {
+	// 			$mediaParts[] = $part[1];
+	// 		} elseif ($part[0] == "assign") {
+	// 			list(, $propName, $propVal) = $part;
+	// 			$mediaParts[] = "$propName: ".
+	// 				$this->compileValue($this->reduce($propVal));
+	// 		}
+	// 	}
 
-		return "@media ".trim(implode($mediaParts));
-	}
+	// 	return "@media ".trim(implode($mediaParts));
+	// }
 
 	function lib_isnumber($value) {
 		return $this->toBool(is_numeric($value[1]) && $value[0] != "color");
@@ -1316,14 +1422,16 @@ class lessc {
 		$b->children = array();
 		$b->selectors = $selectors;
 		$b->type = $type;
+		$b->parent = $this->scope;
 		return $b;
 	}
 
 	// the state of execution
-	function pushEnv() {
+	function pushEnv($block = null) {
 		$e = new stdclass;
 		$e->parent = $this->env;
 		$e->store = array();
+		$e->block = $block;
 
 		$this->env = $e;
 		return $e;
@@ -1788,7 +1896,7 @@ class lessc_parser {
 
 		$this->env = null; // block stack
 		$this->buffer = $this->removeComments($buffer);
-		$this->pushBlock(null); // root
+		$this->pushSpecialBlock("root");
 
 		// trim whitespace on head
 		if (preg_match('/^\s+/', $this->buffer, $m)) {
@@ -1807,7 +1915,6 @@ class lessc_parser {
 		if (!is_null($this->env->parent))
 			throw new exception('parse error: unclosed block');
 
-		$this->env->isRoot = true;
 		return $this->env;
 	}
 
@@ -1861,8 +1968,19 @@ class lessc_parser {
 			$this->seek($s);
 		}
 
+		// media
+		if ($this->literal('@media') && $this->mediaQuery($mediaQuery) &&
+			$this->literal('{'))
+		{
+			$media = $this->pushSpecialBlock("media");
+			$media->query = $mediaQuery;
+			return true;
+		} else {
+			$this->seek($s);
+		}
+
 		// look for special css blocks
-		if ($this->env->parent == null && $this->literal('@', false)) {
+		if (false && $this->env->parent == null && $this->literal('@', false)) {
 			$this->count--;
 
 			// a font-face block
@@ -1883,17 +2001,6 @@ class lessc_parser {
 				$this->seek($s);
 			}
 
-
-			// media
-			if ($this->literal('@media') && $this->mediaTypes($types) &&
-				$this->literal('{'))
-			{
-				$b = $this->pushSpecialBlock('@media');
-				$b->media = $types;
-				return true;
-			} else {
-				$this->seek($s);
-			}
 
 			// css animations
 			if ($this->match('(@(-[a-z]+-)?keyframes)', $m) &&
@@ -1992,22 +2099,28 @@ class lessc_parser {
 				$this->throwError($e->getMessage());
 			}
 
-			$hidden = true;
-			if (!isset($block->args)) foreach ($block->tags as $tag) {
-				if (!is_string($tag) || $tag{0} != $this->lessc->mPrefix) {
-					$hidden = false;
-					break;
+			$hidden = false;
+			if (is_null($block->type)) {
+				$hidden = true;
+				if (!isset($block->args)) {
+					foreach ($block->tags as $tag) {
+						if (!is_string($tag) || $tag{0} != $this->lessc->mPrefix) {
+							$hidden = false;
+							break;
+						}
+					}
+				}
+
+				foreach ($block->tags as $tag) {
+					if (is_string($tag)) {
+						$this->env->children[$tag][] = $block;
+					}
 				}
 			}
 
-			if (!$hidden) $this->append(array('block', $block), $s);
-
-			foreach ($block->tags as $tag) {
-				if (is_string($tag)) {
-					$this->env->children[$tag][] = $block;
-				}
+			if (!$hidden) {
+				$this->append(array('block', $block), $s);
 			}
-
 			return true;
 		}
 
@@ -2292,6 +2405,7 @@ class lessc_parser {
 	}
 
 	// a list of media types, very lenient
+	// TODO: kill
 	protected function mediaTypes(&$parts) {
 		$parts = array();
 		while ($this->to("(", $chunk, false, "[^{]")) {
@@ -2314,6 +2428,56 @@ class lessc_parser {
 		$parts = null;
 		return false;
 	}
+
+	protected function mediaQuery(&$out) {
+		$s = $this->seek();
+
+		$expressions = null;
+		$parts = array();
+
+		if (($this->literal("only") && ($only = true) || $this->literal("not") && ($not = true) || true) && $this->keyword($mediaType)) {
+			$prop = array("mediaType");
+			if (isset($only)) $prop[] = "only";
+			if (isset($not)) $prop[] = "not";
+			$prop[] = $mediaType;
+			$parts[] = $prop;
+		} else {
+			$this->seek($s);
+		}
+
+
+		if (!empty($mediaType) && !$this->literal("and")) {
+			// ~
+		} else {
+
+
+			$this->genericList($expressions, "mediaExpression", "and", false);
+
+
+			if (is_array($expressions)) $parts = array_merge($parts, $expressions[2]);
+		}
+
+		$out = $parts;
+		return true;
+	}
+
+	protected function mediaExpression(&$out) {
+		$s = $this->seek();
+		$value = null;
+		if ($this->literal("(") &&
+			$this->keyword($feature) &&
+			($this->literal(":") && $this->expression($value) || true) &&
+			$this->literal(")"))
+		{
+			$out = array("mediaExp", $feature);
+			if ($value) $out[] = $value;
+			return true;
+		}
+
+		$this->seek($s);
+		return false;
+	}
+
 
 	// a scoped value accessor
 	// .hello > @scope1 > @scope2['value'];
@@ -2711,6 +2875,30 @@ class lessc_parser {
 		return $this->match(lessc::preg_quote($what), $m, $eatWhitespace);
 	}
 
+	protected function genericList(&$out, $parseItem, $delim="", $flatten=true) {
+		$s = $this->seek();
+		$items = array();
+		while ($this->$parseItem($value)) {
+			$items[] = $value;
+			if ($delim) {
+				if (!$this->literal($delim)) break;
+			}
+		}
+
+		if (count($items) == 0) {
+			$this->seek($s);
+			return false;
+		}
+
+		if ($flatten && count($items) == 1) {
+			$out = $items[0];
+		} else {
+			$out = array("list", $delim, $items);
+		}
+
+		return true;
+	}
+
 
 	// advance counter to next occurrence of $what
 	// $until - don't include $what in advance
@@ -2775,13 +2963,16 @@ class lessc_parser {
 		}
 	}
 
-	protected function pushBlock($tags) {
+	protected function pushBlock($selectors=null, $type=null) {
 		$b = new stdclass;
 		$b->parent = $this->env;
 
+		$b->type = $type;
 		$b->id = self::$nextBlockId++;
-		$b->is_vararg = false;
-		$b->tags = $tags;
+
+		$b->is_vararg = false; // TODO: kill me from here
+		$b->tags = $selectors;
+
 		$b->props = array();
 		$b->children = array();
 
@@ -2790,10 +2981,8 @@ class lessc_parser {
 	}
 
 	// push a block that doesn't multiply tags
-	protected function pushSpecialBlock($name) {
-		$b = $this->pushBlock(array($name));
-		$b->no_multiply = true;
-		return $b;
+	protected function pushSpecialBlock($type) {
+		return $this->pushBlock(null, $type);
 	}
 
 	// append a property to the current block
@@ -2999,8 +3188,21 @@ class lessc_formatter_new {
 		return $name . $this->assignSeparator . $value . ";";
 	}
 
+	protected function isEmpty($block) {
+		if (empty($block->lines)) {
+			foreach ($block->children as $child) {
+				if (!$this->isEmpty($child)) return false;
+			}
+
+			return true;
+		}
+		return false;
+
+		if (empty($block->lines) && empty($block->children)) return true;
+	}
+
 	public function block($block) {
-		if (empty($block->lines) && empty($block->children)) return;
+		if ($this->isEmpty($block)) return;
 
 		$inner = $pre = $this->indentStr();
 
