@@ -1513,7 +1513,7 @@ class lessc {
 	}
 
 	protected function newFormatter() {
-		$className = "lessc_formatter";
+		$className = "lessc_formatter_lessjs";
 		if (!empty($this->formatterName)) {
 			if (!is_string($this->formatterName))
 				return $this->formatterName;
@@ -3080,7 +3080,7 @@ class lessc_parser {
 
 }
 
-class lessc_formatter {
+class lessc_formatter_classic {
 	public $indentChar = "  ";
 
 	public $break = "\n";
@@ -3175,7 +3175,7 @@ class lessc_formatter {
 	}
 }
 
-class lessc_formatter_compressed extends lessc_formatter {
+class lessc_formatter_compressed extends lessc_formatter_classic {
 	public $disableSingle = true;
 	public $open = "{";
 	public $selectorSeparator = ",";
@@ -3188,10 +3188,11 @@ class lessc_formatter_compressed extends lessc_formatter {
 	}
 }
 
-class lessc_formatter_lessjs extends lessc_formatter {
+class lessc_formatter_lessjs extends lessc_formatter_classic {
 	public $disableSingle = true;
 	public $breakSelectors = true;
 	public $assignSeparator = ": ";
+	public $selectorSeparator = ",";
 }
 
 

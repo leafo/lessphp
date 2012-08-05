@@ -888,11 +888,9 @@ To compile a string to a string:
 
 ### Output Formatting
 
-Besides the default output formatter, **lessphp** comes with two additional
-ones, and it's easy to make your own.
-
-The first extra formatter is called `compressed`. It compresses the output by
-removing any extra whitespace.
+The output formatter controls what the compiled CSS looks like. Besides the
+default output formatter, two additional ones are included, and it's
+easy to make your own.
 
 We use the `setFormatter` method set the formatter that should be used. Just
 pass the name of the formatter:
@@ -905,19 +903,25 @@ pass the name of the formatter:
     $css = $less->parse();
     ```
 
-The second formatter is called `indent`. It will indent CSS blocks based on how
-they were nested in the LESS code.
+In this example, the `compressed` formatter is used. Other formatters include
+`classic` and `lessjs`. `lessjs` is the default, and matches the output of the
+reference JavaScript version of LESS. `classic` is what **lessphp** used to
+output by default.
+
+To revert to the default formatter, just call `setFormatter` with a value of
+`null`.
 
 #### Custom Formatter
 
-The easiest way to customize is to create your own instance of the formatter
-and alter its public properties before passing it off to **lessphp**. The
-`setFormatter` method can also take an instance of a formatter.
+The easiest way to customize the formatter is to create your own instance of an
+existing formatter and alter its public properties before passing it off to
+**lessphp**. The `setFormatter` method can also take an instance of a
+formatter.
 
 For example, let's use tabs instead of the default two spaces to indent:
 
     ```php
-    $formatter = new lessc_formatter;
+    $formatter = new lessc_formatter_classic;
     $formatter->indentChar = "\t";
 
     $less = new lessc("myfile.less");
@@ -926,7 +930,7 @@ For example, let's use tabs instead of the default two spaces to indent:
     ```
 
 For more information about what can be configured with the formatter consult
-the sourcecode.
+the source code.
 
 ### Preserving Comments
 

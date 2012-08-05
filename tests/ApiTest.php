@@ -48,29 +48,29 @@ Here is a block comment
 /*yeah*/
 div /*yeah*/ {
   /* another property */
-  border:1px solid red;
-  color:url('http://mage-page.com');
-  string:"hello /* this is not a comment */";
-  world:"// neither is this";
+  border: 1px solid red;
+  color: url('http://mage-page.com');
+  string: "hello /* this is not a comment */";
+  world: "// neither is this";
   /*what if this is a comment */
-  string:'hello /* this is not a comment */';
-  world:'// neither is this';
-  what-ever:100px;
+  string: 'hello /* this is not a comment */';
+  world: '// neither is this';
+  what-ever: 100px;
   /*this is not a comment?*/
-  background:url();
+  background: url();
 }
 EOD;
 
 		$outputWithoutComments = <<<EOD
 div {
-  border:1px solid red;
-  color:url('http://mage-page.com');
-  string:"hello /* this is not a comment */";
-  world:"// neither is this";
-  string:'hello /* this is not a comment */';
-  world:'// neither is this';
-  what-ever:100px;
-  background:url(/*this is not a comment?*/);
+  border: 1px solid red;
+  color: url('http://mage-page.com');
+  string: "hello /* this is not a comment */";
+  world: "// neither is this";
+  string: 'hello /* this is not a comment */';
+  world: '// neither is this';
+  what-ever: 100px;
+  background: url(/*this is not a comment?*/);
 }
 EOD;
 
@@ -82,7 +82,11 @@ EOD;
 	public function testOldInterface() {
 		$this->less = new lessc(__DIR__ . "/inputs/hi.less");
 		$out = $this->less->parse(array("hello" => "10px"));
-		$this->assertEquals(trim($out), 'div:before { content:"hi!"; }');
+		$this->assertEquals(trim($out), trim('
+div:before {
+  content: "hi!";
+}'));
+
 	}
 
 	public function testInjectVars() {
@@ -94,8 +98,8 @@ EOD;
 	
 		$this->assertEquals(trim($out), trim("
 .magic {
-  color:red;
-  width:760px;
+  color: red;
+  width: 760px;
 }"));
 
 	}
@@ -115,7 +119,7 @@ EOD;
 
 		$this->assertEquals(
 			$this->compile("result: add-two(10, 20);"),
-			"result:30;");
+			"result: 30;");
 		
 		return $this->less;
 	}
@@ -128,7 +132,7 @@ EOD;
 
 		$this->assertEquals(
 			$this->compile("result: add-two(10, 20);"),
-			"result:add-two(10,20);");
+			"result: add-two(10,20);");
 	}
 
 
@@ -151,19 +155,29 @@ EOD;
 		$this->less->setFormatter("lessjs");
 		$this->assertEquals(
 			$this->compile($src),
-"div, 
+"div,
 pre {
   color: blue;
 }
-div span, 
-div .big, 
-div hello.world, 
-pre span, 
-pre .big, 
+div span,
+div .big,
+div hello.world,
+pre span,
+pre .big,
 pre hello.world {
   height: 20px;
   color: #ffffff;
 }");
+
+		$this->less->setFormatter("classic");
+		$this->assertEquals(
+			$this->compile($src),
+trim("div, pre { color:blue; }
+div span, div .big, div hello.world, pre span, pre .big, pre hello.world {
+  height:20px;
+  color:#ffffff;
+}
+"));
 
 	}
 
