@@ -179,6 +179,13 @@ class lessc {
 			return $this->compileCSSBlock($block);
 		case "media":
 			return $this->compileMedia($block);
+		case "directive":
+			$name = "@" . $block->name;
+			if (!empty($block->value)) {
+				$name .= " " . $this->compileValue($this->reduce($block->value));
+			}
+
+			return $this->compileNestedBlock($block, array($name));
 		default:
 			$this->throwError("unknown block type: $block->type\n");
 		}
@@ -663,9 +670,9 @@ class lessc {
 		case 'raw':
 			$out->lines[] = $prop[1];
 			break;
-		case 'charset':
-			list(, $value) = $prop;
-			$out->lines[] = '@charset '.$this->compileValue($this->reduce($value)).';';
+		case "directive":
+			list(, $name, $value) = $prop;
+			$out->lines[] = "@$name " . $this->compileValue($this->reduce($value)).';';
 			break;
 		default:
 			$this->throwError("unknown op: {$prop[0]}\n");
@@ -1178,10 +1185,9 @@ class lessc {
 		case "string":
 			foreach ($value[2] as &$part) {
 				if (is_array($part)) {
+					$strip = $part[0] == "variable";
 					$part = $this->reduce($part);
-					if ($part[0] == "string") {
-						$part[1] = "";
-					}
+					if ($strip) $part = $this->lib_e($part);
 				}
 			}
 			return $value;
@@ -1877,6 +1883,9 @@ class lessc_parser {
 		'Hz', 'kHz', //Frequencies
 	);
 
+	protected $blockDirectives = array("font-face", "keyframes", "page");
+	protected $lineDirectives = array("charset");
+
 	/**
 	 * if we are in parens we can be more liberal with whitespace around
 	 * operators because it must evaluate to a single value and thus is less
@@ -1986,71 +1995,42 @@ class lessc_parser {
 			$this->seek($s);
 		}
 
-		// media
-		if ($this->literal('@media') && $this->mediaQuery($mediaQuery) &&
-			$this->literal('{'))
-		{
-			$media = $this->pushSpecialBlock("media");
-			$media->query = $mediaQuery;
-			return true;
-		} else {
-			$this->seek($s);
-		}
 
 		// look for special css blocks
-		if (false && $this->env->parent == null && $this->literal('@', false)) {
+		if ($this->literal('@', false)) {
 			$this->count--;
 
-			// a font-face block
-			if ($this->literal('@font-face') && $this->literal('{')) {
-				$b = $this->pushSpecialBlock('@font-face');
-				return true;
-			} else {
-				$this->seek($s);
+			// media
+			if ($this->literal('@media')) {
+				if ($this->mediaQuery($mediaQuery) && $this->literal('{')) {
+					$media = $this->pushSpecialBlock("media");
+					$media->query = $mediaQuery;
+					return true;
+				} else {
+					$this->seek($s);
+					return false;
+				}
 			}
 
-			// charset
-			if ($this->literal('@charset') && $this->propertyValue($value) &&
-				$this->end())
-			{
-				$this->append(array('charset', $value), $s);
-				return true;
-			} else {
-				$this->seek($s);
+			if ($this->literal("@", false) && $this->keyword($dirName)) {
+				if ($this->isDirective($dirName, $this->blockDirectives)) {
+					if (($this->openString("{", $dirValue, null, array(";")) || true) &&
+						$this->literal("{"))
+					{
+						$dir = $this->pushSpecialBlock("directive");
+						$dir->name = $dirName;
+						if (isset($dirValue)) $dir->value = $dirValue;
+						return true;
+					}
+				} elseif ($this->isDirective($dirName, $this->lineDirectives)) {
+					if ($this->propertyValue($dirValue) && $this->end()) {
+						$this->append(array("directive", $dirName, $dirValue));
+						return true;
+					}
+				}
 			}
 
-
-			// css animations
-			if ($this->match('(@(-[a-z]+-)?keyframes)', $m) &&
-				$this->propertyValue($value) && $this->literal('{'))
-			{
-				$b = $this->pushSpecialBlock(trim($m[0]));
-				$b->keyframes = $value;
-				return true;
-			} else {
-				$this->seek($s);
-			}
-
-			if ($this->literal("@page") &&
-				($this->match('(:(left|right))', $m) || true) &&
-				$this->literal("{"))
-			{
-				$name = "@page";
-				if ($m) $name = $name . " " . $m[1];
-				$this->pushSpecialBlock($name);
-				return true;
-			} else {
-				$this->seek($s);
-			}
-		}
-
-		if (isset($this->env->keyframes)) {
-			if ($this->keyframeTags($ktags) && $this->literal('{')) {
-				$this->pushSpecialBlock($ktags);
-				return true;
-			} else {
-				$this->seek($s);
-			}
+			$this->seek($s);
 		}
 
 		// setting a variable
@@ -2160,6 +2140,15 @@ class lessc_parser {
 		return false; // got nothing, throw error
 	}
 
+	protected function isDirective($dirname, $directives) {
+		// TODO: cache pattern in parser
+		$pattern = implode("|",
+			array_map(array("lessc", "preg_quote"), $directives));
+		$pattern = '/^(-[a-z-]+-)?(' . $pattern . ')$/i';
+
+		return preg_match($pattern, $dirname);
+	}
+
 	protected function fixTags($tags) {
 		// move @ tags out of variable namespace
 		foreach ($tags as &$tag) {
@@ -2167,22 +2156,6 @@ class lessc_parser {
 				$tag[0] = $this->lessc->mPrefix;
 		}
 		return $tags;
-	}
-
-	protected function keyframeTags(&$tags) {
-		$s = $this->seek();
-		$tags = array();
-		while($this->match("(to|from|[0-9]+%)", $m)) {
-			$tags[] = $m[1];
-			if (!$this->literal(",")) break;
-		}
-
-		if (count($tags) == 0) {
-			$this->seek($s);
-			return false;
-		}
-
-		return true;
 	}
 
 	// a list of expressions
@@ -2464,11 +2437,7 @@ class lessc_parser {
 		if (!empty($mediaType) && !$this->literal("and")) {
 			// ~
 		} else {
-
-
 			$this->genericList($expressions, "mediaExpression", "and", false);
-
-
 			if (is_array($expressions)) $parts = array_merge($parts, $expressions[2]);
 		}
 
@@ -2525,13 +2494,17 @@ class lessc_parser {
 	}
 
 	// an unbounded string stopped by $end
-	protected function openString($end, &$out, $nestingOpen=null) {
+	protected function openString($end, &$out, $nestingOpen=null, $rejectStrs = null) {
 		$oldWhite = $this->eatWhiteDefault;
 		$this->eatWhiteDefault = false;
 
 		$stop = array("'", '"', "@{", $end);
 		$stop = array_map(array("lessc", "preg_quote"), $stop);
 		// $stop[] = self::$commentMulti;
+
+		if (!is_null($rejectStrs)) {
+			$stop = array_merge($stop, $rejectStrs);
+		}
 
 		$patt = '(.*?)('.implode("|", $stop).')';
 
@@ -2566,6 +2539,12 @@ class lessc_parser {
 				$content[] = $inter;
 				continue;
 			}
+
+			if (in_array($tok, $rejectStrs)) {
+				$count = null;
+				break;
+			}
+
 
 			$content[] = $tok;
 			$this->count+= strlen($tok);
@@ -2823,12 +2802,26 @@ class lessc_parser {
 
 		$tag = '';
 		while ($this->tagBracket($first)) $tag .= $first;
-		while ($this->match('(['.$chars.'0-9]['.$chars.']*)', $m)) {
-			$tag .= $m[1];
-			if ($simple) break;
 
-			while ($this->tagBracket($brack)) $tag .= $brack;
+		while (true) {
+			if ($this->match('(['.$chars.'0-9]['.$chars.']*)', $m)) {
+				$tag .= $m[1];
+				if ($simple) break;
+
+				while ($this->tagBracket($brack)) $tag .= $brack;
+				continue;
+			} elseif ($this->unit($unit)) { // for keyframes
+				if ($unit[0] == "number") {
+					$tag .= $unit[1];
+				} else {
+					$tag .= $unit[1] . $unit[0];
+				}
+				continue;
+			}
+			break;
 		}
+
+
 		$tag = trim($tag);
 		if ($tag == '') return false;
 
@@ -2917,9 +2910,9 @@ class lessc_parser {
 
 	// consume an end of statement delimiter
 	protected function end() {
-		if ($this->literal(';'))
+		if ($this->literal(';')) {
 			return true;
-		elseif ($this->count == strlen($this->buffer) || $this->buffer{$this->count} == '}') {
+		} elseif ($this->count == strlen($this->buffer) || $this->buffer{$this->count} == '}') {
 			// if there is end of file or a closing block next then we don't need a ;
 			return true;
 		}
