@@ -36,3 +36,20 @@
 	body { color: red; }
 }
 
+
+// media bubbling
+
+@media test {
+	div {
+		height: 20px;
+		@media (hello) {
+			color: red;
+
+			pre {
+				color: orange;
+			}
+		}
+	}
+}
+
+
