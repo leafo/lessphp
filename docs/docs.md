@@ -1,8 +1,8 @@
-    title: v0.3.5 documentation
+    title: v0.3.6 documentation
     link_to_home: true
 --
 
-<h2 skip="true">Documentation v0.3.5</h2>
+<h2 skip="true">Documentation v0.3.6</h2>
 
 <div style="margin-bottom: 1em;">$index</div>
 
