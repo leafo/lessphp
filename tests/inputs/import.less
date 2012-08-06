@@ -35,3 +35,10 @@ div {
 	.mixin-import();
 }
 
+
+#merge-import-mixins {
+	@import "a";
+	@import "b";
+	div { .just-a-class; }
+}
+

@@ -113,9 +113,16 @@ class lessc {
 				$pi = pathinfo($realPath);
 				$this->mixImports($root, $pi['dirname'].'/');
 
-				// inject imported blocks into this block, local will overwrite import
-				$parentBlock->children =
-					array_merge($root->children,$parentBlock->children);
+				// bring blocks from import into current block
+				foreach ($root->children as $childName => $child) {
+					if (isset($parentBlock->children[$childName])) {
+						$parentBlock->children[$childName] = array_merge(
+							$parentBlock->children[$childName],
+							$child);
+					} else {
+						$parentBlock->children[$childName] = $child;
+					}
+				}
 
 				// splice in the props
 				foreach ($root->props as $prop) {
