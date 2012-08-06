@@ -621,6 +621,7 @@ class lessc {
 				$oldParent = $mixin->parent;
 				if ($mixin != $block) $mixin->parent = $block;
 
+				$this->mixImports($mixin);
 				foreach ($this->sortProps($mixin->props) as $subProp) {
 					if($suffix !== null) {
 						$subProp[2] = array(

@@ -19,3 +19,12 @@ div b {
   color: fuchsia;
   padding: 16px;
 }
+.one {
+  color: blue;
+}
+.one h2 {
+  background: url("../images/logo.png") no-repeat;
+}
+.two h2 {
+  background: url("../images/logo.png") no-repeat;
+}

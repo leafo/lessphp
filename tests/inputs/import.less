@@ -21,3 +21,17 @@ div {
 	@import "file2";
 }
 
+
+.mixin-import() {
+	@import "file3";
+}
+
+.one {
+	.mixin-import();
+	color: blue;
+}
+
+.two {
+	.mixin-import();
+}
+
