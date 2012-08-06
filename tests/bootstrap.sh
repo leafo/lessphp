@@ -1,3 +1,5 @@
+#!/bin/sh
+
 echo "This script clones twitter bootsrap, compiles it with lessc and lessphp,"
 echo "cleans up results with sort.php, and outputs diff. To run it, you need to"
 echo "have git and lessc installed."
