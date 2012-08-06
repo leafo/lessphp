@@ -122,5 +122,17 @@ body {
 }
 
 
+.to-be-important() {
+  color: red;
+  @color: red;
+  height: 20px;
 
+  pre {
+    color: @color;
+  }
+}
+
+.mix-suffix {
+  .to-be-important() !important;
+}
 

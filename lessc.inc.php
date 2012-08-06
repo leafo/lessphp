@@ -623,7 +623,11 @@ class lessc {
 
 				$this->mixImports($mixin);
 				foreach ($this->sortProps($mixin->props) as $subProp) {
-					if($suffix !== null) {
+					if (!is_null($suffix) &&
+						$subProp[0] == "assign" &&
+						is_string($subProp[1]) &&
+						$subProp[1]{0} != $this->vPrefix)
+					{
 						$subProp[2] = array(
 							'list', ' ',
 							array($subProp[2], array('keyword', $suffix))

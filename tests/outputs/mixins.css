@@ -70,3 +70,10 @@ body b {
 #day .cool {
   color: one two three skip me;
 }
+.mix-suffix {
+  color: red !important;
+  height: 20px !important;
+}
+.mix-suffix pre {
+  color: red;
+}
