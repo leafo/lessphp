@@ -533,8 +533,19 @@ class lessc {
 					return $matches;
 				}
 			} else {
-				return $this->findBlocks($blocks[0],
-					array_slice($path, 1), $args, $seen);
+				$matches = array();
+				foreach ($blocks as $subBlock) {
+					$subMatches = $this->findBlocks($subBlock,
+						array_slice($path, 1), $args, $seen);
+
+					if (!is_null($subMatches)) {
+						foreach ($subMatches as $sm) {
+							$matches[] = $sm;
+						}
+					}
+				}
+
+				return count($matches) > 0 ? $matches : null;
 			}
 		}
 
