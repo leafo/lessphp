@@ -78,7 +78,7 @@ class lessc {
 	}
 
 	static public function compressList($items, $delim) {
-		if (count($items) == 1) return $items[0];
+		if (!isset($items[1]) && isset($items[0])) return $items[0];
 		else return array('list', $delim, $items);
 	}
 
@@ -145,7 +145,7 @@ class lessc {
 	// import all imports mentioned in the block
 	protected function mixImports($block, $importDir = null) {
 		$oldImport = $this->importDir;
-		if (!is_null($importDir)) {
+		if ($importDir !== null) {
 			$this->importDir = array_merge((array)$importDir, (array)$this->importDir);
 		}
 
@@ -368,7 +368,7 @@ class lessc {
 	protected function findClosestSelectors() {
 		$env = $this->env;
 		$selectors = null;
-		while (!is_null($env)) {
+		while ($env !== null) {
 			if (isset($env->selectors)) {
 				$selectors = $env->selectors;
 				break;
@@ -618,7 +618,7 @@ class lessc {
 
 			$args = array_map(array($this, "reduce"), (array)$args);
 			$mixins = $this->findBlocks($block, $path, $args);
-			if (is_null($mixins)) {
+			if ($mixins === null) {
 				// echo "failed to find block: ".implode(" > ", $path)."\n";
 				break; // throw error here??
 			}
@@ -641,7 +641,7 @@ class lessc {
 
 				$this->mixImports($mixin);
 				foreach ($this->sortProps($mixin->props) as $subProp) {
-					if (!is_null($suffix) &&
+					if ($suffix !== null &&
 						$subProp[0] == "assign" &&
 						is_string($subProp[1]) &&
 						$subProp[1]{0} != $this->vPrefix)
@@ -706,7 +706,7 @@ class lessc {
 			list(, $num, $unit) = $value;
 			// [1] - the number
 			// [2] - the unit
-			if (!is_null($this->numberPrecision)) {
+			if ($this->numberPrecision !== null) {
 				$num = round($num, $this->numberPrecision);
 			}
 			return $num . $unit;
@@ -1884,6 +1884,9 @@ class lessc_parser {
 	 */
 	protected $inParens = false;
 
+	// caches preg escaped literals
+	static protected $literalCache = array();
+
 	public function __construct($lessc, $sourceName = null) {
 		$this->eatWhiteDefault = true;
 		// reference to less needed for vPrefix, mPrefix, and parentSelector
@@ -2243,10 +2246,10 @@ class lessc_parser {
 	}
 
 	// consume a list of values for a property
-	public function propertyValue(&$value, $keyName=null) {
+	public function propertyValue(&$value, $keyName = null) {
 		$values = array();
 
-		if (!is_null($keyName)) $this->env->currentProperty = $keyName;
+		if ($keyName !== null) $this->env->currentProperty = $keyName;
 
 		$s = null;
 		while ($this->expressionList($v)) {
@@ -2257,7 +2260,7 @@ class lessc_parser {
 
 		if ($s) $this->seek($s);
 
-		if (!is_null($keyName)) unset($this->env->currentProperty);
+		if ($keyName !== null) unset($this->env->currentProperty);
 
 		if (count($values) == 0) return false;
 
@@ -2267,6 +2270,11 @@ class lessc_parser {
 
 	protected function parenValue(&$out) {
 		$s = $this->seek();
+
+		// speed shortcut
+		if (isset($this->buffer[$this->count]) && $this->buffer[$this->count] != "(") {
+			return false;
+		}
 
 		$inParens = $this->inParens;
 		if ($this->literal("(") &&
@@ -2288,16 +2296,19 @@ class lessc_parser {
 	protected function value(&$value) {
 		$s = $this->seek();
 
-		// negation
-		if ($this->literal("-", false) &&
-			(($this->variable($inner) && $inner = array("variable", $inner)) ||
-			$this->unit($inner) ||
-			$this->parenValue($inner)))
-		{
-			$value = array("unary", "-", $inner);
-			return true;
-		} else {
-			$this->seek($s);
+		// speed shortcut
+		if (isset($this->buffer[$this->count]) && $this->buffer[$this->count] == "-") {
+			// negation
+			if ($this->literal("-", false) &&
+				(($this->variable($inner) && $inner = array("variable", $inner)) ||
+				$this->unit($inner) ||
+				$this->parenValue($inner)))
+			{
+				$value = array("unary", "-", $inner);
+				return true;
+			} else {
+				$this->seek($s);
+			}
 		}
 
 		if ($this->parenValue($value)) return true;
@@ -2565,6 +2576,12 @@ class lessc_parser {
 	}
 
 	protected function unit(&$unit) {
+		// speed shortcut
+		if (isset($this->buffer[$this->count])) {
+			$char = $this->buffer[$this->count];
+			if (!ctype_digit($char) && $char != ".") return false;
+		}
+
 		if ($this->match('([0-9]+(?:\.[0-9]*)?|\.[0-9]+)([%a-zA-Z]+)?', $m)) {
 			$unit = array("number", $m[1], empty($m[2]) ? "" : $m[2]);
 			return true;
@@ -2690,6 +2707,11 @@ class lessc_parser {
 
 	// a bracketed value (contained within in a tag definition)
 	protected function tagBracket(&$value) {
+		// speed shortcut
+		if (isset($this->buffer[$this->count]) && $this->buffer[$this->count] != "[") {
+			return false;
+		}
+
 		$s = $this->seek();
 		if ($this->literal('[') && $this->to(']', $c, true) && $this->literal(']', false)) {
 			$value = '['.$c.']';
@@ -2902,21 +2924,22 @@ class lessc_parser {
 	/* raw parsing functions */
 
 	protected function literal($what, $eatWhitespace = null) {
-		if (is_null($eatWhitespace)) $eatWhitespace = $this->eatWhiteDefault;
-
-		// this is here mainly prevent notice from { } string accessor
-		if ($this->count >= strlen($this->buffer)) return false;
+		if ($eatWhitespace === null) $eatWhitespace = $this->eatWhiteDefault;
 
 		// shortcut on single letter
-		if (!$eatWhitespace && strlen($what) == 1) {
-			if ($this->buffer{$this->count} == $what) {
+		if (!$eatWhitespace && isset($this->buffer[$this->count]) && !isset($what[1])) {
+			if ($this->buffer[$this->count] == $what) {
 				$this->count++;
 				return true;
 			}
 			else return false;
 		}
 
-		return $this->match(lessc::preg_quote($what), $m, $eatWhitespace);
+		if (!isset(self::$literalCache[$what])) {
+			self::$literalCache[$what] = lessc::preg_quote($what);
+		}
+
+		return $this->match(self::$literalCache[$what], $m, $eatWhitespace);
 	}
 
 	protected function genericList(&$out, $parseItem, $delim="", $flatten=true) {
@@ -2961,7 +2984,7 @@ class lessc_parser {
 
 	// try to match something on head of buffer
 	protected function match($regex, &$out, $eatWhitespace = null) {
-		if (is_null($eatWhitespace)) $eatWhitespace = $this->eatWhiteDefault;
+		if ($eatWhitespace === null) $eatWhitespace = $this->eatWhiteDefault;
 
 		$r = '/'.$regex.($eatWhitespace && !$this->writeComments ? '\s*' : '').'/Ais';
 		if (preg_match($r, $this->buffer, $out, null, $this->count)) {
@@ -3053,7 +3076,7 @@ class lessc_parser {
 
 	// append a property to the current block
 	protected function append($prop, $pos = null) {
-		if (!is_null($pos)) $prop[-1] = $pos;
+		if ($pos !== null) $prop[-1] = $pos;
 		$this->env->props[] = $prop;
 	}
 
