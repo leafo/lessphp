@@ -1,4 +1,3 @@
-@charset "utf-8";
 color: "aaa, bbb";
 .topbar {
   background: url(/assets/images/test/topbar.png);
@@ -49,15 +48,6 @@ color: "aaa, bbb";
 }
 .rad pre {
   color: blue;
-}
-@page :left {
-  margin-left: 4cm;
-}
-@page :right {
-  margin-left: 3cm;
-}
-@page {
-  margin: 2cm;
 }
 hello {
   numbers: 1.0 0.1 .1 1.;
