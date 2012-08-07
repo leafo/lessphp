@@ -43,6 +43,7 @@ class lessc {
 	static protected $FALSE = array("keyword", "false");
 
 	protected $libFunctions = array();
+	protected $registeredVars = array();
 	protected $preserveComments = false;
 
 	public $vPrefix = '@'; // prefix of abstract properties
@@ -1502,121 +1503,70 @@ class lessc {
 		}
 	}
 
-	// parse and compile buffer
-	public function parse($str = null, $initialVariables = null) {
-		if (is_array($str)) {
-			$initialVariables = $str;
-			$str = null;
+	/**
+	 * Initialize any static state, can initialize parser for a file
+	 * $opts isn't used yet
+	 */
+	public function __construct($fname = null) {
+		if ($fname !== null) {
+			// used for deprecated parse method
+			$this->_parseFile = $fname;
 		}
+	}
 
+	public function compile($string, $name = null) {
 		$locale = setlocale(LC_NUMERIC, 0);
 		setlocale(LC_NUMERIC, "C");
 
-		$name = null;
-		if (is_null($str)) {
-			if (empty($this->fileName))
-				throw new exception("nothing to parse");
-
-			$name = $this->fileName;
-			$str = file_get_contents($this->fileName);
-		}
-
 		$this->parser = $this->makeParser($name);
-		$root = $this->parser->parse($str);
+		$root = $this->parser->parse($string);
 
 		$this->env = null;
 		$this->scope = null;
-		$this->allParsedFiles = array();
 
 		$this->formatter = $this->newFormatter();
 
-		if ($initialVariables) $this->injectVariables($initialVariables);
+		if (!empty($this->registeredVars)) {
+			$this->injectVariables($this->registeredVars);
+		}
+
 		$this->compileBlock($root);
 
 		ob_start();
 		$this->formatter->block($this->scope);
 		$out = ob_get_clean();
-
 		setlocale(LC_NUMERIC, $locale);
 		return $out;
 	}
 
-	protected function makeParser($name) {
-		$parser = new lessc_parser($this, $name);
-		$parser->writeComments = $this->preserveComments;
-
-		return $parser;
-	}
-
-	public function setFormatter($name) {
-		$this->formatterName = $name;
-	}
-
-	protected function newFormatter() {
-		$className = "lessc_formatter_lessjs";
-		if (!empty($this->formatterName)) {
-			if (!is_string($this->formatterName))
-				return $this->formatterName;
-			$className = "lessc_formatter_$this->formatterName";
+	public function compileFile($fname) {
+		if (!is_readable($fname)) {
+			throw new Exception('load error: failed to find '.$fname);
 		}
 
-		return new $className;
+		$pi = pathinfo($fname);
+
+		$oldImport = $this->importDir;
+
+		$this->importDir = (array)$this->importDir;
+		$this->importDir[] = $pi['dirname'].'/';
+
+		$this->allParsedFiles = array();
+		$this->addParsedFile($fname);
+
+		$out = $this->compile(file_get_contents($fname), $fname);
+
+		$this->importDir = $oldImport;
+
+		return $out;
 	}
 
-	public function setPreserveComments($preserve) {
-		$this->preserveComments = $preserve;
-	}
-
-	/**
-	 * Uses the current value of $this->count to show line and line number
-	 */
-	protected function throwError($msg = null) {
-		if ($this->sourceLoc >= 0) {
-			$this->sourceParser->throwError($msg, $this->sourceLoc);
-		}
-		throw new exception($msg);
-	}
-
-	/**
-	 * Initialize any static state, can initialize parser for a file
-	 * $opts isn't used yet
-	 */
-	public function __construct($fname = null, $opts = null) {
-		if ($fname) {
-			if (!is_file($fname)) {
-				throw new Exception('load error: failed to find '.$fname);
-			}
-			$pi = pathinfo($fname);
-
-			$this->fileName = $fname;
-			$this->importDir = $pi['dirname'].'/';
-			$this->addParsedFile($fname);
-		}
-	}
-
-	public function registerFunction($name, $func) {
-		$this->libFunctions[$name] = $func;
-	}
-
-	public function unregisterFunction($name) {
-		unset($this->libFunctions[$name]);
-	}
-
-	public function allParsedFiles() { return $this->allParsedFiles; }
-	protected function addParsedFile($file) {
-		$this->allParsedFiles[realpath($file)] = filemtime($file);
-	}
-
-
-	// compile file $in to file $out if $in is newer than $out
-	// returns true when it compiles, false otherwise
-	public static function ccompile($in, $out) {
+	// compile only if changed input has changed or output doesn't exist
+	public function checkedCompile($in, $out) {
 		if (!is_file($out) || filemtime($in) > filemtime($out)) {
-			$less = new lessc($in);
-			file_put_contents($out, $less->parse());
+			file_put_contents($out, $this->compileFile($in));
 			return true;
 		}
-
 		return false;
 	}
 
@@ -1640,8 +1590,7 @@ class lessc {
 	 * @param bool $force Force rebuild?
 	 * @return array lessphp cache structure
 	 */
-	public static function cexecute($in, $force = false) {
-
+	public function cachedCompile($in, $force = false) {
 		// assume no root
 		$root = null;
 
@@ -1671,11 +1620,10 @@ class lessc {
 
 		if ($root !== null) {
 			// If we have a root value which means we should rebuild.
-			$less = new lessc($root);
 			$out = array();
 			$out['root'] = $root;
-			$out['compiled'] = $less->parse();
-			$out['files'] = $less->allParsedFiles();
+			$out['compiled'] = $this->compileFile($root);
+			$out['files'] = $this->allParsedFiles();
 			$out['updated'] = time();
 			return $out;
 		} else {
@@ -1684,6 +1632,109 @@ class lessc {
 			return $in;
 		}
 
+	}
+
+	// parse and compile buffer
+	// This is deprecated
+	public function parse($str = null, $initialVariables = null) {
+		if (is_array($str)) {
+			$initialVariables = $str;
+			$str = null;
+		}
+
+		$oldVars = $this->registeredVars;
+		if ($initialVariables !== null) {
+			$this->setVariables($initialVariables);
+		}
+
+		if ($str == null) {
+			if (empty($this->_parseFile)) {
+				throw new exception("nothing to parse");
+			}
+
+			$out = $this->compileFile($this->_parseFile);
+		} else {
+			$out = $this->compile($str);
+		}
+
+		$this->registeredVars = $oldVars;
+		return $out;
+	}
+
+	protected function makeParser($name) {
+		$parser = new lessc_parser($this, $name);
+		$parser->writeComments = $this->preserveComments;
+
+		return $parser;
+	}
+
+	public function setFormatter($name) {
+		$this->formatterName = $name;
+	}
+
+	protected function newFormatter() {
+		$className = "lessc_formatter_lessjs";
+		if (!empty($this->formatterName)) {
+			if (!is_string($this->formatterName))
+				return $this->formatterName;
+			$className = "lessc_formatter_$this->formatterName";
+		}
+
+		return new $className;
+	}
+
+	public function setPreserveComments($preserve) {
+		$this->preserveComments = $preserve;
+	}
+
+	public function registerFunction($name, $func) {
+		$this->libFunctions[$name] = $func;
+	}
+
+	public function unregisterFunction($name) {
+		unset($this->libFunctions[$name]);
+	}
+
+	public function setVariables($variables) {
+		$this->registeredVars = array_merge($this->registeredVars, $variables);
+	}
+
+	public function unsetVariable($name) {
+		unset($this->registeredVars[name]);
+	}
+
+	public function allParsedFiles() {
+		return $this->allParsedFiles;
+	}
+
+	protected function addParsedFile($file) {
+		$this->allParsedFiles[realpath($file)] = filemtime($file);
+	}
+
+	/**
+	 * Uses the current value of $this->count to show line and line number
+	 */
+	protected function throwError($msg = null) {
+		if ($this->sourceLoc >= 0) {
+			$this->sourceParser->throwError($msg, $this->sourceLoc);
+		}
+		throw new exception($msg);
+	}
+
+	// compile file $in to file $out if $in is newer than $out
+	// returns true when it compiles, false otherwise
+	public static function ccompile($in, $out, $less = null) {
+		if ($less === null) {
+			$less = new self;
+		}
+		return $less->checkedCompile($in, $out);
+	}
+
+	public static function cexecute($in, $force = false, $less = null) {
+		if ($less === null) {
+			$less = new self;
+		}
+		return $less->cachedCompile($in, $force);
 	}
 
 	static protected $cssColors = array(
