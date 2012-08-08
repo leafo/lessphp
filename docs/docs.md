@@ -864,52 +864,84 @@ function that let's you unquote any value. It is called `e`.
 
 ## PHP Interface
 
-The PHP interface lets you control the compiler from your PHP scripts. There is
-only one file to include to get access to everything:
+When working with **lessphp** from PHP, the typical flow is to create a new
+instance of `lessc`, configure it how you like, then tell it to compile
+something using one built in compile methods.
+
+Methods:
+
+* [`compile($string)`](#compiling[) -- Compile a string
+
+* [`compileFile($inFile, [$outFile])`](#compiling) -- Compile a file to another or return it
+
+* [`checkedCompile($inFile, $outFile)`](#compiling) -- Compile a file only if it's newer
+
+* [`cachedCompile($cacheOrFile)`](#) -- Conditionally compile while tracking imports
+
+* [`setFormatter($formatterName)`](#output_formatting) -- Change how CSS output looks
+
+* [`setPreserveComments($keepComments)`](#preserving_comments) -- Change if comments are kept in output
+
+* [`registerFunction($name, $callable)`](#custom_functions) -- Add a custom function
+
+* [`unregisterFunction($name)`](#custom_functions) -- Remove a registered function
+
+* [`setVariables($vars)`](#setting_variables_from_php) -- Set a variable from PHP
+
+* [`unsetVariable($name)`](#setting_variables_from_php) -- Remove a PHP variable
+
+
+### Compiling
+
+The `compile` method compiles a string of LESS code to CSS.
 
     ```php
     <?php
-    include "lessc.inc.php";
+    require "lessc.inc.php";
+
+    $less = new lessc;
+    echo $less->compile(".block { padding: 3 + 4px }");
     ```
 
-To compile a file to a string (of CSS code):
+The `compileFile` method reads and compiles a file. It will either return the
+result or write it to the path specified by an optional second argument.
 
     ```php
-    $less = new lessc("myfile.less");
-    $css = $less->parse();
+    echo $less->compileFile("input.less");
     ```
 
-To compile a string to a string:
+The `compileChecked` method is like `compileFile`, but it only compiles if the output
+file doesn't exist or it's older than the input file:
 
     ```php
-    $less = new lessc(); // a blank lessc
-    $css = $less->parse("body { a { color: red } }");
+    $less->checkedCompile("input.less", "output.css");
     ```
 
 ### Output Formatting
 
-The output formatter controls what the compiled CSS looks like. Besides the
-default output formatter, two additional ones are included, and it's
-easy to make your own.
+Output formatting controls the indentation of the output CSS. Besides the
+default formatter, two additional ones are included and it's also easy to make
+your own.
 
-We use the `setFormatter` method set the formatter that should be used. Just
+To use a formatter, the method `setFormatter` is used. Just
 pass the name of the formatter:
 
     ```php
-    $less = new lessc("myfile.less");
+    $less = new lessc();
 
     $less->setFormatter("compressed");
-
-    $css = $less->parse();
+    echo $less->compile("div { color: lighten(blue, 10%) }");
     ```
 
-In this example, the `compressed` formatter is used. Other formatters include
-`classic` and `lessjs`. `lessjs` is the default, and matches the output of the
-reference JavaScript version of LESS. `classic` is what **lessphp** used to
-output by default.
+In this example, the `compressed` formatter is used. The formatters are:
 
-To revert to the default formatter, just call `setFormatter` with a value of
-`null`.
+ * `lessjs` *(default)* -- Same style used in LESS for JavaScript
+
+ * `compressed` -- Compresses all the unrequired whitespace
+
+ * `classic` -- **lessphp**'s original formatter
+
+To revert to the default formatter, call `setFormatter` with a value of `null`.
 
 #### Custom Formatter
 
@@ -918,15 +950,18 @@ existing formatter and alter its public properties before passing it off to
 **lessphp**. The `setFormatter` method can also take an instance of a
 formatter.
 
-For example, let's use tabs instead of the default two spaces to indent:
+Each of the formatter names corresponds to a class with `lessc_formatter_`
+prepended in front of it. Here the classic formatter is customized to use tabs
+instead of spaces:
+
 
     ```php
     $formatter = new lessc_formatter_classic;
     $formatter->indentChar = "\t";
 
-    $less = new lessc("myfile.less");
+    $less = new lessc();
     $less->setFormatter($formatter);
-    $css = $less->parse();
+    echo $less->compileFile("myfile.less");
     ```
 
 For more information about what can be configured with the formatter consult
@@ -934,20 +969,21 @@ the source code.
 
 ### Preserving Comments
 
-By default, all comments in the source LESS file are thrown out when compiling.
-Sometimes you might want to keep the `/* */` comments in the output though. For
-example you need to bundle a license in your file.
+By default, all comments in the source LESS file are stripped when compiling.
+You might want to keep the `/* */` comments in the output though. For
+example, bundling a license in the file.
 
-To enable comment preservation, just use the `setPreserveComments` method:
+Enable or disable comment preservation by calling `setPreserveComments`:
 
     ```php
     $less = new lessc();
     $less->setPreserveComments(true);
-    echo $less->parse("/* hello! */");
+    echo $less->compile("/* hello! */");
     ```
 
-Comments are disabled by default because they hurt the performance of the
-parser, and in most cases comments are not required.
+Comments are disabled by default because there is additional overhead, and more
+often than not they aren't needed.
+
 
 ### Compiling Automatically
 
@@ -1163,7 +1199,7 @@ Errors from watch mode are written to standard out.
 
 ## License
 
-Copyright (c) 2010 Leaf Corcoran, <http://leafo.net/lessphp>
+Copyright (c) 2012 Leaf Corcoran, <http://leafo.net/lessphp>
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
