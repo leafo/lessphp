@@ -1539,7 +1539,7 @@ class lessc {
 		return $out;
 	}
 
-	public function compileFile($fname) {
+	public function compileFile($fname, $outFname = null) {
 		if (!is_readable($fname)) {
 			throw new Exception('load error: failed to find '.$fname);
 		}
@@ -1558,13 +1558,17 @@ class lessc {
 
 		$this->importDir = $oldImport;
 
+		if ($outFname !== null) {
+			return file_put_contents($outFname, $out);
+		}
+
 		return $out;
 	}
 
 	// compile only if changed input has changed or output doesn't exist
 	public function checkedCompile($in, $out) {
 		if (!is_file($out) || filemtime($in) > filemtime($out)) {
-			file_put_contents($out, $this->compileFile($in));
+			$this->compileFile($in, $out);
 			return true;
 		}
 		return false;
