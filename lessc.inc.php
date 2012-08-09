@@ -1707,7 +1707,7 @@ class lessc {
 	}
 
 	public function unsetVariable($name) {
-		unset($this->registeredVars[name]);
+		unset($this->registeredVars[$name]);
 	}
 
 	public function allParsedFiles() {
