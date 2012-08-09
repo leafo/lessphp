@@ -106,7 +106,7 @@ class lessc {
 			if (!is_null($realPath)) {
 				$this->addParsedFile($realPath);
 
-				$parser = new lessc_parser($this, $realPath);
+				$parser = $this->makeParser($realPath);
 				$root = $parser->parse(file_get_contents($realPath));
 				$root->parent = $parentBlock;
 
