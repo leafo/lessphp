@@ -917,6 +917,9 @@ file doesn't exist or it's older than the input file:
     $less->checkedCompile("input.less", "output.css");
     ```
 
+See [Compiling Automatically](#compiling_automatically) for a description of
+the more advanced `cachedCompile` method.
+
 ### Output Formatting
 
 Output formatting controls the indentation of the output CSS. Besides the
