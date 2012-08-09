@@ -625,7 +625,9 @@ class lessc {
 			}
 
 			foreach ($mixins as $mixin) {
+				$haveScope = false;
 				if (isset($mixin->parent->scope)) {
+					$haveScope = true;
 					$mixinParentEnv = $this->pushEnv();
 					$mixinParentEnv->storeParent = $mixin->parent->scope;
 				}
@@ -659,10 +661,7 @@ class lessc {
 				$mixin->parent = $oldParent;
 
 				if ($haveArgs) $this->popEnv();
-
-				if (isset($mixinParentEnv)) {
-					$this->popEnv();
-				}
+				if ($haveScope) $this->popEnv();
 			}
 
 			break;
