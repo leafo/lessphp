@@ -1,7 +1,7 @@
 <?php
 
 /**
- * lessphp v0.3.6
+ * lessphp v0.3.7
  * http://leafo.net/lessphp
  *
  * LESS css compiler, adapted from http://lesscss.org
@@ -38,7 +38,7 @@
  * handling things like indentation.
  */
 class lessc {
-	static public $VERSION = "v0.3.6";
+	static public $VERSION = "v0.3.7";
 	static protected $TRUE = array("keyword", "true");
 	static protected $FALSE = array("keyword", "false");
 
