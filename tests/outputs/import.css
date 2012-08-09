@@ -1,7 +1,7 @@
-@import url("not-found");
+@import "not-found";
+@import "something.css" media;
 @import url("something.css") media;
-@import url("something.css") media;
-@import url("something.css") media, screen, print;
+@import url(something.css) media, screen, print;
 b {
   color: maroon;
   padding: 16px;
@@ -37,4 +37,10 @@ div b {
 #merge-import-mixins div {
   background: red;
   background: blue;
+}
+.inner {
+  content: "inner/file1.less";
+}
+.inner {
+  content: "inner/file2.less";
 }

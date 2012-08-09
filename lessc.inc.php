@@ -87,81 +87,57 @@ class lessc {
 		return preg_quote($what, '/');
 	}
 
-	// attempt to import $import into $parentBlock
-	// $props is the property array that will given to $parentBlock at the end
-	protected function mixImport($import, $parentBlock, &$props) {
-		list(, $url, $media) = $import;
-
-		if (is_array($url)) {
-			$url = $this->compileValue($this->lib_e($this->reduce($url)));
+	protected function tryImport($importPath, $parentBlock, $out) {
+		if ($importPath[0] == "function" && $importPath[1] == "url") {
+			$importPath = $this->flattenList($importPath[2]);
 		}
 
-		if (empty($media) && substr_compare($url, '.css', -4, 4) !== 0) {
-			if ($this->importDisabled) {
-				$props[] = array('raw', '/* import disabled */');
-				return true;
-			}
+		$str = $this->coerceString($importPath);
+		if ($str === null) return false;
 
-			$realPath = $this->findImport($url);
-			if (!is_null($realPath)) {
-				$this->addParsedFile($realPath);
+		$url = $this->compileValue($this->lib_e($str));
 
-				$parser = $this->makeParser($realPath);
-				$root = $parser->parse(file_get_contents($realPath));
-				$root->parent = $parentBlock;
+		// don't import if it ends in css
+		if (substr_compare($url, '.css', -4, 4) === 0) return false;
 
-				// handle all the imports in the new file
-				$pi = pathinfo($realPath);
-				$this->mixImports($root, $pi['dirname'].'/');
+		$realPath = $this->findImport($url);
+		if ($realPath === null) return false;
 
-				// bring blocks from import into current block
-				foreach ($root->children as $childName => $child) {
-					if (isset($parentBlock->children[$childName])) {
-						$parentBlock->children[$childName] = array_merge(
-							$parentBlock->children[$childName],
-							$child);
-					} else {
-						$parentBlock->children[$childName] = $child;
-					}
-				}
-
-				// splice in the props
-				foreach ($root->props as $prop) {
-					// leave a reference to the file where it came from
-					if (isset($prop[-1]) && !is_array($prop[-1])) {
-						$prop[-1] = array($parser, $prop[-1]);
-					}
-					$props[] = $prop;
-				}
-
-				return true;
-			}
+		if ($this->importDisabled) {
+			$out->lines[] = "/* import disabled */";
+			return true;
 		}
 
-		// fallback to regular css import
-		$props[] = array('raw', '@import url("'.$url.'")'.($media ? ' '.$media : '').';');
-		return false;
-	}
+		$this->addParsedFile($realPath);
+		$parser = $this->makeParser($realPath);
+		$root = $parser->parse(file_get_contents($realPath));
 
-	// import all imports mentioned in the block
-	protected function mixImports($block, $importDir = null) {
-		$oldImport = $this->importDir;
-		if ($importDir !== null) {
-			$this->importDir = array_merge((array)$importDir, (array)$this->importDir);
-		}
-
-		$props = array();
-		foreach ($block->props as $prop) {
-			if ($prop[0] == 'import') {
-				$this->mixImport($prop, $block, $props);
+		// copy mixins into scope
+		// bring blocks from import into current block
+		// TODO: need to mark the source parser	these came from this file
+		foreach ($root->children as $childName => $child) {
+			if (isset($parentBlock->children[$childName])) {
+				$parentBlock->children[$childName] = array_merge(
+					$parentBlock->children[$childName],
+					$child);
 			} else {
-				$props[] = $prop;
+				$parentBlock->children[$childName] = $child;
 			}
 		}
-		$block->props = $props;
-		$this->importDir = $oldImport;
-	}
 
+		$oldSourceParser = $this->sourceParser;
+		$oldImport = $this->importDir;
+		// TODO: this is because the importDir api is stupid
+		$this->importDir = (array)$this->importDir;
+
+		$pi = pathinfo($realPath);
+		array_unshift($this->importDir, $pi['dirname']);
+		$this->compileProps($root, $out);
+
+		$this->importDir = $oldImport;
+		$this->sourceParser = $oldSourceParser;
+		return true;
+	}
 
 	/**
 	 * Recursively compiles a block.
@@ -273,7 +249,6 @@ class lessc {
 	}
 
 	protected function compileProps($block, $out) {
-		$this->mixImports($block);
 		foreach ($this->sortProps($block->props) as $prop) {
 			$this->compileProp($prop, $block, $out);
 		}
@@ -281,18 +256,28 @@ class lessc {
 
 	protected function sortProps($props) {
 		$vars = array();
+		$imports = array();
 		$other = array();
 
 		foreach ($props as $prop) {
-			if ($prop[0] == "assign" &&
-				substr($prop[1], 0, 1) == $this->vPrefix) {
+			switch ($prop[0]) {
+			case "assign":
+				if (isset($prop[1][0]) && $prop[0][0] == $this->vPrefix) {
 					$vars[] = $prop;
 				} else {
 					$other[] = $prop;
 				}
+				break;
+			case "import":
+				$imports[] = $prop;
+				$other[] = array("import_mixin");
+				break;
+			default:
+				$other[] = $prop;
+			}
 		}
 
-		return array_merge($vars, $other);
+		return array_merge($vars, $imports, $other);
 	}
 
 	protected function compileMediaQuery($queries) {
@@ -587,18 +572,7 @@ class lessc {
 	// compile a prop and update $lines or $blocks appropriately
 	protected function compileProp($prop, $block, $out) {
 		// set error position context
-		if (isset($prop[-1])) {
-			if (is_array($prop[-1])) {
-				list($parser, $count) = $prop[-1];
-				$this->sourceParser = $parser;
-				$this->sourceLoc = $count;
-			} else {
-				$this->sourceParser = $this->parser;
-				$this->sourceLoc = $prop[-1];
-			}
-		} else {
-			$this->sourceLoc = -1;
-		}
+		$this->sourceLoc = isset($prop[-1]) ? $prop[-1] : -1;
 
 		switch ($prop[0]) {
 		case 'assign':
@@ -642,7 +616,6 @@ class lessc {
 				$oldParent = $mixin->parent;
 				if ($mixin != $block) $mixin->parent = $block;
 
-				$this->mixImports($mixin);
 				foreach ($this->sortProps($mixin->props) as $subProp) {
 					if ($suffix !== null &&
 						$subProp[0] == "assign" &&
@@ -674,6 +647,12 @@ class lessc {
 			break;
 		case "comment":
 			$out->lines[] = $prop[1];
+			break;
+		case "import";
+			$importPath = $this->reduce($prop[1]);
+			if (!$this->tryImport($importPath, $block, $out)) {
+				$out->lines[] = "@import " . $this->compileValue($importPath).";";
+			}
 			break;
 		default:
 			$this->throwError("unknown op: {$prop[0]}\n");
@@ -1271,6 +1250,14 @@ class lessc {
 		return null;
 	}
 
+	// turn list of length 1 into value type
+	protected function flattenList($value) {
+		if ($value[0] == "list" && count($value[2]) == 1) {
+			return $this->flattenList($value[2][0]);
+		}
+		return $value;
+	}
+
 	protected function toBool($a) {
 		if ($a) return self::$TRUE;
 		else return self::$FALSE;
@@ -1529,6 +1516,7 @@ class lessc {
 			$this->injectVariables($this->registeredVars);
 		}
 
+		$this->sourceParser = $this->parser; // used for error messages
 		$this->compileBlock($root);
 
 		ob_start();
@@ -2095,25 +2083,8 @@ class lessc_parser {
 			$this->seek($s);
 		}
 
-		if ($this->import($url, $media)) {
-			$this->append(array('import', $url, $media), $s);
-			return true;
-
-			// don't check .css files
-			if (empty($media) && substr_compare($url, '.css', -4, 4) !== 0) {
-				if ($this->importDisabled) {
-					$this->append(array('raw', '/* import disabled */'));
-				} else {
-					$path = $this->findImport($url);
-					if (!is_null($path)) {
-						$this->append(array('import', $path), $s);
-						return true;
-					}
-				}
-			}
-
-			$this->append(array('raw', '@import url("'.$url.'")'.
-				($media ? ' '.$media : '').';'), $s);
+		if ($this->import($importValue)) {
+			$this->append($importValue, $s);
 			return true;
 		}
 
@@ -2402,7 +2373,7 @@ class lessc_parser {
 	}
 
 	// an import statement
-	protected function import(&$url, &$media) {
+	protected function import(&$out) {
 		$s = $this->seek();
 		if (!$this->literal('@import')) return false;
 
@@ -2410,24 +2381,10 @@ class lessc_parser {
 		// @import url("something.css") media;
 		// @import url(something.css) media;
 
-		if ($this->literal('url(')) $parens = true; else $parens = false;
-
-		if (!$this->string($url)) {
-			if ($parens && $this->to(')', $url)) {
-				$parens = false; // got em
-			} else {
-				$this->seek($s);
-				return false;
-			}
+		if ($this->propertyValue($value)) {
+			$out = array("import", $value);
+			return true;
 		}
-
-		if ($parens && !$this->literal(')')) {
-			$this->seek($s);
-			return false;
-		}
-
-		// now the rest is media
-		return $this->to(';', $media, false, true);
 	}
 
 	protected function mediaQueryList(&$out) {

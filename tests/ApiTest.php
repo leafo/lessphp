@@ -5,6 +5,7 @@ require_once __DIR__ . "/../lessc.inc.php";
 class ApiTest extends PHPUnit_Framework_TestCase {
 	public function setUp() {
 		$this->less = new lessc();
+		$this->less->importDir = array(__DIR__ . "/inputs/test-imports");
 	}
 
 	public function testPreserveComments() {
@@ -107,8 +108,8 @@ div:before {
 	public function testDisableImport() {
 		$this->less->importDisabled = true;
 		$this->assertEquals(
-			$this->compile("@import 'hello';"),
-			"/* import disabled */");
+			"/* import disabled */",
+			$this->compile("@import 'file3';"));
 	}
 
 	public function testUserFunction() {
