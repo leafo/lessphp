@@ -3250,8 +3250,6 @@ class lessc_formatter_classic {
 			return true;
 		}
 		return false;
-
-		if (empty($block->lines) && empty($block->children)) return true;
 	}
 
 	public function block($block) {
