@@ -3150,7 +3150,6 @@ class lessc_parser {
 
 		$out = '';
 		$min = null;
-		$done = false;
 		while (true) {
 			// find the next item
 			foreach ($look as $token) {
