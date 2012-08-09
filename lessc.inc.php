@@ -187,18 +187,22 @@ class lessc {
 	protected function compileBlock($block) {
 		switch ($block->type) {
 		case "root":
-			return $this->compileRoot($block);
+			$this->compileRoot($block);
+			break;
 		case null:
-			return $this->compileCSSBlock($block);
+			$this->compileCSSBlock($block);
+			break;
 		case "media":
-			return $this->compileMedia($block);
+			$this->compileMedia($block);
+			break;
 		case "directive":
 			$name = "@" . $block->name;
 			if (!empty($block->value)) {
 				$name .= " " . $this->compileValue($this->reduce($block->value));
 			}
 
-			return $this->compileNestedBlock($block, array($name));
+			$this->compileNestedBlock($block, array($name));
+			break;
 		default:
 			$this->throwError("unknown block type: $block->type\n");
 		}
