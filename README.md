@@ -18,37 +18,40 @@ compile methods.
 
 The `compile` method compiles a string of LESS code to CSS.
 
-    ```php
-    <?php
-    require "lessc.inc.php";
+```php
+<?php
+require "lessc.inc.php";
 
-    $less = new lessc;
-    echo $less->compile(".block { padding: 3 + 4px }");
-    ```
+$less = new lessc;
+echo $less->compile(".block { padding: 3 + 4px }");
+```
 
 The `compileFile` method reads and compiles a file. It will either return the
 result or write it to the path specified by an optional second argument.
 
-    ```php
-    echo $less->compileFile("input.less");
-    ```
+```php
+<?php
+echo $less->compileFile("input.less");
+```
 
 The `compileChecked` method is like `compileFile`, but it only compiles if the output
 file doesn't exist or it's older than the input file:
 
-    ```php
-    $less->checkedCompile("input.less", "output.css");
-    ```
+```php
+<?php
+$less->checkedCompile("input.less", "output.css");
+```
 
 If there any problem compiling your code, an exception is thrown with a helpful message:
 
-    ```php
-    try {
-      $less->compile("invalid LESS } {");
-    } catch (exception $e) {
-      echo "fatal error: " . $e->getMessage();
-    }
-    ```
+```php
+<?php
+try {
+  $less->compile("invalid LESS } {");
+} catch (exception $e) {
+  echo "fatal error: " . $e->getMessage();
+}
+```
 
 The `lessc` object can be configured through an assortment of instance methods.
 Some possible configuration options include [changing the output format][1],
