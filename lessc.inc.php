@@ -2981,12 +2981,16 @@ class lessc_parser {
 		if ($eatWhitespace === null) $eatWhitespace = $this->eatWhiteDefault;
 
 		// shortcut on single letter
-		if (!$eatWhitespace && isset($this->buffer[$this->count]) && !isset($what[1])) {
+		if (!isset($what[1]) && isset($this->buffer[$this->count])) {
 			if ($this->buffer[$this->count] == $what) {
-				$this->count++;
-				return true;
+				if (!$eatWhitespace) {
+					$this->count++;
+					return true;
+				}
+				// goes below...
+			} else {
+				return false;
 			}
-			else return false;
 		}
 
 		if (!isset(self::$literalCache[$what])) {
