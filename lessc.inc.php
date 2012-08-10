@@ -62,6 +62,8 @@ class lessc {
 
 	static public $defaultValue = array("keyword", "");
 
+	static protected $nextImportId = 0; // uniquely identify imports
+
 	// attempts to find the path of an import url, returns null for css files
 	protected function findImport($url) {
 		foreach ((array)$this->importDir as $dir) {
@@ -104,8 +106,7 @@ class lessc {
 		if ($realPath === null) return false;
 
 		if ($this->importDisabled) {
-			$out->lines[] = "/* import disabled */";
-			return true;
+			return array(false, "/* import disabled */");
 		}
 
 		$this->addParsedFile($realPath);
@@ -125,18 +126,30 @@ class lessc {
 			}
 		}
 
+		$pi = pathinfo($realPath);
+		$dir = $pi["dirname"];
+
+		list($top, $bottom) = $this->sortProps($root->props, true);
+		$this->compileImportedProps($top, $parentBlock, $out, $parser, $dir);
+
+		return array(true, $bottom, $parser, $dir);
+	}
+
+	protected function compileImportedProps($props, $block, $out, $sourceParser, $importDir) {
 		$oldSourceParser = $this->sourceParser;
+
 		$oldImport = $this->importDir;
+
 		// TODO: this is because the importDir api is stupid
 		$this->importDir = (array)$this->importDir;
+		array_unshift($this->importDir, $importDir);
 
-		$pi = pathinfo($realPath);
-		array_unshift($this->importDir, $pi['dirname']);
-		$this->compileProps($root, $out);
+		foreach ($props as $prop) {
+			$this->compileProp($prop, $block, $out);
+		}
 
 		$this->importDir = $oldImport;
 		$this->sourceParser = $oldSourceParser;
-		return true;
 	}
 
 	/**
@@ -254,7 +267,7 @@ class lessc {
 		}
 	}
 
-	protected function sortProps($props) {
+	protected function sortProps($props, $split = false) {
 		$vars = array();
 		$imports = array();
 		$other = array();
@@ -262,22 +275,28 @@ class lessc {
 		foreach ($props as $prop) {
 			switch ($prop[0]) {
 			case "assign":
-				if (isset($prop[1][0]) && $prop[0][0] == $this->vPrefix) {
+				if (isset($prop[1][0]) && $prop[1][0] == $this->vPrefix) {
 					$vars[] = $prop;
 				} else {
 					$other[] = $prop;
 				}
 				break;
 			case "import":
+				$id = self::$nextImportId++;
+				$prop[] = $id;
 				$imports[] = $prop;
-				$other[] = array("import_mixin");
+				$other[] = array("import_mixin", $id);
 				break;
 			default:
 				$other[] = $prop;
 			}
 		}
 
-		return array_merge($vars, $imports, $other);
+		if ($split) {
+			return array(array_merge($vars, $imports), $other);
+		} else {
+			return array_merge($vars, $imports, $other);
+		}
 	}
 
 	protected function compileMediaQuery($queries) {
@@ -649,10 +668,30 @@ class lessc {
 			$out->lines[] = $prop[1];
 			break;
 		case "import";
-			$importPath = $this->reduce($prop[1]);
-			if (!$this->tryImport($importPath, $block, $out)) {
-				$out->lines[] = "@import " . $this->compileValue($importPath).";";
+			list(, $importPath, $importId) = $prop;
+			$importPath = $this->reduce($importPath);
+
+			if (!isset($this->env->imports)) {
+				$this->env->imports = array();
 			}
+
+			$result = $this->tryImport($importPath, $block, $out);
+
+			$this->env->imports[$importId] = $result === false ?
+				array(false, "@import " . $this->compileValue($importPath).";") :
+				$result;
+
+			break;
+		case "import_mixin":
+			list(,$importId) = $prop;
+			$import = $this->env->imports[$importId];
+			if ($import[0] === false) {
+				$out->lines[] = $import[1];
+			} else {
+				list(, $bottom, $parser, $importDir) = $import;
+				$this->compileImportedProps($bottom, $block, $out, $parser, $importDir);
+			}
+
 			break;
 		default:
 			$this->throwError("unknown op: {$prop[0]}\n");

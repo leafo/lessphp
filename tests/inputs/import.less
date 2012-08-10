@@ -42,5 +42,15 @@ div {
 	div { .just-a-class; }
 }
 
+
 @import "inner/file1";
+
+
+// test bubbling variables up from imports, while preserving order
+
+pre {
+	color: @someValue;
+}
+
+@import "file3";
 

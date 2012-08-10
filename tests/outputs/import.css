@@ -44,3 +44,9 @@ div b {
 .inner {
   content: "inner/file2.less";
 }
+pre {
+  color: hello-from-file-3;
+}
+h2 {
+  background: url("../images/logo.png") no-repeat;
+}
