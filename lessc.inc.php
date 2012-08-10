@@ -2151,7 +2151,7 @@ class lessc_parser {
 		}
 
 		// closing a block
-		if ($this->literal('}')) {
+		if ($this->literal('}', false)) {
 			try {
 				$block = $this->pop();
 			} catch (exception $e) {
@@ -2181,6 +2181,10 @@ class lessc_parser {
 			if (!$hidden) {
 				$this->append(array('block', $block), $s);
 			}
+
+			// this is done here so comments aren't bundled into he block that
+			// was just closed
+			$this->whitespace();
 			return true;
 		}
 
