@@ -113,10 +113,14 @@ class lessc {
 		$parser = $this->makeParser($realPath);
 		$root = $parser->parse(file_get_contents($realPath));
 
-		// copy mixins into scope
+		// copy mixins into scope, set their parents
 		// bring blocks from import into current block
 		// TODO: need to mark the source parser	these came from this file
 		foreach ($root->children as $childName => $child) {
+			foreach ($child as $innerBlock) {
+				$innerBlock->parent = $parentBlock;
+			}
+
 			if (isset($parentBlock->children[$childName])) {
 				$parentBlock->children[$childName] = array_merge(
 					$parentBlock->children[$childName],

@@ -34,6 +34,9 @@ div b {
 #merge-import-mixins .just-a-class {
   background: blue;
 }
+#merge-import-mixins .hello {
+  height: 200px;
+}
 #merge-import-mixins div {
   background: red;
   background: blue;
