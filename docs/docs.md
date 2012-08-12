@@ -890,6 +890,10 @@ Methods:
 
 * [`unsetVariable($name)`](#setting_variables_from_php) -- Remove a PHP variable
 
+* [`setImportDir($dirs)`](#import_directory) -- Set the search path for imports
+
+* [`addImportDir($dir)`](#import_directory) -- Append directory to search path for imports
+
 
 ### Compiling
 
@@ -1130,6 +1134,38 @@ One for PHP and one for LESS.
     ));
 
     echo $less->compile("body { background: url("@{url}/bg.png"); }");
+    ```
+
+### Import Directory
+
+When running the `@import` directive, an array of directories called the import
+search path is searched through to find the file being asked for.
+
+By default, when using `compile`, the import search path just contains `""`,
+which is equivalent to the current directory of the script. If `compileFile` is
+used, then the directory of the file being compiled is used as the starting
+import search path.
+
+Two methods are available for configuring the search path.
+
+`setImportDir` will overwrite the search path with its argument. If the value
+isn't an array it will be converted to one.
+
+
+In this example, `@import "colors";` will look for either
+`assets/less/colors.less` or `assets/bootstrap/colors.less` in that order:
+
+    ```php
+    $less->setImportDir(array("assets/less/", "assets/bootstrap");
+
+    echo $less->compile('@import "colors";');
+    ```
+
+`addImportDir` will append a single path to the import search path instead of
+overwritting the whole thing.
+
+    ```php
+    $less->addImportDir("public/stylesheets");
     ```
 
 ### Custom Functions

@@ -1741,6 +1741,15 @@ class lessc {
 		unset($this->registeredVars[$name]);
 	}
 
+	public function setImportDir($dirs) {
+		$this->importDir = (array)$dir;
+	}
+
+	public function addImportDir($dir) {
+		$this->importDir = (array)$this->importDir;
+		$this->importDir[] = $dir;
+	}
+
 	public function allParsedFiles() {
 		return $this->allParsedFiles;
 	}
