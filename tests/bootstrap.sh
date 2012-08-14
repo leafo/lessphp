@@ -1,9 +1,15 @@
 #!/bin/sh
 
-echo "This script clones twitter bootsrap, compiles it with lessc and lessphp,"
+echo "This script clones Twitter Bootstrap, compiles it with lessc and lessphp,"
 echo "cleans up results with sort.php, and outputs diff. To run it, you need to"
 echo "have git and lessc installed."
 echo ""
+
+if [ -z "$input" ]; then
+  input="bootstrap/less/bootstrap.less"
+fi
+dest=$(basename "$input")
+dest="${dest%.*}"
 
 if [ -z "$@" ]; then
   diff_tool="diff -b -u -t -B"
@@ -18,15 +24,15 @@ if [ ! -d 'bootstrap/' ]; then
   git clone https://github.com/twitter/bootstrap
 fi
 
-echo ">> Lessc compilation"
-lessc bootstrap/less/bootstrap.less tmp/bootstrap.lessc.css
+echo ">> lessc compilation ($input)"
+lessc "$input" "tmp/$dest.lessc.css"
 
-echo ">> Lessphp compilation"
-../plessc bootstrap/less/bootstrap.less tmp/bootstrap.lessphp.css
+echo ">> lessphp compilation ($input)"
+../plessc "$input" "tmp/$dest.lessphp.css"
 echo ">> Cleanup and convert"
 
-php sort.php tmp/bootstrap.lessc.css > tmp/bootstrap.lessc.clean.css
-php sort.php tmp/bootstrap.lessphp.css > tmp/bootstrap.lessphp.clean.css
+php sort.php "tmp/$dest.lessc.css" > "tmp/$dest.lessc.clean.css"
+php sort.php "tmp/$dest.lessphp.css" > "tmp/$dest.lessphp.clean.css"
 
 echo ">> Doing diff"
-$diff_tool tmp/bootstrap.lessc.clean.css tmp/bootstrap.lessphp.clean.css
+$diff_tool "tmp/$dest.lessc.clean.css" "tmp/$dest.lessphp.clean.css"
