@@ -1169,7 +1169,7 @@ class lessc {
 		return false;
 	}
 
-	protected function reduce($value) {
+	protected function reduce($value, $forExpression = false) {
 		switch ($value[0]) {
 		case "variable":
 			$key = $value[1];
@@ -1190,7 +1190,7 @@ class lessc {
 			return $out;
 		case "list":
 			foreach ($value[2] as &$item) {
-				$item = $this->reduce($item);
+				$item = $this->reduce($item, $forExpression);
 			}
 			return $value;
 		case "expression":
@@ -1220,7 +1220,7 @@ class lessc {
 				if ($args[0] == 'list')
 					$args = self::compressList($args[2], $args[1]);
 
-				$ret = call_user_func($f, $this->reduce($args), $this);
+				$ret = call_user_func($f, $this->reduce($args, true), $this);
 
 				if (is_null($ret)) {
 					return array("string", "", array(
@@ -1252,9 +1252,21 @@ class lessc {
 				}
 			}
 			return array("string", "", array($op, $exp));
-		default:
-			return $value;
 		}
+
+		if ($forExpression) {
+			switch ($value[0]) {
+			case "keyword":
+				if ($color = $this->coerceColor($value)) {
+					return $color;
+				}
+				break;
+			case "raw_color":
+				return $this->coerceColor($value);
+			}
+		}
+
+		return $value;
 	}
 
 
@@ -1314,8 +1326,8 @@ class lessc {
 	protected function evaluate($exp) {
 		list(, $op, $left, $right, $whiteBefore, $whiteAfter) = $exp;
 
-		$left = $this->reduce($left);
-		$right = $this->reduce($right);
+		$left = $this->reduce($left, true);
+		$right = $this->reduce($right, true);
 
 		if ($leftColor = $this->coerceColor($left)) {
 			$left = $leftColor;
