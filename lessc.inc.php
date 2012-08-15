@@ -1754,7 +1754,7 @@ class lessc {
 	}
 
 	public function setImportDir($dirs) {
-		$this->importDir = (array)$dir;
+		$this->importDir = (array)$dirs;
 	}
 
 	public function addImportDir($dir) {
