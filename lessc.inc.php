@@ -52,6 +52,8 @@ class lessc {
 
 	public $importDisabled = false;
 	public $importDir = '';
+	
+	public $allowUrlRewrite = true; // rewrite urls relative to imported files
 
 	protected $numberPrecision = null;
 
@@ -112,7 +114,7 @@ class lessc {
 		$this->addParsedFile($realPath);
 		$parser = $this->makeParser($realPath);
 		$root = $parser->parse(file_get_contents($realPath));
-
+		
 		// copy mixins into scope, set their parents
 		// bring blocks from import into current block
 		// TODO: need to mark the source parser	these came from this file
@@ -607,8 +609,13 @@ class lessc {
 			if ($name[0] == $this->vPrefix) {
 				$this->set($name, $value);
 			} else {
-				$out->lines[] = $this->formatter->property($name,
-						$this->compileValue($this->reduce($value)));
+				$_value = $this->compileValue($this->reduce($value));
+				if ($this->allowUrlRewrite) {
+					preg_match_all('#url\(("|\')?([^)"\']+)("|\')?\)#ims', $_value, $matches);
+					if (count($matches[2]) > 0)
+						$_value = $this->rewriteUrls($_value, $matches[2][0]);
+				}
+				$out->lines[] = $this->formatter->property($name, $_value);
 			}
 			break;
 		case 'block':
@@ -706,6 +713,26 @@ class lessc {
 		}
 	}
 
+	protected function rewriteUrls($value, $url) {
+		$baseImportDir = realpath(end($this->importDir));
+		$lastImportDir = realpath(reset($this->importDir));
+
+		$urlPath = realpath($lastImportDir.DIRECTORY_SEPARATOR.$url);
+		if ($urlPath === false)
+			return $value;
+
+		$baseArray = explode(DIRECTORY_SEPARATOR, $baseImportDir);
+		$urlArray = explode(DIRECTORY_SEPARATOR, $urlPath);
+		
+		$baseArrayDiff = array_diff($baseArray, $urlArray);
+		$urlArrayDiff = array_diff($urlArray, $baseArray);
+		
+		$newUrl = implode('/', $urlArrayDiff);
+		for ($i=0,$l=count($baseArrayDiff); $i<$l; $i++)
+			$newUrl = '../'.$newUrl;
+		
+		return str_replace($url, $newUrl, $value);
+	}
 
 	/**
 	 * Compiles a primitive value into a CSS property value.
@@ -1169,7 +1196,7 @@ class lessc {
 		return false;
 	}
 
-	protected function reduce($value, $forExpression = false) {
+	protected function reduce($value) {
 		switch ($value[0]) {
 		case "variable":
 			$key = $value[1];
@@ -1190,7 +1217,7 @@ class lessc {
 			return $out;
 		case "list":
 			foreach ($value[2] as &$item) {
-				$item = $this->reduce($item, $forExpression);
+				$item = $this->reduce($item);
 			}
 			return $value;
 		case "expression":
@@ -1220,7 +1247,7 @@ class lessc {
 				if ($args[0] == 'list')
 					$args = self::compressList($args[2], $args[1]);
 
-				$ret = call_user_func($f, $this->reduce($args, true), $this);
+				$ret = call_user_func($f, $this->reduce($args), $this);
 
 				if (is_null($ret)) {
 					return array("string", "", array(
@@ -1252,21 +1279,9 @@ class lessc {
 				}
 			}
 			return array("string", "", array($op, $exp));
+		default:
+			return $value;
 		}
-
-		if ($forExpression) {
-			switch ($value[0]) {
-			case "keyword":
-				if ($color = $this->coerceColor($value)) {
-					return $color;
-				}
-				break;
-			case "raw_color":
-				return $this->coerceColor($value);
-			}
-		}
-
-		return $value;
 	}
 
 
@@ -1326,8 +1341,8 @@ class lessc {
 	protected function evaluate($exp) {
 		list(, $op, $left, $right, $whiteBefore, $whiteAfter) = $exp;
 
-		$left = $this->reduce($left, true);
-		$right = $this->reduce($right, true);
+		$left = $this->reduce($left);
+		$right = $this->reduce($right);
 
 		if ($leftColor = $this->coerceColor($left)) {
 			$left = $leftColor;
@@ -1754,7 +1769,7 @@ class lessc {
 	}
 
 	public function setImportDir($dirs) {
-		$this->importDir = (array)$dirs;
+		$this->importDir = (array)$dir;
 	}
 
 	public function addImportDir($dir) {
