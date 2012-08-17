@@ -609,11 +609,8 @@ class lessc {
 			if ($name[0] == $this->vPrefix) {
 				$this->set($name, $value);
 			} else {
-				$compiledValue = $this->compileValue($this->reduce($value));
-				if ($this->allowUrlRewrite) {
-					$compiledValue = $this->rewriteUrls($compiledValue);
-				}
-				$out->lines[] = $this->formatter->property($name, $compiledValue);
+				$out->lines[] = $this->formatter->property($name,
+						$this->compileValue($this->reduce($value)));
 			}
 			break;
 		case 'block':
@@ -711,34 +708,6 @@ class lessc {
 		}
 	}
 
-	/**
-	 * Change relative paths according to path to root .less file.
-	 */
-	protected function rewriteUrls($value) {
-		if (preg_match('#url\(("|\')?([^)"\']+)("|\')?\)#ims', $value, $matches))
-			$url = $matches[2];
-		else
-			return $value;
-	
-		$baseImportDir = realpath(end($this->importDir));
-		$lastImportDir = realpath(reset($this->importDir));
-
-		$urlPath = realpath($lastImportDir.DIRECTORY_SEPARATOR.$url);
-		if ($urlPath === false)
-			return $value;
-
-		$baseArray = explode(DIRECTORY_SEPARATOR, $baseImportDir);
-		$urlArray = explode(DIRECTORY_SEPARATOR, $urlPath);
-		
-		$baseArrayDiff = array_diff($baseArray, $urlArray);
-		$urlArrayDiff = array_diff($urlArray, $baseArray);
-		
-		$newUrl = implode('/', $urlArrayDiff);
-		for ($i=0,$l=count($baseArrayDiff); $i<$l; $i++)
-			$newUrl = '../'.$newUrl;
-		
-		return str_replace($url, $newUrl, $value);
-	}
 
 	/**
 	 * Compiles a primitive value into a CSS property value.
@@ -751,12 +720,16 @@ class lessc {
 	 * The input is expected to be reduced. This function will not work on
 	 * things like expressions and variables.
 	 */
-	protected function compileValue($value) {
+	protected function compileValue($value, $inUrl = false) {
 		switch ($value[0]) {
 		case 'list':
 			// [1] - delimiter
 			// [2] - array of values
-			return implode($value[1], array_map(array($this, 'compileValue'), $value[2]));
+			$values = array();
+			foreach ($value[2] as $item) {
+				$values[] = $this->compileValue($item, $inUrl);
+			}
+			return implode($value[1], $values);
 		case 'raw_color';
 		case 'keyword':
 			// [1] - the keyword
@@ -774,7 +747,10 @@ class lessc {
 			list(, $delim, $content) = $value;
 			foreach ($content as &$part) {
 				if (is_array($part)) {
-					$part = $this->compileValue($part);
+					$part = $this->compileValue($part, $inUrl);
+				}
+				if ($inUrl && $this->allowUrlRewrite) {
+					$part = $this->rewriteUrls($part);
 				}
 			}
 			return $delim . implode($content) . $delim;
@@ -805,12 +781,36 @@ class lessc {
 
 		case 'function':
 			list(, $name, $args) = $value;
-			return $name.'('.$this->compileValue($args).')';
+			return $name.'('.$this->compileValue($args, $name === 'url').')';
 		default: // assumed to be unit
 			$this->throwError("unknown value type: $value[0]");
 		}
 	}
 
+	/**
+	 * Change relative paths according to path to root .less file.
+	 */
+	protected function rewriteUrls($url) {	
+		$baseImportDir = realpath(end($this->importDir));
+		$lastImportDir = realpath(reset($this->importDir));
+
+		$urlPath = realpath($lastImportDir.DIRECTORY_SEPARATOR.$url);
+		if ($urlPath === false)
+			return $url;
+
+		$baseArray = explode(DIRECTORY_SEPARATOR, $baseImportDir);
+		$urlArray = explode(DIRECTORY_SEPARATOR, $urlPath);
+		
+		$baseArrayDiff = array_diff($baseArray, $urlArray);
+		$urlArrayDiff = array_diff($urlArray, $baseArray);
+		
+		$newUrl = implode('/', $urlArrayDiff);
+		for ($i=0,$l=count($baseArrayDiff); $i<$l; $i++)
+			$newUrl = '../'.$newUrl;
+		
+		return $newUrl;
+	}
+	
 	protected function lib_isnumber($value) {
 		return $this->toBool($value[0] == "number");
 	}
