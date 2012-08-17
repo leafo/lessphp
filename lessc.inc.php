@@ -53,6 +53,8 @@ class lessc {
 	public $importDisabled = false;
 	public $importDir = '';
 
+	public $allowUrlRewrite = true; // rewrite urls relative to imported files
+	
 	protected $numberPrecision = null;
 
 	// set to the parser that generated the current line when compiling
@@ -607,8 +609,11 @@ class lessc {
 			if ($name[0] == $this->vPrefix) {
 				$this->set($name, $value);
 			} else {
-				$out->lines[] = $this->formatter->property($name,
-						$this->compileValue($this->reduce($value)));
+				$compiledValue = $this->compileValue($this->reduce($value));
+				if ($this->allowUrlRewrite) {
+					$compiledValue = $this->rewriteUrls($compiledValue);
+				}
+				$out->lines[] = $this->formatter->property($name, $compiledValue);
 			}
 			break;
 		case 'block':
@@ -706,6 +711,34 @@ class lessc {
 		}
 	}
 
+	/**
+	 * Change relative paths according to path to root .less file.
+	 */
+	protected function rewriteUrls($value) {
+		if (preg_match('#url\(("|\')?([^)"\']+)("|\')?\)#ims', $value, $matches))
+			$url = $matches[2];
+		else
+			return $value;
+	
+		$baseImportDir = realpath(end($this->importDir));
+		$lastImportDir = realpath(reset($this->importDir));
+
+		$urlPath = realpath($lastImportDir.DIRECTORY_SEPARATOR.$url);
+		if ($urlPath === false)
+			return $value;
+
+		$baseArray = explode(DIRECTORY_SEPARATOR, $baseImportDir);
+		$urlArray = explode(DIRECTORY_SEPARATOR, $urlPath);
+		
+		$baseArrayDiff = array_diff($baseArray, $urlArray);
+		$urlArrayDiff = array_diff($urlArray, $baseArray);
+		
+		$newUrl = implode('/', $urlArrayDiff);
+		for ($i=0,$l=count($baseArrayDiff); $i<$l; $i++)
+			$newUrl = '../'.$newUrl;
+		
+		return str_replace($url, $newUrl, $value);
+	}
 
 	/**
 	 * Compiles a primitive value into a CSS property value.
