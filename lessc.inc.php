@@ -790,7 +790,7 @@ class lessc {
 	/**
 	 * Change relative paths according to path to root .less file.
 	 */
-	protected function rewriteUrls($url) {	
+	protected function rewriteUrls($url) {
 		$baseImportDir = realpath(end($this->importDir));
 		$lastImportDir = realpath(reset($this->importDir));
 
@@ -801,12 +801,14 @@ class lessc {
 		$baseArray = explode(DIRECTORY_SEPARATOR, $baseImportDir);
 		$urlArray = explode(DIRECTORY_SEPARATOR, $urlPath);
 		
-		$baseArrayDiff = array_diff($baseArray, $urlArray);
-		$urlArrayDiff = array_diff($urlArray, $baseArray);
+		$i = 0;
+		foreach ($baseArray as $i => $segment) {
+			if ($baseArray[$i] !== $urlArray[$i])
+				break;
+		}
 		
-		$newUrl = implode('/', $urlArrayDiff);
-		for ($i=0,$l=count($baseArrayDiff); $i<$l; $i++)
-			$newUrl = '../'.$newUrl;
+		$newUrl = str_repeat('../', count($baseArray) - $i);
+		$newUrl .= implode('/', array_slice($urlArray, $i));
 		
 		return $newUrl;
 	}
