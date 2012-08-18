@@ -1072,7 +1072,7 @@ An example with saving cache object to a file:
 
       if (!is_array($cache) || $newCache["updated"] > $cache["updated"]) {
         file_put_contents($cacheFile, serialize($newCache));
-        file_put_contents($outFile, $newCache['compiled']);
+        file_put_contents($outputFile, $newCache['compiled']);
       }
     }
 
