@@ -820,7 +820,7 @@ class lessc {
 			$this->throwError("color expected for rgbahex");
 
 		return sprintf("#%02x%02x%02x%02x",
-			isset($color[4]) ? $color[4]*255 : 0,
+			isset($color[4]) ? $color[4]*255 : 255,
 			$color[1],$color[2], $color[3]);
 	}
 
