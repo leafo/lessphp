@@ -113,14 +113,17 @@ class lessc {
 		$parser = $this->makeParser($realPath);
 		$root = $parser->parse(file_get_contents($realPath));
 
+		// set the parents of all the block props
+		foreach ($root->props as $prop) {
+			if ($prop[0] == "block") {
+				$prop[1]->parent = $parentBlock;
+			}
+		}
+
 		// copy mixins into scope, set their parents
 		// bring blocks from import into current block
 		// TODO: need to mark the source parser	these came from this file
 		foreach ($root->children as $childName => $child) {
-			foreach ($child as $innerBlock) {
-				$innerBlock->parent = $parentBlock;
-			}
-
 			if (isset($parentBlock->children[$childName])) {
 				$parentBlock->children[$childName] = array_merge(
 					$parentBlock->children[$childName],
@@ -620,8 +623,9 @@ class lessc {
 
 			$args = array_map(array($this, "reduce"), (array)$args);
 			$mixins = $this->findBlocks($block, $path, $args);
+
 			if ($mixins === null) {
-				// echo "failed to find block: ".implode(" > ", $path)."\n";
+				// fwrite(STDERR,"failed to find block: ".implode(" > ", $path)."\n");
 				break; // throw error here??
 			}
 
