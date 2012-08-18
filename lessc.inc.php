@@ -747,13 +747,14 @@ class lessc {
 			list(, $delim, $content) = $value;
 			foreach ($content as &$part) {
 				if (is_array($part)) {
-					$part = $this->compileValue($part, $inUrl);
-				}
-				if ($inUrl && $this->allowUrlRewrite) {
-					$part = $this->rewriteUrls($part);
+					$part = $this->compileValue($part, false);
 				}
 			}
-			return $delim . implode($content) . $delim;
+			$content = implode($content);
+			if ($inUrl && $this->allowUrlRewrite) {
+				$content = $this->rewriteUrls($content);
+			}
+			return $delim . $content . $delim;
 		case 'color':
 			// [1] - red component (either number or a %)
 			// [2] - green component
@@ -794,6 +795,9 @@ class lessc {
 		$baseImportDir = realpath(end($this->importDir));
 		$lastImportDir = realpath(reset($this->importDir));
 
+		if ($baseImportDir === $lastImportDir)
+			return $url;
+		
 		$urlPath = realpath($lastImportDir.DIRECTORY_SEPARATOR.$url);
 		if ($urlPath === false)
 			return $url;
@@ -803,7 +807,7 @@ class lessc {
 		
 		$i = 0;
 		foreach ($baseArray as $i => $segment) {
-			if ($baseArray[$i] !== $urlArray[$i])
+			if (!isset($baseArray[$i], $urlArray[$i]) || $baseArray[$i] !== $urlArray[$i])
 				break;
 		}
 		
