@@ -728,7 +728,7 @@ class lessc {
 			// [1] - delimiter
 			// [2] - array of values
 			return implode($value[1], array_map(array($this, 'compileValue'), $value[2]));
-		case 'raw_color';
+		case 'raw_color':
 			if (!empty($this->formatter->compressColors)) {
 				return $this->compileValue($this->coerceColor($value));
 			}
