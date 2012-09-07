@@ -1,8 +1,8 @@
-    title: v0.3.4 documentation
+    title: v0.3.8 documentation
     link_to_home: true
 --
 
-<h2 skip="true">Documentation v0.3.4</h2>
+<h2 skip="true">Documentation v0.3.8</h2>
 
 <div style="margin-bottom: 1em;">$index</div>
 
@@ -612,6 +612,28 @@ These are `isnumber`, `iscolor`, `iskeyword`, `isstring`, `ispixel`,
     }
     ```
 
+#### !important
+
+If you want to apply the `!important` suffix to every property when mixing in a
+mixin, just append `!important` to the end of the call to the mixin:
+
+    ```less
+    .make_bright {
+      color: red;
+      font-weight: bold;
+    }
+
+    .color {
+      color: green;
+    }
+
+    body {
+      .make_bright() !important;
+      .color();
+    }
+
+    ```
+
 ### Selector Expressions
 
 Sometimes we want to dynamically generate the selector of a block based on some
@@ -842,90 +864,156 @@ function that let's you unquote any value. It is called `e`.
 
 ## PHP Interface
 
-The PHP interface lets you control the compiler from your PHP scripts. There is
-only one file to include to get access to everything:
+When working with **lessphp** from PHP, the typical flow is to create a new
+instance of `lessc`, configure it how you like, then tell it to compile
+something using one built in compile methods.
+
+Methods:
+
+* [`compile($string)`](#compiling[) -- Compile a string
+
+* [`compileFile($inFile, [$outFile])`](#compiling) -- Compile a file to another or return it
+
+* [`checkedCompile($inFile, $outFile)`](#compiling) -- Compile a file only if it's newer
+
+* [`cachedCompile($cacheOrFile, [$force])`](#compiling_automatically) -- Conditionally compile while tracking imports
+
+* [`setFormatter($formatterName)`](#output_formatting) -- Change how CSS output looks
+
+* [`setPreserveComments($keepComments)`](#preserving_comments) -- Change if comments are kept in output
+
+* [`registerFunction($name, $callable)`](#custom_functions) -- Add a custom function
+
+* [`unregisterFunction($name)`](#custom_functions) -- Remove a registered function
+
+* [`setVariables($vars)`](#setting_variables_from_php) -- Set a variable from PHP
+
+* [`unsetVariable($name)`](#setting_variables_from_php) -- Remove a PHP variable
+
+* [`setImportDir($dirs)`](#import_directory) -- Set the search path for imports
+
+* [`addImportDir($dir)`](#import_directory) -- Append directory to search path for imports
+
+
+### Compiling
+
+The `compile` method compiles a string of LESS code to CSS.
 
     ```php
     <?php
-    include "lessc.inc.php";
+    require "lessc.inc.php";
+
+    $less = new lessc;
+    echo $less->compile(".block { padding: 3 + 4px }");
     ```
 
-To compile a file to a string (of CSS code):
+The `compileFile` method reads and compiles a file. It will either return the
+result or write it to the path specified by an optional second argument.
 
     ```php
-    $less = new lessc("myfile.less");
-    $css = $less->parse();
+    echo $less->compileFile("input.less");
     ```
 
-To compile a string to a string:
+The `compileChecked` method is like `compileFile`, but it only compiles if the output
+file doesn't exist or it's older than the input file:
 
     ```php
-    $less = new lessc(); // a blank lessc
-    $css = $less->parse("body { a { color: red } }");
+    $less->checkedCompile("input.less", "output.css");
     ```
+
+See [Compiling Automatically](#compiling_automatically) for a description of
+the more advanced `cachedCompile` method.
 
 ### Output Formatting
 
-Besides the default output formatter, **lessphp** comes with two additional
-ones, and it's easy to make your own.
+Output formatting controls the indentation of the output CSS. Besides the
+default formatter, two additional ones are included and it's also easy to make
+your own.
 
-The first extra formatter is called `compressed`. It compresses the output by
-removing any extra whitespace.
-
-We use the `setFormatter` method set the formatter that should be used. Just
+To use a formatter, the method `setFormatter` is used. Just
 pass the name of the formatter:
 
     ```php
-    $less = new lessc("myfile.less");
+    $less = new lessc;
 
     $less->setFormatter("compressed");
-
-    $css = $less->parse();
+    echo $less->compile("div { color: lighten(blue, 10%) }");
     ```
 
-The second formatter is called `indent`. It will indent CSS blocks based on how
-they were nested in the LESS code.
+In this example, the `compressed` formatter is used. The formatters are:
+
+ * `lessjs` *(default)* -- Same style used in LESS for JavaScript
+
+ * `compressed` -- Compresses all the unrequired whitespace
+
+ * `classic` -- **lessphp**'s original formatter
+
+To revert to the default formatter, call `setFormatter` with a value of `null`.
 
 #### Custom Formatter
 
-The easiest way to customize is to create your own instance of the formatter
-and alter its public properties before passing it off to **lessphp**. The
-`setFormatter` method can also take an instance of a formatter.
+The easiest way to customize the formatter is to create your own instance of an
+existing formatter and alter its public properties before passing it off to
+**lessphp**. The `setFormatter` method can also take an instance of a
+formatter.
 
-For example, let's use tabs instead of the default two spaces to indent:
+Each of the formatter names corresponds to a class with `lessc_formatter_`
+prepended in front of it. Here the classic formatter is customized to use tabs
+instead of spaces:
+
 
     ```php
-    $formatter = new lessc_formatter;
+    $formatter = new lessc_formatter_classic;
     $formatter->indentChar = "\t";
 
-    $less = new lessc("myfile.less");
+    $less = new lessc;
     $less->setFormatter($formatter);
-    $css = $less->parse();
+    echo $less->compileFile("myfile.less");
     ```
 
 For more information about what can be configured with the formatter consult
-the sourcecode.
+the source code.
+
+### Preserving Comments
+
+By default, all comments in the source LESS file are stripped when compiling.
+You might want to keep the `/* */` comments in the output though. For
+example, bundling a license in the file.
+
+Enable or disable comment preservation by calling `setPreserveComments`:
+
+    ```php
+    $less = new lessc;
+    $less->setPreserveComments(true);
+    echo $less->compile("/* hello! */");
+    ```
+
+Comments are disabled by default because there is additional overhead, and more
+often than not they aren't needed.
+
 
 ### Compiling Automatically
 
-Often, you want to write the compiled CSS to a file, and only recompile when
-the original LESS file has changed. The following function will check if the
-modification date of the LESS file is more recent than the CSS file.  The LESS
-file will be compiled if it is. If the CSS file doesn't exist yet, then it will
-also compile the LESS file.
+Often, you want to only compile a LESS file only if it has been modified since
+last compile. This is very important because compiling is performance intensive
+and you should avoid a recompile if it possible.
+
+The `checkedCompile` compile method will do just that. It will check if the
+input file is newer than the output file, or if the output file doesn't exist
+yet, and compile only then.
 
     ```php
-    lessc::ccompile('myfile.less', 'mystyle.css');
+    $less->checkedCompile("input.less", "output.css");
     ```
 
-`ccompile` is very basic, it only checks if the input file's modification time.
-It is not of any files that are brought in using `@import`.
+There's a problem though. `checkedCompile` is very basic, it only checks the
+input file's modification time. It is unaware of any files from `@import`.
 
-For this reason we also have `lessc::cexecute`. It functions slightly
-differently, but gives us the ability to check changes to all files used during
-the compile. It takes one argument, either the name of the file we want to
-compile, or an existing *cache object*. Its return value is an updated cache
-object.
+
+For this reason we also have `cachedCompile`. It's slightly more complex, but
+gives us the ability to check changes to all files including those imported. It
+takes one argument, either the name of the file we want to compile, or an
+existing *cache object*. Its return value is an updated cache object.
 
 If we don't have a cache object, then we call the function with the name of the
 file to get the initial cache object. If we do have a cache object, then we
@@ -935,25 +1023,28 @@ The cache object keeps track of all the files that must be checked in order to
 determine if a rebuild is required.
 
 The cache object is a plain PHP `array`. It stores the last time it compiled in
-`$cache['updated']` and output of the compile in `$cache['compiled']`.
+`$cache["updated"]` and output of the compile in `$cache["compiled"]`.
 
 Here we demonstrate creating an new cache object, then using it to see if we
 have a recompiled version available to be written:
 
 
     ```php
-    $less_file = 'myfile.less';
-    $css_file = 'myfile.css';
+    $inputFile = "myfile.less";
+    $outputFile = "myfile.css";
+
+    $less = new lessc;
 
     // create a new cache object, and compile
-    $cache = lessc::cexecute('myfile.less');
-    file_put_contents($css_file, $cache['compiled']);
+    $cache = $less->cachedCompile($inputFile);
+
+    file_put_contents($outputFile, $cache["compiled"]);
 
     // the next time we run, write only if it has updated
-    $last_updated = $cache['updated'];
-    $cache = lessc::cexecute($cache);
-    if ($cache['updated'] > $last_updated) {
-        file_put_contents($css_file, $cache['compiled']);
+    $last_updated = $cache["updated"];
+    $cache = $less->cachedCompile($cache);
+    if ($cache["updated"] > $last_updated) {
+        file_put_contents($outputFile, $cache["compiled"]);
     }
 
     ```
@@ -966,73 +1057,127 @@ like a file or in persistent memory.
 An example with saving cache object to a file:
 
     ```php
-    function auto_compile_less($less_fname, $css_fname) {
+    function autoCompileLess($inputFile, $outputFile) {
       // load the cache
-      $cache_fname = $less_fname.".cache";
-      if (file_exists($cache_fname)) {
-        $cache = unserialize(file_get_contents($cache_fname));
+      $cacheFile = $inputFile.".cache";
+
+      if (file_exists($cacheFile)) {
+        $cache = unserialize(file_get_contents($cacheFile));
       } else {
-        $cache = $less_fname;
+        $cache = $inputFile;
       }
 
-      $new_cache = lessc::cexecute($cache);
-      if (!is_array($cache) || $new_cache['updated'] > $cache['updated']) {
-        file_put_contents($cache_fname, serialize($new_cache));
-        file_put_contents($css_fname, $new_cache['compiled']);
+      $less = new lessc;
+      $newCache = $less->cachedCompile($cache);
+
+      if (!is_array($cache) || $newCache["updated"] > $cache["updated"]) {
+        file_put_contents($cacheFile, serialize($newCache));
+        file_put_contents($outputFile, $newCache['compiled']);
       }
     }
 
-    auto_compile_less('myfile.less', 'myfile.css');
+    autoCompileLess('myfile.less', 'myfile.css');
     ```
 
-`lessc:cexecute` takes an optional second argument, `$force`. Passing in true
-will cause the input to always be recompiled.
+`cachedCompile` method takes an optional second argument, `$force`. Passing in
+true will cause the input to always be recompiled.
 
 ### Error Handling
 
-All of the following methods will throw an `Exception` if the parsing fails:
+All of the compile methods will throw an `Exception` if the parsing fails or
+there is a compile time error. Compile time errors include things like passing
+incorrectly typed values for functions that expect specific things, like the
+color manipulation functions.
 
     ```php
-    $less = new lessc();
+    $less = new lessc;
     try {
-        $less->parse("} invalid LESS }}}");
+        $less->compile("} invalid LESS }}}");
     } catch (Exception $ex) {
         echo "lessphp fatal error: ".$ex->getMessage();
     }
     ```
 ### Setting Variables From PHP
 
-The `parse` function takes a second optional argument. If you want to
-initialize variables from outside the LESS file then you can pass in an
-associative array of names and values. The values will parsed as CSS values:
+Before compiling any code you can set initial LESS variables from PHP. The
+`setVariables` method lets us do this. It takes an associative array of names
+to values. The values must be strings, and will be parsed into correct CSS
+values.
+
 
     ```php
-    $less = new lessc();
-    echo $less->parse(".magic { color: @color;  width: @base - 200; }",
-        array(
-            'color' => 'red';
-            'base' => '960px';
-        ));
+    $less = new lessc;
+
+    $less->setVariables(array(
+      "color" => "red",
+      "base" => "960px"
+    ));
+
+    echo $less->compile(".magic { color: @color;  width: @base - 200; }");
     ```
 
-You can also do this when loading from a file. If the first argument of `parse`
-is an array it will be used an array of variables to set.
+If you need to unset a variable, the `unsetVariable` method is available. It
+takes the name of the variable to unset.
 
     ```php
-    $less = new lessc("myfile.less");
-    echo $less->parse(array('color' => 'blue'));
+    $less->unsetVariable("color");
+    ```
+
+Be aware that the value of the variable is a string containing a CSS value. So
+if you want to pass a LESS string in, you're going to need two sets of quotes.
+One for PHP and one for LESS.
+
+
+    ```php
+    $less->setVariables(array(
+      "url" => "'http://example.com.com/'"
+    ));
+
+    echo $less->compile("body { background: url("@{url}/bg.png"); }");
+    ```
+
+### Import Directory
+
+When running the `@import` directive, an array of directories called the import
+search path is searched through to find the file being asked for.
+
+By default, when using `compile`, the import search path just contains `""`,
+which is equivalent to the current directory of the script. If `compileFile` is
+used, then the directory of the file being compiled is used as the starting
+import search path.
+
+Two methods are available for configuring the search path.
+
+`setImportDir` will overwrite the search path with its argument. If the value
+isn't an array it will be converted to one.
+
+
+In this example, `@import "colors";` will look for either
+`assets/less/colors.less` or `assets/bootstrap/colors.less` in that order:
+
+    ```php
+    $less->setImportDir(array("assets/less/", "assets/bootstrap");
+
+    echo $less->compile('@import "colors";');
+    ```
+
+`addImportDir` will append a single path to the import search path instead of
+overwritting the whole thing.
+
+    ```php
+    $less->addImportDir("public/stylesheets");
     ```
 
 ### Custom Functions
 
 **lessphp** has a simple extension interface where you can implement user
 functions that will be exposed in LESS code during the compile. They can be a
-little tricky though because you need to work with the  **lessphp** type system.
+little tricky though because you need to work with the **lessphp** type system.
 
-An instance of `lessc`, the **lessphp** compiler has two relevant methods:
-`registerFunction` and `unregisterFunction`. `registerFunction` takes two
-arguments, a name and a callable value. `unregisterFunction` just takes the
-name of an existing function to remove.
+The two methods we are interested in are `registerFunction` and
+`unregisterFunction`. `registerFunction` takes two arguments, a name and a
+callable value. `unregisterFunction` just takes the name of an existing
+function to remove.
 
 Here's an example that adds a function called `double` that doubles any numeric
 argument:
@@ -1046,11 +1191,11 @@ argument:
         return array($type, $value*2);
     }
 
-    $myless = new myless();
-    $myless->registerFunction("double", "lessphp_double");
+    $less = new lessc;
+    $less->registerFunction("double", "lessphp_double");
 
     // gives us a width of 800px
-    echo $myless->parse("div { width: double(400px); }");
+    echo $less->compile("div { width: double(400px); }");
     ```
 
 The second argument to `registerFunction` is any *callable value* that is
@@ -1060,7 +1205,7 @@ If we are using PHP 5.3 or above then we are free to pass a function literal
 like so:
 
     ```php
-    $myless->registerFunction("double", function($arg) {
+    $less->registerFunction("double", function($arg) {
         list($type, $value) = $arg;
         return array($type, $value*2);
     });
@@ -1074,16 +1219,16 @@ is a string representing the type, and the other elements make up the
 associated data for that value.
 
 The best way to get an understanding of the system is to register is dummy
-function which does a `vardump` on the argument. Try passing the function
+function which does a `var_dump` on the argument. Try passing the function
 different values from LESS and see what the results are.
 
-The return value of the registered function must also be a **lessphp** type, but if it is
-a string or numeric value, it will automatically be coerced into an appropriate
-typed value. In our example, we reconstruct the value with our modifications
-while making sure that we preserve the original type.
+The return value of the registered function must also be a **lessphp** type,
+but if it is a string or numeric value, it will automatically be coerced into
+an appropriate typed value. In our example, we reconstruct the value with our
+modifications while making sure that we preserve the original type.
 
-In addition to the arguments passed from **lessphp**, the instance of
-**lessphp** itself is sent to the registered function as the second argument.
+The instance of **lessphp** itself is sent to the registered function as the
+second argument in addition to the arguments array.
 
 ## Command Line Interface
 
@@ -1120,7 +1265,7 @@ Errors from watch mode are written to standard out.
 
 ## License
 
-Copyright (c) 2010 Leaf Corcoran, <http://leafo.net/lessphp>
+Copyright (c) 2012 Leaf Corcoran, <http://leafo.net/lessphp>
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

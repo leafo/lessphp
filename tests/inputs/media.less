@@ -36,3 +36,29 @@
 	body { color: red; }
 }
 
+
+// media bubbling
+
+@media test {
+	div {
+		height: 20px;
+		@media (hello) {
+			color: red;
+
+			pre {
+				color: orange;
+			}
+		}
+	}
+}
+
+// should not cross boundary
+@media yeah {
+	@page {
+		@media cool {
+			color: red;
+		}
+	}
+}
+
+

@@ -1,24 +1,13 @@
-## test.php
+lessphp uses [phpunit](https://github.com/sebastianbergmann/phpunit/) for it's tests
 
-To run:
+`InputTest.php` iterates through all the less files in `inputs/`, compiles them,
+then compares the result with the respective file in `outputs/`.
 
-    php test.php [flags] [test-name-glob]
-
-
-Runs through all files in `inputs`, compiles them, then compares to respective
-file in `outputs`. If there are any differences then the test will fail.
-
-Add the `-d` flag to show the differences of failed tests.  Defaults to showing
-differences with `diff` but you can set the tool by doing `-d=toolname`.
-
-Pass the `-C` flag to save the output of the inputs to the appropriate file. This
-will overwrite any existing outputs. Use this when you want to save verified
-test results. Combine with a *test-name-glob* to selectively compile.
-
-You can also run specific tests by passing in an argument that contains any
-part of the test name.
+From the root you can run `make` to run all the tests.
 
 ## bootstrap.sh
 
-It's a syntetic test comparing lessc and lessphp output compiling twitter bootstrap;
-see bootstrap.sh for details.
+Clones twitter bootsrap, compiles it with lessc and lessphp, cleans up results
+with sort.php, and outputs diff. To run it, you need to have git and lessc
+installed.
+
