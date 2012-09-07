@@ -3257,6 +3257,7 @@ class lessc_formatter_classic {
 	public $breakSelectors = false;
 
 	public $compressColors = false;
+	public $removeLastSemicolon = false;
 
 	public function __construct() {
 		$this->indentLevel = 0;
@@ -3312,7 +3313,15 @@ class lessc_formatter_classic {
 
 		if (!empty($block->lines)) {
 			$glue = $this->break.$inner;
-			echo $inner . implode($glue, $block->lines);
+			$lines = $block->lines;
+
+			if ($this->removeLastSemicolon) {
+				$lastIndex = count($lines) - 1;
+				$lines[$lastIndex] = rtrim($lines[$lastIndex], ';');
+			}
+
+			echo $inner . implode($glue, $lines);
+
 			if (!$isSingle && !empty($block->children)) {
 				echo $this->break;
 			}
@@ -3343,6 +3352,7 @@ class lessc_formatter_compressed extends lessc_formatter_classic {
 	public $assignSeparator = ":";
 	public $break = "";
 	public $compressColors = true;
+	public $removeLastSemicolon = true;
 
 	public function indentStr($n = 0) {
 		return "";
