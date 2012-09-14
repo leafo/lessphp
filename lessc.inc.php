@@ -3040,12 +3040,10 @@ class lessc_parser {
 	protected function genericList(&$out, $parseItem, $delim="", $flatten=true) {
 		$s = $this->seek();
 		$items = array();
-		if( ($parsedItems = $this->$parseItem($out)) && is_array( $parsedItems ) ){
-			foreach ($parsedItems as $currentItem) {
-				$items[] = $currentItem;
-				if ($delim) {
-					if (!$this->literal($delim)) break;
-				}
+		while ($this->$parseItem($out)) {
+			$items[] = $value;
+			if ($delim) {
+				if (!$this->literal($delim)) break;
 			}
 		}
 
