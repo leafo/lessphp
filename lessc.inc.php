@@ -55,6 +55,8 @@ class lessc {
 	
 	public $allowUrlRewrite = true; // rewrite urls relative to imported files
 
+	public $allowUrlRewrite = true; // rewrite urls relative to imported files
+	
 	protected $numberPrecision = null;
 
 	// set to the parser that generated the current line when compiling
@@ -745,12 +747,16 @@ class lessc {
 	 * The input is expected to be reduced. This function will not work on
 	 * things like expressions and variables.
 	 */
-	protected function compileValue($value) {
+	protected function compileValue($value, $inUrl = false) {
 		switch ($value[0]) {
 		case 'list':
 			// [1] - delimiter
 			// [2] - array of values
-			return implode($value[1], array_map(array($this, 'compileValue'), $value[2]));
+			$values = array();
+			foreach ($value[2] as $item) {
+				$values[] = $this->compileValue($item, $inUrl);
+			}
+			return implode($value[1], $values);
 		case 'raw_color';
 		case 'keyword':
 			// [1] - the keyword
@@ -768,10 +774,14 @@ class lessc {
 			list(, $delim, $content) = $value;
 			foreach ($content as &$part) {
 				if (is_array($part)) {
-					$part = $this->compileValue($part);
+					$part = $this->compileValue($part, false);
 				}
 			}
-			return $delim . implode($content) . $delim;
+			$content = implode($content);
+			if ($inUrl && $this->allowUrlRewrite) {
+				$content = $this->rewriteUrls($content);
+			}
+			return $delim . $content . $delim;
 		case 'color':
 			// [1] - red component (either number or a %)
 			// [2] - green component
@@ -799,12 +809,41 @@ class lessc {
 
 		case 'function':
 			list(, $name, $args) = $value;
-			return $name.'('.$this->compileValue($args).')';
+			return $name.'('.$this->compileValue($args, $name === 'url').')';
 		default: // assumed to be unit
 			$this->throwError("unknown value type: $value[0]");
 		}
 	}
 
+	/**
+	 * Change relative paths according to path to root .less file.
+	 */
+	protected function rewriteUrls($url) {
+		$baseImportDir = realpath(end($this->importDir));
+		$lastImportDir = realpath(reset($this->importDir));
+
+		if ($baseImportDir === $lastImportDir)
+			return $url;
+		
+		$urlPath = realpath($lastImportDir.DIRECTORY_SEPARATOR.$url);
+		if ($urlPath === false)
+			return $url;
+
+		$baseArray = explode(DIRECTORY_SEPARATOR, $baseImportDir);
+		$urlArray = explode(DIRECTORY_SEPARATOR, $urlPath);
+		
+		$i = 0;
+		foreach ($baseArray as $i => $segment) {
+			if (!isset($baseArray[$i], $urlArray[$i]) || $baseArray[$i] !== $urlArray[$i])
+				break;
+		}
+		
+		$newUrl = str_repeat('../', count($baseArray) - $i);
+		$newUrl .= implode('/', array_slice($urlArray, $i));
+		
+		return $newUrl;
+	}
+	
 	protected function lib_isnumber($value) {
 		return $this->toBool($value[0] == "number");
 	}
