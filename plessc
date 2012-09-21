@@ -1,4 +1,4 @@
-#!/usr/bin/php -q
+#!/usr/bin/env php -q
 <?php
 // Command line utility to compile LESS to STDOUT
 // Leaf Corcoran <leafot@gmail.com>, 2012
@@ -193,6 +193,34 @@ function dumpValue($node, $depth = 0) {
 		}
 		return $node; // normal value
 	}
+}
+
+
+function stripValue($o, $toStrip) {
+	if (is_array($o) || is_object($o)) {
+		$isObject = is_object($o);
+		$o = (array)$o;
+		foreach ($toStrip as $removeKey) {
+			if (!empty($o[$removeKey])) {
+				$o[$removeKey] = "*stripped*";
+			}
+		}
+
+		foreach ($o as $k => $v) {
+			$o[$k] = stripValue($v, $toStrip);
+		}
+
+		if ($isObject) {
+			$o = (object)$o;
+		}
+	}
+
+	return $o;
+}
+
+function dumpWithoutParent($o, $alsoStrip=array()) {
+	$toStrip = array_merge(array("parent"), $alsoStrip);
+	print_r(stripValue($o, $toStrip));
 }
 
 try {

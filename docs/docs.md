@@ -1,8 +1,8 @@
-    title: v0.3.7 documentation
+    title: v0.3.8 documentation
     link_to_home: true
 --
 
-<h2 skip="true">Documentation v0.3.7</h2>
+<h2 skip="true">Documentation v0.3.8</h2>
 
 <div style="margin-bottom: 1em;">$index</div>
 
@@ -1072,7 +1072,7 @@ An example with saving cache object to a file:
 
       if (!is_array($cache) || $newCache["updated"] > $cache["updated"]) {
         file_put_contents($cacheFile, serialize($newCache));
-        file_put_contents($outFile, $newCache['compiled']);
+        file_put_contents($outputFile, $newCache['compiled']);
       }
     }
 
