@@ -1619,11 +1619,38 @@ class lessc {
 		return $out;
 	}
 
-	// compile only if changed input has changed or output doesn't exist
-	public function checkedCompile($in, $out) {
-		if (!is_file($out) || filemtime($in) > filemtime($out)) {
-			$this->compileFile($in, $out);
-			return true;
+	/*
+	* Checks 1 or more files modified time to see if they are newer then the output file.
+	* If a file is newer then the output file, it compiles the file into the output file.
+	*
+	* @param mixed $in: 1 filename or an array of filenames to be checked against.
+	* @param string filename $out: the output file to compare the time against.
+	* @param string filename $fileToCompile: if passing an array, the file to compile if
+	*		one of the files is newer then the output.
+	*/
+	public function checkedCompile($in, $out, $fileToCompile = NULL) {
+		if( is_array($in) )
+		{
+			if( !isset( $fileToCompile ))
+			{
+				throw new Exception('The 3rd argument must be set as the file you want compiled if one fo the files is newer');
+			}
+			
+			foreach( $in as $file )
+			{
+				if(!is_file($out) || filemtime($file) > filemtime($out))
+				{
+					$this->compileFile($fileToCompile, $out);
+					return true;
+				}
+			}
+		}else
+		{
+			if (!is_file($out) || filemtime($in) > filemtime($out)) 
+			{
+				$this->compileFile($in, $out);
+				return true;
+			}
 		}
 		return false;
 	}
