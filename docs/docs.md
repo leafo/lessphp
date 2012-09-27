@@ -1206,8 +1206,8 @@ like so:
 
     ```php
     $less->registerFunction("double", function($arg) {
-        list($type, $value) = $arg;
-        return array($type, $value*2);
+        list($type, $value, $unit) = $arg;
+        return array($type, $value*2, $unit);
     });
     ```
 
