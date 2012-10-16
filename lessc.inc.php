@@ -814,6 +814,10 @@ class lessc {
 		return $this->toBool($value[0] == "number" && $value[2] == "em");
 	}
 
+	protected function lib_isrem($value) {
+		return $this->toBool($value[0] == "number" && $value[2] == "rem");
+	}
+
 	protected function lib_rgbahex($color) {
 		$color = $this->coerceColor($color);
 		if (is_null($color))
