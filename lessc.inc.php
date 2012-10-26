@@ -708,6 +708,7 @@ class lessc {
 		default:
 			$this->throwError("unknown op: {$prop[0]}\n");
 		}
+		$out->lines = array_unique($out->lines);
 	}
 
 
