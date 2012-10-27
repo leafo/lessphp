@@ -1029,6 +1029,25 @@ class lessc {
 		return $this->fixColor($new);
 	}
 
+	protected function lib_contrast($args) {
+		if ($args[0] != 'list' || count($args[2]) < 3) {
+			return array(array('color', 0, 0, 0), 0);
+		}
+
+		list($inputColor, $darkColor, $lightColor) = $args[2];
+
+		$inputColor = $this->assertColor($inputColor);
+		$darkColor = $this->assertColor($darkColor);
+		$lightColor = $this->assertColor($lightColor);
+		$hsl = $this->toHSL($inputColor);
+
+		if ($hsl[3] > 50) {
+			return $darkColor;
+		}
+
+		return $lightColor;
+	}
+
 	protected function assertColor($value, $error = "expected color value") {
 		$color = $this->coerceColor($value);
 		if (is_null($color)) $this->throwError($error);

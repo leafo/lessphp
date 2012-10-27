@@ -57,6 +57,10 @@ fade {
   color: #808080;
   color: rgba(6,3,2,-0.25);
 }
+.contrast {
+  color: #0000ff;
+  color: #ff0000;
+}
 .percent {
   per: 50%;
 }
