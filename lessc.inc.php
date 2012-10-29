@@ -1322,8 +1322,12 @@ class lessc {
 			case 'keyword':
 				$name = $value[1];
 				if (isset(self::$cssColors[$name])) {
-					list($r, $g, $b) = explode(',', self::$cssColors[$name]);
-					return array('color', $r, $g, $b);
+					$rgba = explode(',', self::$cssColors[$name]);
+
+					if(isset($rgba[3]))
+						return array('color', $rgba[0], $rgba[1], $rgba[2], $rgba[3]);
+
+					return array('color', $rgba[0], $rgba[1], $rgba[2]);
 				}
 				return null;
 		}
@@ -1996,6 +2000,7 @@ class lessc {
 		'teal' => '0,128,128',
 		'thistle' => '216,191,216',
 		'tomato' => '255,99,71',
+		'transparent' => '0,0,0,0',
 		'turquoise' => '64,224,208',
 		'violet' => '238,130,238',
 		'wheat' => '245,222,179',
