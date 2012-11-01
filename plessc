@@ -26,11 +26,10 @@ $opts = getopt('hvrwncXTf:', array('help'));
 while (count($argv) > 0 && preg_match('/^-([-hvrwncXT]$|[f]=)/', $argv[0])) {
 	array_shift($argv);
 }
-
 function has() {
 	global $opts;
 	foreach (func_get_args() as $arg) {
-		if (isset($opts[$arg])) return true;
+		if (array_key_exists($arg, $opts)) return true;
 	}
 	return false;
 }
@@ -137,8 +136,19 @@ if (has("w")) {
 		if ($updated) {
 			$last_action = time();
 
+			$l = new lessc();
+
+			if (has("f")) {
+				$format = $opts["f"];
+				if ($format != "default") $l->setFormatter($format);
+			}
+
+			if (has("c")) {
+				$l->setPreserveComments(true);
+			}
+      
 			try {
-				$cache = lessc::cexecute($cache);
+				$cache = lessc::cexecute($cache, false, $l);
 				echo "Writing updated file: ".$out."\n";
 				if (!file_put_contents($out, $cache['compiled'])) {
 					err($fa."Could not write to file ".$out);
