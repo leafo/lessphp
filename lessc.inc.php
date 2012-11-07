@@ -53,6 +53,9 @@ class lessc {
 	public $importDisabled = false;
 	public $importDir = '';
 
+	public $notFoundFatal = false; //if file is not found throw exception
+	public $missingMixinFatal = false; //if mixin block is not found throw exception
+
 	protected $numberPrecision = null;
 
 	// set to the parser that generated the current line when compiling
@@ -70,6 +73,9 @@ class lessc {
 			$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
 			if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
 				return $file;
+			} else {
+				if ($this->notFoundFatal)
+					$this->throwError("unable to load file: $full\n");
 			}
 		}
 
@@ -626,7 +632,9 @@ class lessc {
 
 			if ($mixins === null) {
 				// fwrite(STDERR,"failed to find block: ".implode(" > ", $path)."\n");
-				break; // throw error here??
+				if ($this->missingMixinFatal)
+					$this->throwError('mixin block not found');
+				break; 
 			}
 
 			foreach ($mixins as $mixin) {
