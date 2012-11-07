@@ -6,7 +6,7 @@ echo "have git and lessc installed."
 echo ""
 
 if [ -z "$input" ]; then
-  input="bootstrap/less/bootstrap.less"
+  input="bootstrap/less/responsive.less"
 fi
 dest=$(basename "$input")
 dest="${dest%.*}"
@@ -28,7 +28,7 @@ echo ">> lessc compilation ($input)"
 lessc "$input" "tmp/$dest.lessc.css"
 
 echo ">> lessphp compilation ($input)"
-../plessc "$input" "tmp/$dest.lessphp.css"
+php ../plessc "$input" "tmp/$dest.lessphp.css"
 echo ">> Cleanup and convert"
 
 php sort.php "tmp/$dest.lessc.css" > "tmp/$dest.lessc.clean.css"
