@@ -1683,6 +1683,23 @@ class lessc {
 		return false;
 	}
 
+	// query the prefixr.com api to optimise the css file
+	public function queryPrefixr($fname, $outFname = null) {
+		if (!is_readable($fname)) {
+			throw new Exception('load error: failed to find '.$fname);
+		}
+
+		$out = @fopen('http://prefixr.com/api/index.php?css='.urlencode(file_get_contents($fname)), "r");
+		if (!$out)
+		{
+			throw new Exception('load error: failed to query prefixr.com api');
+		}
+		if ($outFname !== null) {
+			return file_put_contents($outFname, $out);
+		}
+
+		return stream_get_contents($out);
+	}
 	/**
 	 * Execute lessphp on a .less file or a lessphp cache structure
 	 *
