@@ -282,7 +282,6 @@ class lessc {
 		$vars = array();
 		$imports = array();
 		$other = array();
-
 		foreach ($props as $prop) {
 			switch ($prop[0]) {
 			case "assign":
@@ -648,7 +647,6 @@ class lessc {
 				}
 
 				$oldParent = $mixin->parent;
-				if ($mixin != $block) $mixin->parent = $block;
 
 				foreach ($this->sortProps($mixin->props) as $subProp) {
 					if ($suffix !== null &&
