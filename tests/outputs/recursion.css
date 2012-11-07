@@ -1,0 +1,18 @@
+.set1 .row .span3 {
+  width: 10px;
+}
+.set1 .row .span2 {
+  width: 10px;
+}
+.set1 .row .span1 {
+  width: 10px;
+}
+.set2 .row .span3 {
+  width: 33px;
+}
+.set2 .row .span2 {
+  width: 33px;
+}
+.set2 .row .span1 {
+  width: 33px;
+}
