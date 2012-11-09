@@ -53,6 +53,9 @@ class lessc {
 	public $importDisabled = false;
 	public $importDir = '';
 
+	public $notFoundFatal = false; //if file is not found throw exception
+	public $missingMixinFatal = false; //if mixin block is not found throw exception
+
 	protected $numberPrecision = null;
 
 	// set to the parser that generated the current line when compiling
@@ -70,6 +73,9 @@ class lessc {
 			$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
 			if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
 				return $file;
+			} else {
+				if ($this->notFoundFatal)
+					$this->throwError("unable to load file: $full\n");
 			}
 		}
 
@@ -626,7 +632,9 @@ class lessc {
 
 			if ($mixins === null) {
 				// fwrite(STDERR,"failed to find block: ".implode(" > ", $path)."\n");
-				break; // throw error here??
+				if ($this->missingMixinFatal)
+					$this->throwError('mixin block not found');
+				break; 
 			}
 
 			foreach ($mixins as $mixin) {
@@ -1640,11 +1648,12 @@ class lessc {
 
 		$this->sourceParser = $this->parser; // used for error messages
 		$this->compileBlock($root);
-
+//brakepoint
 		ob_start();
 		$this->formatter->block($this->scope);
 		$out = ob_get_clean();
 		setlocale(LC_NUMERIC, $locale);
+
 		return $out;
 	}
 
@@ -2095,10 +2104,11 @@ class lessc_parser {
 		$this->seenComments = array();
 
 		// trim whitespace on head
-		// if (preg_match('/^\s+/', $this->buffer, $m)) {
-		// 	$this->line += substr_count($m[0], "\n");
+		// and counting lines? (vld)
+		//if (preg_match('/^\s+/', $this->buffer, $m)) {
+		//	$this->line += substr_count($m[0], "\n");
 		// 	$this->buffer = ltrim($this->buffer);
-		// }
+		//}
 		$this->whitespace();
 
 		// parse the entire file
@@ -3203,7 +3213,7 @@ class lessc_parser {
 		}
 	}
 
-	protected function pushBlock($selectors=null, $type=null) {
+	protected function pushBlock($selectors=null, $type=null, $line = 0) {
 		$b = new stdclass;
 		$b->parent = $this->env;
 
@@ -3212,6 +3222,7 @@ class lessc_parser {
 
 		$b->isVararg = false; // TODO: kill me from here
 		$b->tags = $selectors;
+		$b->line = $line; //saving line to env (vld)
 
 		$b->props = array();
 		$b->children = array();
