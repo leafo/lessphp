@@ -1648,11 +1648,12 @@ class lessc {
 
 		$this->sourceParser = $this->parser; // used for error messages
 		$this->compileBlock($root);
-
+//brakepoint
 		ob_start();
 		$this->formatter->block($this->scope);
 		$out = ob_get_clean();
 		setlocale(LC_NUMERIC, $locale);
+
 		return $out;
 	}
 
@@ -2104,10 +2105,10 @@ class lessc_parser {
 
 		// trim whitespace on head
 		// and counting lines? (vld)
-		if (preg_match('/^\s+/', $this->buffer, $m)) {
-			$this->line += substr_count($m[0], "\n");
-		 	$this->buffer = ltrim($this->buffer);
-		}
+		//if (preg_match('/^\s+/', $this->buffer, $m)) {
+		//	$this->line += substr_count($m[0], "\n");
+		// 	$this->buffer = ltrim($this->buffer);
+		//}
 		$this->whitespace();
 
 		// parse the entire file
@@ -3212,7 +3213,7 @@ class lessc_parser {
 		}
 	}
 
-	protected function pushBlock($selectors=null, $type=null) {
+	protected function pushBlock($selectors=null, $type=null, $line = 0) {
 		$b = new stdclass;
 		$b->parent = $this->env;
 
@@ -3221,6 +3222,7 @@ class lessc_parser {
 
 		$b->isVararg = false; // TODO: kill me from here
 		$b->tags = $selectors;
+		$b->line = $line; //saving line to env (vld)
 
 		$b->props = array();
 		$b->children = array();
