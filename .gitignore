@@ -6,3 +6,4 @@ tests/bootstrap
 tests/tmp
 vendor
 composer.lock
+sftp-config.json
