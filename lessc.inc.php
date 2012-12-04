@@ -53,6 +53,8 @@ class lessc {
 	public $importDisabled = false;
 	public $importDir = '';
 
+	public $missingMixinFatal = false;
+
 	protected $numberPrecision = null;
 
 	// set to the parser that generated the current line when compiling
@@ -626,6 +628,8 @@ class lessc {
 
 			if ($mixins === null) {
 				// fwrite(STDERR,"failed to find block: ".implode(" > ", $path)."\n");
+				if ($this->missingMixinFatal)
+					$this->throwError("failed to find mixin block: ".implode(" > ", $path));
 				break; // throw error here??
 			}
 
