@@ -53,6 +53,8 @@ class lessc {
 	public $importDisabled = false;
 	public $importDir = '';
 
+	public $notFoundFatal = false; // will fail if resource file is not found
+
 	protected $numberPrecision = null;
 
 	// set to the parser that generated the current line when compiling
@@ -66,13 +68,18 @@ class lessc {
 
 	// attempts to find the path of an import url, returns null for css files
 	protected function findImport($url) {
+		$notFound = false;
 		foreach ((array)$this->importDir as $dir) {
 			$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
 			if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
 				return $file;
+			} else if (substr($file, -3)!='css') {
+				$notFound = true;
 			}
 		}
-
+		if ($notFound===true)
+			$this->throwError("unable to load file: $file\n");
+		
 		return null;
 	}
 
