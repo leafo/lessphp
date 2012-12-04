@@ -78,7 +78,7 @@ class lessc {
 			}
 		}
 		if ($notFound===true)
-			$this->throwError("unable to load file: $file\n");
+			$this->throwError("unable to load file [$file]");
 		
 		return null;
 	}

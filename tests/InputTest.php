@@ -39,6 +39,16 @@ class InputTest extends PHPUnit_Framework_TestCase {
 		$input = file_get_contents($inFname);
 		$output = file_get_contents($outFname);
 
+		try {
+			$parsedOutput = $this->less->parse($input);
+		} catch (Exception $e) {
+			if (preg_match('/^unable to load file \[(.*)\]/i', $e->getMessage(), $match)) {
+				$this->assertFileNotExists($match[1]);
+			}
+			return;
+		}
+
+		
 		$this->assertEquals($output, $this->less->parse($input));
 	}
 
