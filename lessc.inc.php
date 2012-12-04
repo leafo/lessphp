@@ -890,10 +890,15 @@ class lessc {
 	}
 
 	protected function lib_round($arg) {
-		$value = $this->assertNumber($arg);
-		return array("number", round($value), $arg[2]);
+		if (sizeof($arg[2])>1 || $arg[0] == 'list') {
+			$value     = $this->assertNumber($arg[2][0]);
+			$percision = $this->assertNumber($arg[2][1]);
+			return array("number", round($value, $percision), $arg[2][0][2]);
+		} else {
+			$value = $this->assertNumber($arg);
+			return array("number", round($value), $arg[2]);
+		}
 	}
-
 	/**
 	 * Helper function to get arguments for color manipulation functions.
 	 * takes a list that contains a color like thing and a percentage
