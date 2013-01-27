@@ -52,7 +52,7 @@ class lessc {
 
 	public $importDisabled = false;
 	public $importDir = '';
-	
+
 	public $allowUrlRewrite = true; // rewrite urls relative to imported files
 
 	protected $numberPrecision = null;
@@ -803,26 +803,30 @@ class lessc {
 
 		if ($baseImportDir === $lastImportDir)
 			return $url;
-		
+
+		$arguments = null;
+		if(strpos($url,'?') !== false)
+			list($url, $arguments) = explode('?', $url);
+
 		$urlPath = realpath($lastImportDir.DIRECTORY_SEPARATOR.$url);
 		if ($urlPath === false)
-			return $url;
+			return $arguments ? $url.'?'.$arguments : $url;
 
 		$baseArray = explode(DIRECTORY_SEPARATOR, $baseImportDir);
 		$urlArray = explode(DIRECTORY_SEPARATOR, $urlPath);
-		
+
 		$i = 0;
 		foreach ($baseArray as $i => $segment) {
 			if (!isset($baseArray[$i], $urlArray[$i]) || $baseArray[$i] !== $urlArray[$i])
 				break;
 		}
-		
+
 		$newUrl = str_repeat('../', count($baseArray) - $i);
 		$newUrl .= implode('/', array_slice($urlArray, $i));
-		
-		return $newUrl;
+
+		return $arguments ? $newUrl.'?'.$arguments : $newUrl;
 	}
-	
+
 	protected function lib_isnumber($value) {
 		return $this->toBool($value[0] == "number");
 	}
