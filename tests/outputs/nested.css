@@ -1,51 +1,51 @@
 #header {
-  color: black;
+	color: black;
 }
 #header .navigation {
-  font-size: 12px;
+	font-size: 12px;
 }
 #header .navigation .border .outside {
-  color: blue;
+	color: blue;
 }
 #header .logo {
-  width: 300px;
+	width: 300px;
 }
 #header .logo:hover {
-  text-decoration: none;
+	text-decoration: none;
 }
 a b ul li {
-  color: green;
+	color: green;
 }
 div .cool {
-  color: green;
+	color: green;
 }
 p .cool span {
-  color: yellow;
+	color: yellow;
 }
 div another {
-  color: green;
+	color: green;
 }
 p another span {
-  color: yellow;
+	color: yellow;
 }
 b .something {
-  color: blue;
+	color: blue;
 }
 b.something {
-  color: blue;
+	color: blue;
 }
 .foo .bar .qux,
 .foo .baz .qux {
-  display: block;
+	display: block;
 }
 .qux .foo .bar,
 .qux .foo .baz {
-  display: inline;
+	display: inline;
 }
 .qux .foo .bar .biz,
 .qux .foo .baz .biz {
-  display: none;
+	display: none;
 }
 b hello [x="&yeah"] {
-  color: red;
+	color: red;
 }

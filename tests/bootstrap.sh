@@ -6,22 +6,22 @@ echo "have git and lessc installed."
 echo ""
 
 if [ -z "$input" ]; then
-  input="bootstrap/less/bootstrap.less"
+	input="bootstrap/less/bootstrap.less"
 fi
 dest=$(basename "$input")
 dest="${dest%.*}"
 
 if [ -z "$@" ]; then
-  diff_tool="diff -b -u -t -B"
+	diff_tool="diff -b -u -t -B"
 else
-  diff_tool=$@
+	diff_tool=$@
 fi
 
 mkdir -p tmp
 
 if [ ! -d 'bootstrap/' ]; then
-  echo ">> Cloning bootstrap to bootstrap/"
-  git clone https://github.com/twitter/bootstrap
+	echo ">> Cloning bootstrap to bootstrap/"
+	git clone https://github.com/twitter/bootstrap
 fi
 
 echo ">> lessc compilation ($input)"
