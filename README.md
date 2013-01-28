@@ -47,9 +47,9 @@ If there any problem compiling your code, an exception is thrown with a helpful 
 ```php
 <?php
 try {
-  $less->compile("invalid LESS } {");
+	$less->compile("invalid LESS } {");
 } catch (exception $e) {
-  echo "fatal error: " . $e->getMessage();
+	echo "fatal error: " . $e->getMessage();
 }
 ```
 
@@ -73,24 +73,24 @@ An additional script has been included to use the compiler from the command
 line. In the simplest invocation, you specify an input file and the compiled
 css is written to standard out:
 
-    $ plessc input.less > output.css
+		$ plessc input.less > output.css
 
-Using the -r flag, you can specify LESS code directly as an argument or, if 
+Using the -r flag, you can specify LESS code directly as an argument or, if
 the argument is left off, from standard in:
 
-    $ plessc -r "my less code here"
+		$ plessc -r "my less code here"
 
-Finally, by using the -w flag you can watch a specified input file and have it 
+Finally, by using the -w flag you can watch a specified input file and have it
 compile as needed to the output file:
 
-    $ plessc -w input-file output-file
+		$ plessc -w input-file output-file
 
 Errors from watch mode are written to standard out.
 
 The -f flag sets the [output formatter][1]. For example, to compress the
 output run this:
 
-    $ plessc -f=compressed myfile.less
+		$ plessc -f=compressed myfile.less
 
 For more help, run `plessc --help`
 

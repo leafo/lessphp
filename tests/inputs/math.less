@@ -1,4 +1,3 @@
-
 .unary {
 	// all operators are parsable as unary operators, anything
 	// but - throws an error right now though,
@@ -11,20 +10,20 @@
 }
 
 .spaces {
-	// we can make the parser do math by leaving out the 
+	// we can make the parser do math by leaving out the
 	// space after the first value, or putting spaces on both sides
 
 	sub: 10-5;
 	sub: 10 - 5;
 
-	add: 10+5; 
-	add: 10 + 5; 
+	add: 10+5;
+	add: 10 + 5;
 
 	// div: 10/5; // this wont work, read on
-	div: 10 / 5; 
+	div: 10 / 5;
 
-	mul: 10*5; 
-	mul: 10 * 5; 
+	mul: 10*5;
+	mul: 10 * 5;
 }
 
 // these properties have divison not in parenthases
@@ -62,8 +61,8 @@
 
 
 .negation {
-    hello: -(1px);
-    hello: 0-(1px);
+		hello: -(1px);
+		hello: 0-(1px);
 
 	@something: 10;
 	hello: -@something;

@@ -1,114 +1,113 @@
-
 .demo (light, @color) {
-  color: lighten(@color, 10%);
+	color: lighten(@color, 10%);
 }
 .demo (@_, @color) {
-  display: block;
+	display: block;
 }
 
 @switch: light;
 
 .class {
-  .demo(@switch, #888);
+	.demo(@switch, #888);
 }
 
 // by arity
 
 .mixin () {
-    zero: 0;
+		zero: 0;
 }
 .mixin (@a: 1px) {
-    one: 1;
+		one: 1;
 }
 .mixin (@a) {
-    one-req: 1;
+		one-req: 1;
 }
 .mixin (@a: 1px, @b: 2px) {
-    two: 2;
+		two: 2;
 }
 
 .mixin (@a, @b, @c) {
-    three-req: 3;
+		three-req: 3;
 }
 
 .mixin (@a: 1px, @b: 2px, @c: 3px) {
-    three: 3;
+		three: 3;
 }
 
 .zero {
-    .mixin();
+		.mixin();
 }
 
 .one {
-    .mixin(1);
+		.mixin(1);
 }
 
 .two {
-    .mixin(1, 2);
+		.mixin(1, 2);
 }
 
 .three {
-    .mixin(1, 2, 3);
+		.mixin(1, 2, 3);
 }
 
 //
 
 .mixout ('left') {
-    left: 1;
+		left: 1;
 }
 
 .mixout ('right') {
-    right: 1;
+		right: 1;
 }
 
 .left {
-    .mixout('left');
+		.mixout('left');
 }
 .right {
-    .mixout('right');
+		.mixout('right');
 }
 
 //
 
 .border (@side, @width) {
-    color: black;
-    .border-side(@side, @width);
+		color: black;
+		.border-side(@side, @width);
 }
 .border-side (left, @w) {
-    border-left: @w;
+		border-left: @w;
 }
 .border-side (right, @w) {
-    border-right: @w;
+		border-right: @w;
 }
 
 .border-right {
-    .border(right, 4px);
+		.border(right, 4px);
 }
 .border-left {
-    .border(left, 4px);
+		.border(left, 4px);
 }
 
 //
 
 
 .border-radius (@r) {
-    both: @r * 10;
+		both: @r * 10;
 }
 .border-radius (@r, left) {
-    left: @r;
+		left: @r;
 }
 .border-radius (@r, right) {
-    right: @r;
+		right: @r;
 }
 
 .only-right {
-    .border-radius(33, right);
+		.border-radius(33, right);
 }
 .only-left {
-    .border-radius(33, left);
+		.border-radius(33, left);
 }
 .left-right {
-    .border-radius(33);
+		.border-radius(33);
 }
 
 .hola(hello, @hello...) {

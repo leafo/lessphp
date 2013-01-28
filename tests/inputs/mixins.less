@@ -1,4 +1,3 @@
-
 @rounded-corners {
 	border-radius: 10px;
 }
@@ -16,16 +15,16 @@ body #window {
 }
 
 #bundle {
-  .button {
-    display: block;
-    border: 1px solid black;
-    background-color: grey;
-    &:hover { background-color: white }
-  }
+	.button {
+		display: block;
+		border: 1px solid black;
+		background-color: grey;
+		&:hover { background-color: white }
+	}
 }
 #header a {
-  color: orange;
-  #bundle > .button; // mixin the button class
+	color: orange;
+	#bundle > .button; // mixin the button class
 }
 
 div {
@@ -51,13 +50,13 @@ body {
 // not using > to list mixins
 
 .hello {
-  .world {
-    color: blue;
-  }
+	.world {
+		color: blue;
+	}
 }
 
 .foobar {
-  .hello .world;
+	.hello .world;
 }
 
 
@@ -70,13 +69,13 @@ body {
 
 .spam(@something: 100, @dad: land) {
 	@wow: 23434;
-    foo: @arguments;
-    bar: @arguments;
+		foo: @arguments;
+		bar: @arguments;
 }
 
 .eggs {
-    .spam(1px, 2px);
-    .spam();
+		.spam(1px, 2px);
+		.spam();
 }
 
 .first(@one, @two, @three, @four: cool) {
@@ -88,7 +87,7 @@ body {
 }
 
 #hello-important {
-	.first(one, two, three) !important;	
+	.first(one, two, three) !important;
 }
 
 .rad(@name) {
@@ -111,9 +110,9 @@ body {
 
 
 .another(@x, @y:skip, @z:me) {
-  .cool {
-    color: @arguments;
-  }
+	.cool {
+		color: @arguments;
+	}
 }
 
 #day {
@@ -123,32 +122,32 @@ body {
 
 
 .to-be-important() {
-  color: red;
-  @color: red;
-  height: 20px;
+	color: red;
+	@color: red;
+	height: 20px;
 
-  pre {
-    color: @color;
-  }
+	pre {
+		color: @color;
+	}
 }
 
 .mix-suffix {
-  .to-be-important() !important;
+	.to-be-important() !important;
 }
 
 
 
 
 #search-all {
-  .red() {
-    color:#f00 !important;
-  }
+	.red() {
+		color:#f00 !important;
+	}
 }
 
 #search-all {
-  .green() {
-    color: #0f0 !important;
-  }
+	.green() {
+		color: #0f0 !important;
+	}
 }
 
 .search-test {

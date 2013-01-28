@@ -1,28 +1,27 @@
-
 @outer: 10px;
 @class(@var:22px, @car: 400px + @outer) {
-  margin: @var;
-  height: @car;
+	margin: @var;
+	height: @car;
 }
 
-@group { 
-  @f(@color) {
-    color: @color;
-  }
-  .cool {
-    border-bottom: 1px solid green;
-  }
+@group {
+	@f(@color) {
+		color: @color;
+	}
+	.cool {
+		border-bottom: 1px solid green;
+	}
 }
 
 .class(@width:200px) {
-  padding: @width;
+	padding: @width;
 }
 
 body {
-  .class(2.0em);
-  @group > @f(red);
-  @class(10px, 10px + 2);
-  @group > .cool;
+	.class(2.0em);
+	@group > @f(red);
+	@class(10px, 10px + 2);
+	@group > .cool;
 }
 
 

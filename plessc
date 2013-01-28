@@ -10,14 +10,14 @@ Usage: $exe [options] input-file [output-file]
 
 Options include:
 
-    -h, --help  Show this message
-    -v          Print the version
-    -f=format   Set the output format, includes "default", "compressed"
-    -c          Keep /* */ comments in output
-    -r          Read from STDIN instead of input-file
-    -w          Watch input-file, and compile to output-file if it is changed
-    -T          Dump formatted parse tree
-    -X          Dump raw parse tree
+		-h, --help	Show this message
+		-v					Print the version
+		-f=format	 Set the output format, includes "default", "compressed"
+		-c					Keep /* */ comments in output
+		-r					Read from STDIN instead of input-file
+		-w					Watch input-file, and compile to output-file if it is changed
+		-T					Dump formatted parse tree
+		-X					Dump raw parse tree
 
 
 EOT;
@@ -40,7 +40,7 @@ if (has("h", "help")) {
 }
 
 error_reporting(E_ALL);
-$path  = realpath(dirname(__FILE__)).'/';
+$path	= realpath(dirname(__FILE__)).'/';
 
 require $path."lessc.inc.php";
 
@@ -166,7 +166,7 @@ if (!$fname = array_shift($argv)) {
 
 function dumpValue($node, $depth = 0) {
 	if (is_object($node)) {
-		$indent = str_repeat("  ", $depth);
+		$indent = str_repeat("	", $depth);
 		$out = array();
 		foreach ($node->props as $prop) {
 			$out[] = $indent . dumpValue($prop, $depth + 1);
