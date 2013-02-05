@@ -16,5 +16,10 @@
     ],
     "autoload": {
         "classmap": ["lessc.inc.php"]
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "0.3-dev"
+        }
     }
 }
