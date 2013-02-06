@@ -2578,7 +2578,7 @@ class lessc_parser {
 			$out = array("mediaExp", $feature);
 			if ($value) $out[] = $value;
 			return true;
-		}elseif($this->variable($variable)) {
+		} elseif ($this->variable($variable)) {
 			$out = array('variable', $variable);
 			return true;
 		}

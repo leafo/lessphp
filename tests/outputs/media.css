@@ -63,3 +63,8 @@
     }
   }
 }
+@media (max-width: 599px) {
+  .helloworld {
+    color: blue;
+  }
+}
