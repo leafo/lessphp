@@ -897,6 +897,16 @@ class lessc {
 		return array("number", round($value), $arg[2]);
 	}
 
+	protected function lib_unit($arg) {
+		if ($arg[0] == "list") {
+			list($number, $newUnit) = $arg[2];
+			return array("number", $this->assertNumber($number),
+				$this->compileValue($this->lib_e($newUnit)));
+		} else {
+			return array("number", $this->assertNumber($arg), "");
+		}
+	}
+
 	/**
 	 * Helper function to get arguments for color manipulation functions.
 	 * takes a list that contains a color like thing and a percentage
