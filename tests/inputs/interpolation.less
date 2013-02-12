@@ -1,0 +1,11 @@
+
+@cool-hello: "yes";
+@cool-yes: "okay";
+@var: "hello";
+
+div {
+	color: ~"@{cool-hello}";
+	color: ~"@{cool-@{var}}";
+	color: ~"@{cool-@{cool-@{var}}}";
+}
+

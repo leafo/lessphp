@@ -1215,6 +1215,10 @@ class lessc {
 
 	protected function reduce($value, $forExpression = false) {
 		switch ($value[0]) {
+		case "interpolate":
+			$reduced = $this->reduce($value[1]);
+			$var = $this->compileValue($reduced);
+			return $this->lib_e($this->reduce(array("variable", $this->vPrefix . $var)));
 		case "variable":
 			$key = $value[1];
 			if (is_array($key)) {
@@ -1490,7 +1494,7 @@ class lessc {
 		if (is_null($color)) {
 			$this->throwError('color expected for red()');
 		}
-		
+
 		return $color[1];
 	}
 
@@ -1499,7 +1503,7 @@ class lessc {
 		if (is_null($color)) {
 			$this->throwError('color expected for green()');
 		}
-		
+
 		return $color[2];
 	}
 
@@ -1508,7 +1512,7 @@ class lessc {
 		if (is_null($color)) {
 			$this->throwError('color expected for blue()');
 		}
-		
+
 		return $color[3];
 	}
 
@@ -2644,11 +2648,10 @@ class lessc_parser {
 				continue;
 			}
 
-			if (in_array($tok, $rejectStrs)) {
-				$count = null;
+			if (!empty($rejectStrs) && in_array($tok, $rejectStrs)) {
+				$ount = null;
 				break;
 			}
-
 
 			$content[] = $tok;
 			$this->count+= strlen($tok);
@@ -2724,10 +2727,10 @@ class lessc_parser {
 
 		$s = $this->seek();
 		if ($this->literal("@{") &&
-			$this->keyword($var) &&
+			$this->openString("}", $interp, null, array("'", '"', ";")) &&
 			$this->literal("}", false))
 		{
-			$out = array("variable", $this->lessc->vPrefix . $var);
+			$out = array("interpolate", $interp);
 			$this->eatWhiteDefault = $oldWhite;
 			if ($this->eatWhiteDefault) $this->whitespace();
 			return true;
