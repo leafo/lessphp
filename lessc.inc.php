@@ -2939,16 +2939,18 @@ class lessc_parser {
 				continue;
 			}
 
-			if ($this->interpolation($interp)) {
-				$hasExpression = true;
-				$interp[2] = true; // don't unescape
-				$parts[] = $interp;
-				continue;
-			}
+			if (isset($this->buffer[$this->count]) && $this->buffer[$this->count] == "@") {
+				if ($this->interpolation($interp)) {
+					$hasExpression = true;
+					$interp[2] = true; // don't unescape
+					$parts[] = $interp;
+					continue;
+				}
 
-			if ($this->literal("@")) {
-				$parts[] = "@";
-				continue;
+				if ($this->literal("@")) {
+					$parts[] = "@";
+					continue;
+				}
 			}
 
 			if ($this->unit($unit)) { // for keyframes
