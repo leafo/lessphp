@@ -437,7 +437,7 @@ class lessc {
 		foreach ($selectors as $s) {
 			if (is_array($s)) {
 				list(, $value) = $s;
-				$out[] = $this->compileValue($this->reduce($value));
+				$out[] = trim($this->compileValue($this->reduce($value)));
 			} else {
 				$out[] = $s;
 			}
@@ -1218,7 +1218,11 @@ class lessc {
 		case "interpolate":
 			$reduced = $this->reduce($value[1]);
 			$var = $this->compileValue($reduced);
-			return $this->lib_e($this->reduce(array("variable", $this->vPrefix . $var)));
+			$res = $this->reduce(array("variable", $this->vPrefix . $var));
+
+			if (empty($value[2])) $res = $this->lib_e($res);
+
+			return $res;
 		case "variable":
 			$key = $value[1];
 			if (is_array($key)) {
@@ -2904,38 +2908,71 @@ class lessc_parser {
 		return false;
 	}
 
-	// a single tag
+	// a space separated list of selectors
 	protected function tag(&$tag, $simple = false) {
 		if ($simple)
-			$chars = '^,:;{}\][>\(\) "\'';
+			$chars = '^@,:;{}\][>\(\) "\'';
 		else
-			$chars = '^,;{}["\'';
+			$chars = '^@,;{}["\'';
+
+		$s = $this->seek();
 
 		if (!$simple && $this->tagExpression($tag)) {
 			return true;
 		}
 
-		$tag = '';
-		while ($this->tagBracket($first)) $tag .= $first;
+		$hasExpression = false;
+		$parts = array();
+		while ($this->tagBracket($first)) $parts[] = $first;
+
+		$oldWhite = $this->eatWhiteDefault;
+		$this->eatWhiteDefault = false;
 
 		while (true) {
 			if ($this->match('(['.$chars.'0-9]['.$chars.']*)', $m)) {
-				$tag .= $m[1];
+				$parts[] = $m[1];
 				if ($simple) break;
 
-				while ($this->tagBracket($brack)) $tag .= $brack;
-				continue;
-			} elseif ($this->unit($unit)) { // for keyframes
-				$tag .= $unit[1] . $unit[2];
+				while ($this->tagBracket($brack)) {
+					$parts[] = $brack;
+				}
 				continue;
 			}
+
+			if ($this->interpolation($interp)) {
+				$hasExpression = true;
+				$interp[2] = true; // don't unescape
+				$parts[] = $interp;
+				continue;
+			}
+
+			if ($this->literal("@")) {
+				$parts[] = "@";
+				continue;
+			}
+
+			if ($this->unit($unit)) { // for keyframes
+				$parts[] = $unit[1];
+				$parts[] = $unit[2];
+				continue;
+			}
+
 			break;
 		}
 
+		$this->eatWhiteDefault = $oldWhite;
+		if (!$parts) {
+			$this->seek($s);
+			return false;
+		}
 
-		$tag = trim($tag);
-		if ($tag == '') return false;
+		if ($hasExpression) {
+			$tag = array("exp", array("string", "", $parts));
+		} else {
+			$tag = trim(implode($parts));
+		}
 
+		$this->whitespace();
 		return true;
 	}
 
