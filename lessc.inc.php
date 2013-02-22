@@ -53,7 +53,7 @@ class lessc {
 	public $importDisabled = false;
 	public $importDir = '';
 
-	public $allowUrlRewrite = true; // rewrite urls relative to imported files
+	public $allowUrlRewrite = false; // rewrite urls relative to imported files
 	public $baseUrlPath = null;
 
 	protected $numberPrecision = null;
@@ -1812,6 +1812,10 @@ class lessc {
 	public function addImportDir($dir) {
 		$this->importDir = (array)$this->importDir;
 		$this->importDir[] = $dir;
+	}
+
+	public function setAllowUrlRewrite($allowUrlRewrite){
+		$this->allowUrlRewrite = (bool)$allowUrlRewrite;
 	}
 
 	public function allParsedFiles() {
