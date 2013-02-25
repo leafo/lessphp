@@ -1,5 +1,9 @@
 
 body {
+	color:rgb(red(#f00), red(#0F0), red(#00f));
+	color:rgb(red(#f00), green(#0F0), blue(#00f));
+	color:rgb(red(#0ff), green(#f0f), blue(#ff0));
+
 	color: hsl(34, 50%, 40%);
 	color: hsla(34, 50%, 40%, 0.3);
 
@@ -85,6 +89,11 @@ fade {
 	color: mix(rgba(5,3,1,0.3), rgba(6,3,2, 0.8), 50%);
 }
 
+.contrast {
+	color: contrast(#000, red, blue);
+	color: contrast(#fff, red, blue);
+}
+
 .percent {
 	per: percentage(0.5);
 }
@@ -135,5 +144,10 @@ dd {
 	c: 132- red;
 }
 
-
+.transparent {
+	r: red(transparent);
+	g: green(transparent);
+	b: blue(transparent);
+	a: alpha(transparent);
+}
 

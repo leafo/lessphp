@@ -63,3 +63,11 @@ format {
 }
 
 
+#unit {
+	@unit: "em";
+	height: unit(10px);
+	height: unit(10px, "s");
+	height: unit(10px, @unit);
+	height: unit(0.07407s) * 100%;
+}
+

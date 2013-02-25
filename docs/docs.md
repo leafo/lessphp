@@ -847,6 +847,9 @@ function that let's you unquote any value. It is called `e`.
   the alpha of the colors if it exists. See
   <http://sass-lang.com/docs/yardoc/Sass/Script/Functions.html#mix-instance_method>.
 
+* `constrast(color, dark, light)` -- if `color` has a lightness value greater
+  than 50% then `dark` is returned, otherwise return `light`.
+
 * `rgbahex(color)` -- returns a string containing 4 part hex color.
 
    This is used to convert a CSS color into the hex format that IE's filter
@@ -1206,8 +1209,8 @@ like so:
 
     ```php
     $less->registerFunction("double", function($arg) {
-        list($type, $value) = $arg;
-        return array($type, $value*2);
+        list($type, $value, $unit) = $arg;
+        return array($type, $value*2, $unit);
     });
     ```
 

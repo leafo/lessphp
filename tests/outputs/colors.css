@@ -1,4 +1,7 @@
 body {
+  color: #ff0000;
+  color: #ffffff;
+  color: #000000;
   color: #996d33;
   color: rgba(153,109,51,0.3);
   lighten: #ffffff;
@@ -57,6 +60,10 @@ fade {
   color: #808080;
   color: rgba(6,3,2,-0.25);
 }
+.contrast {
+  color: #0000ff;
+  color: #ff0000;
+}
 .percent {
   per: 50%;
 }
@@ -86,4 +93,10 @@ dd {
   c: 132 / #ff0000;
   c: 132 - #ff0000;
   c: 132- #ff0000;
+}
+.transparent {
+  r: 0;
+  g: 0;
+  b: 0;
+  a: 0;
 }

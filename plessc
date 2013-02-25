@@ -1,4 +1,4 @@
-#!/usr/bin/env php -q
+#!/usr/bin/env php
 <?php
 // Command line utility to compile LESS to STDOUT
 // Leaf Corcoran <leafot@gmail.com>, 2012
