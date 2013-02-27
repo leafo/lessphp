@@ -1127,7 +1127,7 @@ class lessc {
 	 * Expects H to be in range of 0 to 360, S and L in 0 to 100
 	 */
 	protected function toRGB($color) {
-		if ($color == 'color') return $color;
+		if ($color[0] == 'color') return $color;
 
 		$H = $color[1] / 360;
 		$S = $color[2] / 100;
