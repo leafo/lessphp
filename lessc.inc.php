@@ -2653,7 +2653,6 @@ class lessc_parser {
 			}
 
 			if (!empty($rejectStrs) && in_array($tok, $rejectStrs)) {
-				$ount = null;
 				break;
 			}
 
