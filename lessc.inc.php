@@ -2130,7 +2130,7 @@ class lessc_parser {
 			$this->throwError();
 
 		// TODO report where the block was opened
-		if (!is_null($this->env->parent))
+		if (isset($this->env->parent) && !is_null($this->env->parent))
 			throw new exception('parse error: unclosed block');
 
 		return $this->env;
