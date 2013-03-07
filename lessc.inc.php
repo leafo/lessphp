@@ -2035,7 +2035,7 @@ class lessc {
 		unset($fcont[0],$fcont[1]);
 		foreach($fcont as $fless){
 			if(substr($fless,-5)===".less"){
-				checkedCompile($autoload."/".$fless, $autopush."/".substr($fless,-5).".css");
+				self::checkedCompile($autoload."/".$fless, $autopush."/".substr($fless,-5).".css");
 			}
 		}
 	}
@@ -3477,5 +3477,4 @@ class lessc_formatter_lessjs extends lessc_formatter_classic {
 	public $assignSeparator = ": ";
 	public $selectorSeparator = ",";
 }
-
 
