@@ -2030,6 +2030,15 @@ class lessc {
 		'yellow' => '255,255,0',
 		'yellowgreen' => '154,205,50'
 	);
+	public function watchFolder($autoload,$autopush){
+		$fcont = scandir($autoload);
+		unset($fcont[0],$fcont[1]);
+		foreach($fcont as $fless){
+			if(substr($fless,-5)===".less"){
+				parent::checkedCompile($autoload."/".$fless, $autopush."/".substr($fless,-5).".css");
+			}
+		}
+	}
 }
 
 // responsible for taking a string of LESS code and converting it into a
