@@ -2035,7 +2035,7 @@ class lessc {
 		unset($fcont[0],$fcont[1]);
 		foreach($fcont as $fless){
 			if(substr($fless,-5)===".less"){
-				parent::checkedCompile($autoload."/".$fless, $autopush."/".substr($fless,-5).".css");
+				checkedCompile($autoload."/".$fless, $autopush."/".substr($fless,-5).".css");
 			}
 		}
 	}
