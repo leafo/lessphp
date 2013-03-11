@@ -1,8 +1,8 @@
-    title: v0.3.8 documentation
+    title: v0.3.9 documentation
     link_to_home: true
 --
 
-<h2 skip="true">Documentation v0.3.8</h2>
+<h2 skip="true">Documentation v0.3.9</h2>
 
 <div style="margin-bottom: 1em;">$index</div>
 
@@ -1236,7 +1236,7 @@ second argument in addition to the arguments array.
 ## Command Line Interface
 
 **lessphp** comes with a command line script written in PHP that can be used to
-invoke the compiler from the terminal. On Linux an OSX, all you need to do is
+invoke the compiler from the terminal. On Linux and OSX, all you need to do is
 place `plessc` and `lessc.inc.php` somewhere in your PATH (or you can run it in
 the current directory as well). On windows you'll need a copy of `php.exe` to
 run the file. To compile a file, `input.less` to CSS, run:
