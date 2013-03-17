@@ -861,7 +861,7 @@ class lessc {
 		$template = $this->compileValue($this->lib_e($string));
 
 		$i = 0;
-		if (preg_match_all('/%[dsa]/', $template, $m)) {
+		if (preg_match_all('/%[dsaDSA]/', $template, $m)) {
 			foreach ($m[0] as $match) {
 				$val = isset($values[$i]) ?
 					$this->reduce($values[$i]) : array('keyword', '');
@@ -873,6 +873,9 @@ class lessc {
 
 				$i++;
 				$rep = $this->compileValue($this->lib_e($val));
+                if (ctype_upper(substr($match, 1))) {
+                    $rep = urlencode($rep);
+                }
 				$template = preg_replace('/'.self::preg_quote($match).'/',
 					$rep, $template, 1);
 			}
