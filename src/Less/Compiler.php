@@ -16,18 +16,18 @@
  *
  * Converting LESS to CSS is a three stage process. The incoming file is parsed
  * by `Less_Parser` into a syntax tree, then it is compiled into another tree
- * representing the CSS structure by `lessc`. The CSS tree is fed into a
+ * representing the CSS structure by `Less_Compiler`. The CSS tree is fed into a
  * formatter, like `lessc_formatter` which then outputs CSS as a string.
  *
  * During the first compile, all values are *reduced*, which means that their
  * types are brought to the lowest form before being dump as strings. This
  * handles math equations, variable dereferences, and the like.
  *
- * The `parse` function of `lessc` is the entry point.
+ * The `parse` function of `Less_Compiler` is the entry point.
  *
  * In summary:
  *
- * The `lessc` class creates an intstance of the parser, feeds it LESS code,
+ * The `Less_Compiler` class creates an intstance of the parser, feeds it LESS code,
  * then transforms the resulting tree to a CSS tree. This class also holds the
  * evaluation context, such as all available mixins and variables at any given
  * time.
@@ -293,7 +293,7 @@ class Less_Compiler
 			if (! is_string($this->formatterName)) {
 				return $this->formatterName;
 			}
-			$className = "lessc_formatter_$this->formatterName";
+			$className = "Less_Formatter_$this->formatterName";
 		}
 
 		return new $className;
