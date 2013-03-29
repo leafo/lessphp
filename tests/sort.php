@@ -1,7 +1,7 @@
 <?php
 error_reporting(E_ALL);
 
-require realpath(dirname(__FILE__)).'/../lessc.inc.php';
+require_once dirname(__FILE__) . '/../autoload.php';
 
 // sorts the selectors in stylesheet in order to normalize it for comparison
 

@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . "/../lessc.inc.php";
+require_once dirname(__FILE__) . '/../autoload.php';
 
 // Runs all the tests in inputs/ and compares their output to ouputs/
 
@@ -17,7 +17,7 @@ class InputTest extends PHPUnit_Framework_TestCase {
 	protected static $outputDir = "outputs";
 
 	public function setUp() {
-		$this->less = new lessc();
+		$this->less = new Less_Compiler();
 		$this->less->importDir = array(__DIR__ . "/" . self::$inputDir . "/test-imports");
 	}
 

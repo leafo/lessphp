@@ -1,10 +1,10 @@
 <?php
 
-require_once __DIR__ . "/../lessc.inc.php";
+require_once dirname(__FILE__) . '/../autoload.php';
 
 class ApiTest extends PHPUnit_Framework_TestCase {
 	public function setUp() {
-		$this->less = new lessc();
+		$this->less = new Less_Compiler();
 		$this->less->importDir = array(__DIR__ . "/inputs/test-imports");
 	}
 
@@ -81,7 +81,7 @@ EOD;
 	}
 
 	public function testOldInterface() {
-		$this->less = new lessc(__DIR__ . "/inputs/hi.less");
+		$this->less = new Less_Compiler(__DIR__ . "/inputs/hi.less");
 		$out = $this->less->parse(array("hello" => "10px"));
 		$this->assertEquals(trim($out), trim('
 div:before {
@@ -96,7 +96,7 @@ div:before {
 				'color' => 'red',
 				'base' => '960px'
 			));
-	
+
 		$this->assertEquals(trim($out), trim("
 .magic {
   color: red;
@@ -121,7 +121,7 @@ div:before {
 		$this->assertEquals(
 			$this->compile("result: add-two(10, 20);"),
 			"result: 30;");
-		
+
 		return $this->less;
 	}
 
