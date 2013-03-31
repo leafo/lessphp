@@ -158,11 +158,11 @@ div:before {
 				}
 			}";
 
-		$this->less->setFormatter("compressed");
+		$this->less->setFormatter("Compressed");
 		$this->assertEquals($this->compile($src), "div,pre{color:blue;}div span,div .big,div hello.world,pre span,pre .big,pre hello.world{height:20px;color:#fff;}");
 
 		// TODO: fix the output order of tags
-		$this->less->setFormatter("lessjs");
+		$this->less->setFormatter("Js");
 		$this->assertEquals($this->compile($src), "div,
 pre {
   color: blue;
@@ -177,7 +177,7 @@ pre hello.world {
   color: #ffffff;
 }");
 
-		$this->less->setFormatter("classic");
+		$this->less->setFormatter("Classic");
 		$this->assertEquals($this->compile($src), trim("div, pre { color:blue; }
 div span, div .big, div hello.world, pre span, pre .big, pre hello.world {
   height:20px;
