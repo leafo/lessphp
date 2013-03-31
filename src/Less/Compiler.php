@@ -1,7 +1,7 @@
 <?php
 
 /*
- * lessphp v0.3.9.1
+ * lessphp v0.4
  * http://leafo.net/lessphp
  *
  * LESS css compiler for PHP 5, adapted from http://lesscss.org
@@ -17,7 +17,7 @@
  * Converting LESS to CSS is a three stage process. The incoming file is parsed
  * by `Less_Parser` into a syntax tree, then it is compiled into another tree
  * representing the CSS structure by `Less_Compiler`. The CSS tree is fed into a
- * formatter, like `lessc_formatter` which then outputs CSS as a string.
+ * formatter, like `Less_Formatter_Classic` which then outputs CSS as a string.
  *
  * During the first compile, all values are *reduced*, which means that their
  * types are brought to the lowest form before being dump as strings. This
@@ -34,21 +34,37 @@
  *
  * The `Less_Parser` class is only concerned with parsing its input.
  *
- * The `lessc_formatter` takes a CSS tree, and dumps it to a formatted string,
+ * The `Less_Formatter_Classic` takes a CSS tree, and dumps it to a formatted string,
  * handling things like indentation.
+ *
+ * @author Leaf Corcoran <leafot@gmail.com>
+ * @author Titouan Galopin <galopintitouan@gmail.com>
  */
 class Less_Compiler
 {
-	static public $VERSION = "v0.3.9";
+	/**
+	 * lessphp version
+	 */
+	const VERSION = '0.4';
+
+	/**
+	 * @var string
+	 * @deprecated Deprecated since version 0.4. Use Less_Compiler::VERSION instead.
+	 */
+	static public $VERSION = self::VERSION;
+
 	static public $defaultValue = array("keyword", "");
+
 	static protected $TRUE = array("keyword", "true");
 	static protected $FALSE = array("keyword", "false");
 	static protected $nextImportId = 0;
+
 	public $vPrefix = '@'; // prefix of abstract properties
 	public $mPrefix = '$'; // prefix of abstract blocks
 	public $parentSelector = '&';
 	public $importDisabled = false;
 	public $importDir = '';
+
 	protected $libFunctions = array();
 
 	// set to the parser that generated the current line when compiling
@@ -60,6 +76,13 @@ class Less_Compiler
 
 	// attempts to find the path of an import url, returns null for css files
 	protected $sourceLoc = null;
+
+	protected $allParsedFiles = array();
+
+	/**
+	 * @var Less_Parser
+	 */
+	protected $parser;
 
 	static protected $cssColors = array(
 		'aliceblue' => '240,248,255',

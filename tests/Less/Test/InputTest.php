@@ -14,7 +14,7 @@ function _quote($str)
 	return preg_quote($str, "/");
 }
 
-class InputTest extends PHPUnit_Framework_TestCase
+class Less_Test_InputTest extends PHPUnit_Framework_TestCase
 {
 	protected static $inputDir = '../Resources/inputs';
 	protected static $outputDir = '../Resources/outputs';

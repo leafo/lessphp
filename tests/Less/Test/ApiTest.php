@@ -3,7 +3,7 @@
 require_once dirname(__FILE__) . '/../../../autoload.php';
 
 
-class ApiTest extends PHPUnit_Framework_TestCase
+class Less_Test_ApiTest extends PHPUnit_Framework_TestCase
 {
 	/**
 	 * @var Less_Compiler
