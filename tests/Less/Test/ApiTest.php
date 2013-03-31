@@ -1,14 +1,23 @@
 <?php
 
-require_once __DIR__ . "/../lessc.inc.php";
+require_once dirname(__FILE__) . '/../../../autoload.php';
 
-class ApiTest extends PHPUnit_Framework_TestCase {
-	public function setUp() {
-		$this->less = new lessc();
-		$this->less->importDir = array(__DIR__ . "/inputs/test-imports");
+
+class Less_Test_ApiTest extends PHPUnit_Framework_TestCase
+{
+	/**
+	 * @var Less_Compiler
+	 */
+	protected $less;
+
+	public function setUp()
+	{
+		$this->less = new Less_Compiler();
+		$this->less->importDir = array(__DIR__ . '/../Resources/inputs/test-imports');
 	}
 
-	public function testPreserveComments() {
+	public function testPreserveComments()
+	{
 		$input = <<<EOD
 // what is going on?
 
@@ -80,8 +89,14 @@ EOD;
 		$this->assertEquals($this->compile($input), trim($outputWithComments));
 	}
 
-	public function testOldInterface() {
-		$this->less = new lessc(__DIR__ . "/inputs/hi.less");
+	public function compile($str)
+	{
+		return trim($this->less->parse($str));
+	}
+
+	public function testOldInterface()
+	{
+		$this->less = new Less_Compiler(__DIR__ . '/../Resources/inputs/hi.less');
 		$out = $this->less->parse(array("hello" => "10px"));
 		$this->assertEquals(trim($out), trim('
 div:before {
@@ -90,13 +105,10 @@ div:before {
 
 	}
 
-	public function testInjectVars() {
-		$out = $this->less->parse(".magic { color: @color;  width: @base - 200; }",
-			array(
-				'color' => 'red',
-				'base' => '960px'
-			));
-	
+	public function testInjectVars()
+	{
+		$out = $this->less->parse(".magic { color: @color;  width: @base - 200; }", array('color' => 'red', 'base' => '960px'));
+
 		$this->assertEquals(trim($out), trim("
 .magic {
   color: red;
@@ -105,40 +117,38 @@ div:before {
 
 	}
 
-	public function testDisableImport() {
+	public function testDisableImport()
+	{
 		$this->less->importDisabled = true;
-		$this->assertEquals(
-			"/* import disabled */",
-			$this->compile("@import 'file3';"));
+		$this->assertEquals("/* import disabled */", $this->compile("@import 'file3';"));
 	}
 
-	public function testUserFunction() {
-		$this->less->registerFunction("add-two", function($list) {
+	public function testUserFunction()
+	{
+		$this->less->registerFunction("add-two", function ($list) {
 			list($a, $b) = $list[2];
+
 			return $a[1] + $b[1];
 		});
 
-		$this->assertEquals(
-			$this->compile("result: add-two(10, 20);"),
-			"result: 30;");
-		
+		$this->assertEquals($this->compile("result: add-two(10, 20);"), "result: 30;");
+
 		return $this->less;
 	}
 
 	/**
+	 * @param Less_Compiler $less
 	 * @depends testUserFunction
 	 */
-	public function testUnregisterFunction($less) {
+	public function testUnregisterFunction(Less_Compiler $less)
+	{
 		$less->unregisterFunction("add-two");
 
-		$this->assertEquals(
-			$this->compile("result: add-two(10, 20);"),
-			"result: add-two(10,20);");
+		$this->assertEquals($this->compile("result: add-two(10, 20);"), "result: add-two(10,20);");
 	}
 
-
-
-	public function testFormatters() {
+	public function testFormatters()
+	{
 		$src = "
 			div, pre {
 				color: blue;
@@ -148,15 +158,12 @@ div:before {
 				}
 			}";
 
-		$this->less->setFormatter("compressed");
-		$this->assertEquals(
-			$this->compile($src), "div,pre{color:blue;}div span,div .big,div hello.world,pre span,pre .big,pre hello.world{height:20px;color:#fff;}");
+		$this->less->setFormatter("Compressed");
+		$this->assertEquals($this->compile($src), "div,pre{color:blue;}div span,div .big,div hello.world,pre span,pre .big,pre hello.world{height:20px;color:#fff;}");
 
 		// TODO: fix the output order of tags
-		$this->less->setFormatter("lessjs");
-		$this->assertEquals(
-			$this->compile($src),
-"div,
+		$this->less->setFormatter("Js");
+		$this->assertEquals($this->compile($src), "div,
 pre {
   color: blue;
 }
@@ -170,20 +177,14 @@ pre hello.world {
   color: #ffffff;
 }");
 
-		$this->less->setFormatter("classic");
-		$this->assertEquals(
-			$this->compile($src),
-trim("div, pre { color:blue; }
+		$this->less->setFormatter("Classic");
+		$this->assertEquals($this->compile($src), trim("div, pre { color:blue; }
 div span, div .big, div hello.world, pre span, pre .big, pre hello.world {
   height:20px;
   color:#ffffff;
 }
 "));
 
-	}
-
-	public function compile($str) {
-		return trim($this->less->parse($str));
 	}
 
 }
