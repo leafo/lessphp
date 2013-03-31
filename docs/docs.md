@@ -1,8 +1,8 @@
-    title: v0.3.9 documentation
+    title: v0.4 documentation
     link_to_home: true
 --
 
-<h2 skip="true">Documentation v0.3.9</h2>
+<h2 skip="true">Documentation v0.4</h2>
 
 <div style="margin-bottom: 1em;">$index</div>
 
@@ -28,13 +28,13 @@ described in the [PHP Interface](#php_interface).
 
 ## Installation
 
-**lessphp** is distributed entirely in a single stand-alone file. Download the
-latest version from either [the homepage][1] or [GitHub][2].
+**lessphp** is distributed using Composer:
+
+	require {
+		"leafo/lessphp": "*"
+	}
 
 Development versions can also be downloading from GitHub.
-
-Place `lessphp.inc.php` in a location available to your PHP scripts, and
-include it. That's it! you're ready to begin.
 
 ## The Language
 
@@ -868,12 +868,12 @@ function that let's you unquote any value. It is called `e`.
 ## PHP Interface
 
 When working with **lessphp** from PHP, the typical flow is to create a new
-instance of `lessc`, configure it how you like, then tell it to compile
+instance of `Less_Compiler`, configure it how you like, then tell it to compile
 something using one built in compile methods.
 
 Methods:
 
-* [`compile($string)`](#compiling[) -- Compile a string
+* [`compile($string)`](#compiling) -- Compile a string
 
 * [`compileFile($inFile, [$outFile])`](#compiling) -- Compile a file to another or return it
 
@@ -904,9 +904,9 @@ The `compile` method compiles a string of LESS code to CSS.
 
     ```php
     <?php
-    require "lessc.inc.php";
+    require 'path/to/lessphp/autoload.php';
 
-    $less = new lessc;
+    $less = new Less_Compiler();
     echo $less->compile(".block { padding: 3 + 4px }");
     ```
 
@@ -937,9 +937,9 @@ To use a formatter, the method `setFormatter` is used. Just
 pass the name of the formatter:
 
     ```php
-    $less = new lessc;
+    $less = new Less_Compiler();
 
-    $less->setFormatter("compressed");
+    $less->setFormatter("Compressed");
     echo $less->compile("div { color: lighten(blue, 10%) }");
     ```
 
@@ -966,10 +966,10 @@ instead of spaces:
 
 
     ```php
-    $formatter = new lessc_formatter_classic;
+    $formatter = new Less_Formatter_Classic();
     $formatter->indentChar = "\t";
 
-    $less = new lessc;
+    $less = new Less_Compiler();
     $less->setFormatter($formatter);
     echo $less->compileFile("myfile.less");
     ```
@@ -986,7 +986,7 @@ example, bundling a license in the file.
 Enable or disable comment preservation by calling `setPreserveComments`:
 
     ```php
-    $less = new lessc;
+    $less = new Less_Compiler();
     $less->setPreserveComments(true);
     echo $less->compile("/* hello! */");
     ```
@@ -1036,7 +1036,7 @@ have a recompiled version available to be written:
     $inputFile = "myfile.less";
     $outputFile = "myfile.css";
 
-    $less = new lessc;
+    $less = new Less_Compiler();
 
     // create a new cache object, and compile
     $cache = $less->cachedCompile($inputFile);
@@ -1070,7 +1070,7 @@ An example with saving cache object to a file:
         $cache = $inputFile;
       }
 
-      $less = new lessc;
+      $less = new Less_Compiler();
       $newCache = $less->cachedCompile($cache);
 
       if (!is_array($cache) || $newCache["updated"] > $cache["updated"]) {
@@ -1093,7 +1093,8 @@ incorrectly typed values for functions that expect specific things, like the
 color manipulation functions.
 
     ```php
-    $less = new lessc;
+    $less = new Less_Compiler();
+
     try {
         $less->compile("} invalid LESS }}}");
     } catch (Exception $ex) {
@@ -1109,7 +1110,7 @@ values.
 
 
     ```php
-    $less = new lessc;
+    $less = new Less_Compiler();
 
     $less->setVariables(array(
       "color" => "red",
@@ -1187,14 +1188,14 @@ argument:
 
     ```php
     <?php
-    include "lessc.inc.php";
+    include 'path/to/lessphp/autoload.php';
 
     function lessphp_double($arg) {
         list($type, $value) = $arg;
         return array($type, $value*2);
     }
 
-    $less = new lessc;
+    $less = new Less_Compiler();
     $less->registerFunction("double", "lessphp_double");
 
     // gives us a width of 800px
@@ -1237,9 +1238,9 @@ second argument in addition to the arguments array.
 
 **lessphp** comes with a command line script written in PHP that can be used to
 invoke the compiler from the terminal. On Linux and OSX, all you need to do is
-place `plessc` and `lessc.inc.php` somewhere in your PATH (or you can run it in
-the current directory as well). On windows you'll need a copy of `php.exe` to
-run the file. To compile a file, `input.less` to CSS, run:
+place `plessc` somewhere in your PATH (or you can run it in the current directory as well).
+On windows you'll need a copy of `php.exe` to run the file. To compile a file, `input.less`
+to CSS, run:
 
     ```bash
     $ plessc input.less
