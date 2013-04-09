@@ -66,6 +66,10 @@ class lessc {
 
 	// attempts to find the path of an import url, returns null for css files
 	protected function findImport($url) {
+		//Check if url is an absolute path
+		if ($this->fileExists($file = $url.'.less') || $this->fileExists($file = $url)) {
+			return $file;
+		} 
 		foreach ((array)$this->importDir as $dir) {
 			$full = $dir.(substr($dir, -1) != '/' ? '/' : '').$url;
 			if ($this->fileExists($file = $full.'.less') || $this->fileExists($file = $full)) {
