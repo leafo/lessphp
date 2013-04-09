@@ -13,3 +13,15 @@
 @page {
   margin: 2cm;
 }
+@-ms-viewport {
+  width: device-width;
+}
+@-moz-viewport {
+  width: device-width;
+}
+@-o-viewport {
+  width: device-width;
+}
+@viewport {
+  width: device-width;
+}
