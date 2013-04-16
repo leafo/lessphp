@@ -3,7 +3,7 @@
 /**
  * lessphp v0.3.9
  * http://leafo.net/lessphp
- * фыв
+ * 
  * LESS css compiler, adapted from http://lesscss.org
  *
  * Copyright 2012, Leaf Corcoran <leafot@gmail.com>
