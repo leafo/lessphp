@@ -1,0 +1,9 @@
+ul li:before {
+  content: "—";
+}
+ul:after {
+  content: "©—©";
+}
+div:before {
+  content: "Привет, мир!";
+}
