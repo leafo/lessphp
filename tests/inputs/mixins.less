@@ -157,3 +157,12 @@ body {
 }
 
 
+// mixin self without infinite loop
+.cowboy() {
+	color: blue;
+}
+
+.cowboy {
+	.cowboy;
+}
+

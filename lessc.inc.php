@@ -633,6 +633,10 @@ class lessc {
 			}
 
 			foreach ($mixins as $mixin) {
+				if ($mixin === $block && !$args) {
+					continue;
+				}
+
 				$haveScope = false;
 				if (isset($mixin->parent->scope)) {
 					$haveScope = true;
