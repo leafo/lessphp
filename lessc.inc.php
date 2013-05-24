@@ -1653,6 +1653,7 @@ class lessc {
 	}
 
 	public function compile($string, $name = null) {
+		$precision = ini_set('precision', 16);
 		$locale = setlocale(LC_NUMERIC, 0);
 		setlocale(LC_NUMERIC, "C");
 
@@ -1675,6 +1676,7 @@ class lessc {
 		$this->formatter->block($this->scope);
 		$out = ob_get_clean();
 		setlocale(LC_NUMERIC, $locale);
+		ini_set('precision', $precision);
 		return $out;
 	}
 
