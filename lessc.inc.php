@@ -1056,11 +1056,27 @@ class lessc {
 	}
 
 	protected function lib_contrast($args) {
-		if ($args[0] != 'list' || count($args[2]) < 3) {
+		if($args[0] == 'color') {
+			$args = array(
+				'list',
+				',',
+				array(
+					$args,
+					array('color',0,0,0),
+					array('color',255,255,255)
+				)
+			);
+		}
+
+		if ($args[0] != 'list' || count($args[2]) < 1) {
 			return array(array('color', 0, 0, 0), 0);
 		}
 
 		list($inputColor, $darkColor, $lightColor) = $args[2];
+
+		$darkColor = $darkColor ? $darkColor : array('color', 0, 0, 0);
+		$lightColor = $lightColor ? $lightColor : array('color', 255, 255, 255);
+
 
 		$inputColor = $this->assertColor($inputColor);
 		$darkColor = $this->assertColor($darkColor);
