@@ -1159,7 +1159,7 @@ In this example, `@import "colors";` will look for either
 `assets/less/colors.less` or `assets/bootstrap/colors.less` in that order:
 
     ```php
-    $less->setImportDir(array("assets/less/", "assets/bootstrap");
+    $less->setImportDir(array("assets/less/", "assets/bootstrap"));
 
     echo $less->compile('@import "colors";');
     ```
