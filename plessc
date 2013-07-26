@@ -13,6 +13,7 @@ Options include:
     -h, --help  Show this message
     -v          Print the version
     -f=format   Set the output format, includes "default", "compressed"
+    -d=var:val  Set a less variable, may be used more than once
     -c          Keep /* */ comments in output
     -r          Read from STDIN instead of input-file
     -w          Watch input-file, and compile to output-file if it is changed
@@ -22,8 +23,8 @@ Options include:
 
 EOT;
 
-$opts = getopt('hvrwncXTf:', array('help'));
-while (count($argv) > 0 && preg_match('/^-([-hvrwncXT]$|[f]=)/', $argv[0])) {
+$opts = getopt('hvrwncXTf:d:', array('help'));
+while (count($argv) > 0 && preg_match('/^-([-hvrwncXT]$|[fd]=)/', $argv[0])) {
 	array_shift($argv);
 }
 
@@ -64,6 +65,28 @@ function make_less($fname = null) {
 		$format = $opts["f"];
 		if ($format != "default") $l->setFormatter($format);
 	}
+
+	if (has("d")) {
+		// Define variables
+		$vars = is_array($opts["d"]) ? $opts["d"] : array($opts["d"]);
+		$defs = array();
+		foreach ($vars as $var) {
+			// Each definition is $var:$val; the colon may be escaped if needed
+			$pair = preg_split('/(?<!\\\\):/', $var);
+			if (count($pair) == 2) {
+				$defs[$pair[0]] = $pair[1];
+			} else {
+				throw new Exception(
+					'Invalid variable definition "' . $var . '"; definitions'
+					. ' should be like "-d=variable_name:variable_value".'
+				);
+			}
+		}   
+
+		if (!empty($defs)) {
+			$l->setVariables($defs);
+		}
+	}   
 
 	if (has("c")) {
 		$l->setPreserveComments(true);
