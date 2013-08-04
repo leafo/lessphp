@@ -2808,11 +2808,14 @@ class lessc_parser {
 	// consume an argument definition list surrounded by ()
 	// each argument is a variable name with optional value
 	// or at the end a ... or a variable named followed by ...
-	protected function argumentDef(&$args, &$isVararg, $delim = ',') {
+	// arguments are separated by , unless a ; is in the list, then ; is the
+	// delimiter.
+	protected function argumentDef(&$args, &$isVararg) {
 		$s = $this->seek();
 		if (!$this->literal('(')) return false;
 
 		$values = array();
+		$delim = ",";
 
 		$isVararg = false;
 		while (true) {
@@ -2842,7 +2845,52 @@ class lessc_parser {
 				$values[] = array("lit", $literal);
 			}
 
-			if (!$this->literal($delim)) break;
+			if (!$this->literal($delim)) {
+				if ($delim == "," && $this->literal(";")) {
+					// found new delim, convert existing args
+					$delim = ";";
+
+					// transform arg list
+					if (isset($values[1])) { // 2 items
+						$newList = array();
+						foreach ($values as $i => $arg) {
+							switch($arg[0]) {
+							case "arg":
+								if ($i) {
+									$this->throwError("Cannot mix ; and , as delimiter types");
+								}
+								$newList[] = $arg[2];
+								break;
+							case "lit":
+								$newList[] = $arg[1];
+								break;
+							case "rest":
+								$this->throwError("Unexpected rest before semicolon");
+							}
+						}
+
+						$newList = array("list", ",", $newList);
+
+						switch ($values[0][0]) {
+						case "arg":
+							$newArg = array("arg", $values[0][1], $newList);
+							break;
+						case "lit":
+							$newArg = array("lit", $newList);
+							break;
+						}
+
+					} elseif ($values) { // 1 item
+						$newArg = $values[0];
+					}
+
+					if ($newArg) {
+						$values = array($newArg);
+					}
+				} else {
+					break;
+				}
+			}
 		}
 
 		if (!$this->literal(')')) {
