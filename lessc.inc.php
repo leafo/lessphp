@@ -574,9 +574,6 @@ class lessc {
 	// sets all argument names in $args to either the default value
 	// or the one passed in through $values
 	protected function zipSetArgs($args, $values) {
-		print_r($args);
-		print_r($values);
-
 		$assignedValues = array();
 		foreach ($args as $i => $a) {
 			if ($a[0] == "arg") {
