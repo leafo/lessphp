@@ -567,7 +567,6 @@ class lessc {
 				return count($matches) > 0 ? $matches : null;
 			}
 		}
-
 		if ($searchIn->parent === $searchIn) return null;
 		return $this->findBlocks($searchIn->parent, $path, $args, $seen);
 	}
@@ -624,8 +623,25 @@ class lessc {
 		case 'mixin':
 			list(, $path, $args, $suffix) = $prop;
 
-			$args = array_map(array($this, "reduce"), (array)$args);
-			$mixins = $this->findBlocks($block, $path, $args);
+			$orderedArgs = array();
+			foreach ((array)$args as $arg) {
+				switch ($arg[0]) {
+				case "arg":
+					$argval = array("variable", $arg[1]);
+					break;
+
+				case "lit":
+					$argval = $arg[1];
+					break;
+
+				default:
+					$this->throwError("Unknown arg type: " . $arg[0]);
+				}
+
+				$orderedArgs[] = $this->reduce($argval);
+			}
+
+			$mixins = $this->findBlocks($block, $path, $orderedArgs);
 
 			if ($mixins === null) {
 				// fwrite(STDERR,"failed to find block: ".implode(" > ", $path)."\n");
@@ -633,7 +649,7 @@ class lessc {
 			}
 
 			foreach ($mixins as $mixin) {
-				if ($mixin === $block && !$args) {
+				if ($mixin === $block && !$orderedArgs) {
 					continue;
 				}
 
@@ -648,7 +664,7 @@ class lessc {
 				if (isset($mixin->args)) {
 					$haveArgs = true;
 					$this->pushEnv();
-					$this->zipSetArgs($mixin->args, $args);
+					$this->zipSetArgs($mixin->args, $orderedArgs);
 				}
 
 				$oldParent = $mixin->parent;
@@ -2313,7 +2329,7 @@ class lessc_parser {
 
 		// mixin
 		if ($this->mixinTags($tags) &&
-			($this->argumentValues($argv) || true) &&
+			($this->argumentDef($argv, $isVararg) || true) &&
 			($this->keyword($suffix) || true) && $this->end())
 		{
 			$tags = $this->fixTags($tags);
@@ -2781,30 +2797,6 @@ class lessc_parser {
 		return false;
 	}
 
-	// consume a list of property values delimited by ; and wrapped in ()
-	protected function argumentValues(&$args, $delim = ',') {
-		$s = $this->seek();
-		if (!$this->literal('(')) return false;
-
-		$values = array();
-		while (true) {
-			if ($this->expressionList($value)) $values[] = $value;
-			if (!$this->literal($delim)) break;
-			else {
-				if ($value == null) $values[] = null;
-				$value = null;
-			}
-		}
-
-		if (!$this->literal(')')) {
-			$this->seek($s);
-			return false;
-		}
-
-		$args = $values;
-		return true;
-	}
-
 	// consume an argument definition list surrounded by ()
 	// each argument is a variable name with optional value
 	// or at the end a ... or a variable named followed by ...
@@ -2824,26 +2816,29 @@ class lessc_parser {
 				break;
 			}
 
-			if ($this->variable($vname)) {
-				$arg = array("arg", $vname);
-				$ss = $this->seek();
-				if ($this->assign() && $this->expressionList($value)) {
-					$arg[] = $value;
-				} else {
-					$this->seek($ss);
-					if ($this->literal("...")) {
-						$arg[0] = "rest";
-						$isVararg = true;
+			if ($this->expressionList($value)) {
+				if ($value[0] == "variable") {
+					$arg = array("arg", $value[1]);
+					$ss = $this->seek();
+
+					if ($this->assign() && $this->expressionList($rhs)) {
+						$arg[] = $rhs;
+					} else {
+						$this->seek($ss);
+						if ($this->literal("...")) {
+							$arg[0] = "rest";
+							$isVararg = true;
+						}
 					}
+
+					$values[] = $arg;
+					if ($isVararg) break;
+					continue;
+				} else {
+					$values[] = array("lit", $value);
 				}
-				$values[] = $arg;
-				if ($isVararg) break;
-				continue;
 			}
 
-			if ($this->value($literal)) {
-				$values[] = array("lit", $literal);
-			}
 
 			if (!$this->literal($delim)) {
 				if ($delim == "," && $this->literal(";")) {
