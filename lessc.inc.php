@@ -82,6 +82,7 @@ class lessc {
 
 	static public function compressList($items, $delim) {
 		if (!isset($items[1]) && isset($items[0])) return $items[0];
+		if(count($items) == 1) return reset($items);
 		else return array('list', $delim, $items);
 	}
 
@@ -579,7 +580,9 @@ class lessc {
 		$assignedValues = array();
 		foreach ($args as $a) {
 			if ($a[0] == "arg") {
-				if ($i < count($values) && !is_null($values[$i])) {
+				if (!is_null($values[$a[1]])) {
+					$value = $values[$a[1]];
+				} elseif ($i < count($values) && !is_null($values[$i])) {
 					$value = $values[$i];
 				} elseif (isset($a[2])) {
 					$value = $a[2];
@@ -2781,15 +2784,16 @@ class lessc_parser {
 		return false;
 	}
 
-	// consume a list of property values delimited by ; and wrapped in ()
-	protected function argumentValues(&$args, $delim = ',') {
+	// consume a list of property values delimited by , (or ;) and wrapped in ()
+	protected function argumentValues(&$args) {
 		$s = $this->seek();
+		if (!$this->literal('(')) return false;
 		if (!$this->literal('(')) return false;
 
 		$values = array();
 		while (true) {
-			if ($this->expressionList($value)) $values[] = $value;
-			if (!$this->literal($delim)) break;
+			if ($this->parametersList($value)) $values[] = $value;
+			if (!$this->literal(';') && !$this->literal(',')) break;
 			else {
 				if ($value == null) $values[] = null;
 				$value = null;
@@ -2802,6 +2806,30 @@ class lessc_parser {
 		}
 
 		$args = $values;
+		return true;
+	}
+	
+	// a list of (possibly named) parameters
+	protected function parametersList(&$exps) {
+		$values = array();
+		
+		// named expressions?
+
+		while ($this->variable($variable) && $this->assign() && $this->expression($exp)) {
+			$values[$variable] = $exp;
+		}
+		
+		// ordered expressions?
+
+		if(count($values) == 0){
+			while ($this->expression($exp)) {
+				$values[] = $exp;
+			}
+		}
+
+		if (count($values) == 0) return false;
+
+		$exps = lessc::compressList($values, ' ');
 		return true;
 	}
 
