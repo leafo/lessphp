@@ -2781,15 +2781,16 @@ class lessc_parser {
 		return false;
 	}
 
-	// consume a list of property values delimited by ; and wrapped in ()
-	protected function argumentValues(&$args, $delim = ',') {
+	// consume a list of property values delimited by , (or ;) and wrapped in ()
+	protected function argumentValues(&$args) {
 		$s = $this->seek();
+		if (!$this->literal('(')) return false;
 		if (!$this->literal('(')) return false;
 
 		$values = array();
 		while (true) {
 			if ($this->expressionList($value)) $values[] = $value;
-			if (!$this->literal($delim)) break;
+			if (!$this->literal(';') && !$this->literal(',')) break;
 			else {
 				if ($value == null) $values[] = null;
 				$value = null;
