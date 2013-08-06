@@ -2891,7 +2891,7 @@ class lessc_parser {
 							}
 						}
 
-						$newList = array("list", ",", $newList);
+						$newList = array("list", ", ", $newList);
 
 						switch ($values[0][0]) {
 						case "arg":
