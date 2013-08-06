@@ -2980,17 +2980,6 @@ class lessc_parser {
 		return false;
 	}
 
-	protected function tagExpression(&$value) {
-		$s = $this->seek();
-		if ($this->literal("(") && $this->expression($exp) && $this->literal(")")) {
-			$value = array('exp', $exp);
-			return true;
-		}
-
-		$this->seek($s);
-		return false;
-	}
-
 	// a space separated list of selectors
 	protected function tag(&$tag, $simple = false) {
 		if ($simple)
@@ -2999,10 +2988,6 @@ class lessc_parser {
 			$chars = '^@,;{}["\'';
 
 		$s = $this->seek();
-
-		if (!$simple && $this->tagExpression($tag)) {
-			return true;
-		}
 
 		$hasExpression = false;
 		$parts = array();

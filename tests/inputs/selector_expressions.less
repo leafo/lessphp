@@ -1,7 +1,7 @@
 
 @color: blue;
 
-(~"something @{color}"), world {
+something @{color}, world {
 	color: blue;
 }
 
@@ -11,7 +11,7 @@
 		height: 100px;
 	}
 
-	(~"cool @{color}") {
+	cool @{color} {
 		height: 4000px;
 	}
 }
@@ -19,7 +19,7 @@
 .heck(@a) { color: @a+10 }
 
 .spanX (@index) when (@index > 0) {
-	(~".span@{index}") { .heck(@index) }
+	.span@{index} { .heck(@index) }
 	.spanX(@index - 1);
 }
 .spanX (0) {}
