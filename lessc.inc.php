@@ -3405,7 +3405,7 @@ class lessc_parser {
 				break;
 			case '"':
 			case "'":
-				if (preg_match('/'.$min[0].'.*?'.$min[0].'/', $text, $m, 0, $count))
+				if (preg_match('/'.$min[0].'.*?(?<!\\\\)'.$min[0].'/', $text, $m, 0, $count))
 					$count += strlen($m[0]) - 1;
 				break;
 			case '//':
