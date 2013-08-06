@@ -458,7 +458,7 @@ class lessc {
 			foreach ($block->guards as $guardGroup) {
 				foreach ($guardGroup as $guard) {
 					$this->pushEnv();
-					$this->zipSetArgs($block->args, $callingArgs);
+					$this->zipSetArgs($block->args, $callingArgs, array());
 
 					$negate = false;
 					if ($guard[0] == "negate") {
@@ -573,26 +573,40 @@ class lessc {
 
 	// sets all argument names in $args to either the default value
 	// or the one passed in through $values
-	protected function zipSetArgs($args, $values) {
+	protected function zipSetArgs($args, $orderedValues, $keywordValues) {
 		$assignedValues = array();
-		foreach ($args as $i => $a) {
+
+		$i = 0;
+		foreach ($args as  $a) {
 			if ($a[0] == "arg") {
-				if ($i < count($values) && isset($values[$i])) {
-					$value = $values[$i];
+				if (isset($keywordValues[$a[1]])) {
+					// has keyword arg
+					$value = $keywordValues[$a[1]];
+				} elseif (isset($orderedValues[$i])) {
+					// has ordered arg
+					$value = $orderedValues[$i];
+					$i++;
 				} elseif (isset($a[2])) {
+					// has default value
 					$value = $a[2];
-				} else $value = null;
+				} else {
+					$this->throwError("Failed to assign arg " . $a[1]);
+					$value = null; // :(
+				}
 
 				$value = $this->reduce($value);
 				$this->set($a[1], $value);
 				$assignedValues[] = $value;
+			} else {
+				// a lit
+				$i++;
 			}
 		}
 
 		// check for a rest
 		$last = end($args);
 		if ($last[0] == "rest") {
-			$rest = array_slice($values, count($args) - 1);
+			$rest = array_slice($orderedValues, count($args) - 1);
 			$this->set($last[1], $this->reduce(array("list", " ", $rest)));
 		}
 
@@ -622,21 +636,24 @@ class lessc {
 			list(, $path, $args, $suffix) = $prop;
 
 			$orderedArgs = array();
+			$keywordArgs = array();
 			foreach ((array)$args as $arg) {
+				$argval = null;
 				switch ($arg[0]) {
 				case "arg":
-					$argval = array("variable", $arg[1]);
+					if (!isset($arg[2])) {
+						$orderedArgs[] = $this->reduce(array("variable", $arg[1]));
+					} else {
+						$keywordArgs[$arg[1]] = $this->reduce($arg[2]);
+					}
 					break;
 
 				case "lit":
-					$argval = $arg[1];
+					$orderedArgs[] = $this->reduce($arg[1]);
 					break;
-
 				default:
 					$this->throwError("Unknown arg type: " . $arg[0]);
 				}
-
-				$orderedArgs[] = $this->reduce($argval);
 			}
 
 			$mixins = $this->findBlocks($block, $path, $orderedArgs);
@@ -662,7 +679,7 @@ class lessc {
 				if (isset($mixin->args)) {
 					$haveArgs = true;
 					$this->pushEnv();
-					$this->zipSetArgs($mixin->args, $orderedArgs);
+					$this->zipSetArgs($mixin->args, $orderedArgs, $keywordArgs);
 				}
 
 				$oldParent = $mixin->parent;
