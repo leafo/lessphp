@@ -1271,6 +1271,10 @@ class lessc {
 			$var = $this->compileValue($reduced);
 			$res = $this->reduce(array("variable", $this->vPrefix . $var));
 
+			if ($res[0] == "raw_color") {
+				$res = $this->coerceColor($res);
+			}
+
 			if (empty($value[2])) $res = $this->lib_e($res);
 
 			return $res;
