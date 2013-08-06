@@ -13,12 +13,18 @@ function _quote($str) {
 }
 
 class InputTest extends PHPUnit_Framework_TestCase {
-	protected static $inputDir = "inputs";
-	protected static $outputDir = "outputs";
+	protected static $importDirs = array("inputs/test-imports");
+
+	protected static $testDirs = array(
+		"inputs" => "outputs",
+		"inputs_lessjs" => "outputs_lessjs",
+	);
 
 	public function setUp() {
 		$this->less = new lessc();
-		$this->less->importDir = array(__DIR__ . "/" . self::$inputDir . "/test-imports");
+		$this->less->importDir = array_map(function($path) {
+			return __DIR__ . "/" . $path;
+		}, self::$importDirs);
 	}
 
 	/**
@@ -54,7 +60,11 @@ class InputTest extends PHPUnit_Framework_TestCase {
 	}
 
 	static public function findInputNames($pattern="*.less") {
-		$files = glob(__DIR__ . "/" . self::$inputDir . "/" . $pattern);
+		$files = array();
+		foreach (self::$testDirs as $inputDir => $outputDir) {
+			$files = array_merge($files, glob(__DIR__ . "/" . $inputDir . "/" . $pattern));
+		}
+
 		return array_filter($files, "is_file");
 	}
 
@@ -62,10 +72,18 @@ class InputTest extends PHPUnit_Framework_TestCase {
 		$front = _quote(__DIR__ . "/");
 		$out = preg_replace("/^$front/", "", $input);
 
-		$in = _quote(self::$inputDir . "/");
-		$out = preg_replace("/$in/", self::$outputDir . "/", $out);
+		foreach (self::$testDirs as $inputDir => $outputDir) {
+			$in = _quote($inputDir . "/");
+			$rewritten = preg_replace("/$in/", $outputDir . "/", $out);
+			if ($rewritten != $out) {
+				$out = $rewritten;
+				break;
+			}
+		}
+
 		$out = preg_replace("/.less$/", ".css", $out);
 
 		return __DIR__ . "/" . $out;
 	}
 }
+
