@@ -620,7 +620,8 @@ class lessc {
 			$this->set($last[1], $this->reduce(array("list", " ", $rest)));
 		}
 
-		$this->env->arguments = $assignedValues;
+		// wow is this the only true use of PHP's + operator for arrays?
+		$this->env->arguments = $assignedValues + $orderedValues;
 	}
 
 	// compile a prop and update $lines or $blocks appropriately
