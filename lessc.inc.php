@@ -450,7 +450,7 @@ class lessc {
 		return $left == $right;
 	}
 
-	protected function patternMatch($block, $callingArgs) {
+	protected function patternMatch($block, $orderedArgs, $keywordArgs) {
 		// match the guards if it has them
 		// any one of the groups must have all its guards pass for a match
 		if (!empty($block->guards)) {
@@ -458,7 +458,7 @@ class lessc {
 			foreach ($block->guards as $guardGroup) {
 				foreach ($guardGroup as $guard) {
 					$this->pushEnv();
-					$this->zipSetArgs($block->args, $callingArgs, array());
+					$this->zipSetArgs($block->args, $orderedArgs, $keywordArgs);
 
 					$negate = false;
 					if ($guard[0] == "negate") {
@@ -487,24 +487,34 @@ class lessc {
 			}
 		}
 
-		$numCalling = count($callingArgs);
-
 		if (empty($block->args)) {
-			return $block->isVararg || $numCalling == 0;
+			return $block->isVararg || empty($orderedArgs) && empty($keywordArgs);
+		}
+
+		$remainingArgs = $block->args;
+		if ($keywordArgs) {
+			$remainingArgs = array();
+			foreach ($block->args as $arg) {
+				if ($arg[0] == "arg" && isset($keywordArgs[$arg[1]])) {
+					continue;
+				}
+
+				$remainingArgs[] = $arg;
+			}
 		}
 
 		$i = -1; // no args
 		// try to match by arity or by argument literal
-		foreach ($block->args as $i => $arg) {
+		foreach ($remainingArgs as $i => $arg) {
 			switch ($arg[0]) {
 			case "lit":
-				if (empty($callingArgs[$i]) || !$this->eq($arg[1], $callingArgs[$i])) {
+				if (empty($orderedArgs[$i]) || !$this->eq($arg[1], $orderedArgs[$i])) {
 					return false;
 				}
 				break;
 			case "arg":
 				// no arg and no default value
-				if (!isset($callingArgs[$i]) && !isset($arg[2])) {
+				if (!isset($orderedArgs[$i]) && !isset($arg[2])) {
 					return false;
 				}
 				break;
@@ -519,14 +529,14 @@ class lessc {
 		} else {
 			$numMatched = $i + 1;
 			// greater than becuase default values always match
-			return $numMatched >= $numCalling;
+			return $numMatched >= count($orderedArgs);
 		}
 	}
 
-	protected function patternMatchAll($blocks, $callingArgs) {
+	protected function patternMatchAll($blocks, $orderedArgs, $keywordArgs) {
 		$matches = null;
 		foreach ($blocks as $block) {
-			if ($this->patternMatch($block, $callingArgs)) {
+			if ($this->patternMatch($block, $orderedArgs, $keywordArgs)) {
 				$matches[] = $block;
 			}
 		}
@@ -535,7 +545,7 @@ class lessc {
 	}
 
 	// attempt to find blocks matched by path and args
-	protected function findBlocks($searchIn, $path, $args, $seen=array()) {
+	protected function findBlocks($searchIn, $path, $orderedArgs, $keywordArgs, $seen=array()) {
 		if ($searchIn == null) return null;
 		if (isset($seen[$searchIn->id])) return null;
 		$seen[$searchIn->id] = true;
@@ -545,7 +555,7 @@ class lessc {
 		if (isset($searchIn->children[$name])) {
 			$blocks = $searchIn->children[$name];
 			if (count($path) == 1) {
-				$matches = $this->patternMatchAll($blocks, $args);
+				$matches = $this->patternMatchAll($blocks, $orderedArgs, $keywordArgs);
 				if (!empty($matches)) {
 					// This will return all blocks that match in the closest
 					// scope that has any matching block, like lessjs
@@ -555,7 +565,7 @@ class lessc {
 				$matches = array();
 				foreach ($blocks as $subBlock) {
 					$subMatches = $this->findBlocks($subBlock,
-						array_slice($path, 1), $args, $seen);
+						array_slice($path, 1), $orderedArgs, $keywordArgs, $seen);
 
 					if (!is_null($subMatches)) {
 						foreach ($subMatches as $sm) {
@@ -568,7 +578,7 @@ class lessc {
 			}
 		}
 		if ($searchIn->parent === $searchIn) return null;
-		return $this->findBlocks($searchIn->parent, $path, $args, $seen);
+		return $this->findBlocks($searchIn->parent, $path, $orderedArgs, $keywordArgs, $seen);
 	}
 
 	// sets all argument names in $args to either the default value
@@ -656,7 +666,7 @@ class lessc {
 				}
 			}
 
-			$mixins = $this->findBlocks($block, $path, $orderedArgs);
+			$mixins = $this->findBlocks($block, $path, $orderedArgs, $keywordArgs);
 
 			if ($mixins === null) {
 				// fwrite(STDERR,"failed to find block: ".implode(" > ", $path)."\n");
