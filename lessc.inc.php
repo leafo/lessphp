@@ -2959,21 +2959,69 @@ class lessc_parser {
 	}
 
 	// a bracketed value (contained within in a tag definition)
-	protected function tagBracket(&$value) {
+	protected function tagBracket(&$parts, &$hasExpression) {
 		// speed shortcut
 		if (isset($this->buffer[$this->count]) && $this->buffer[$this->count] != "[") {
 			return false;
 		}
 
 		$s = $this->seek();
-		if ($this->literal('[') && $this->to(']', $c, true) && $this->literal(']', false)) {
-			$value = '['.$c.']';
-			// whitespace?
-			if ($this->whitespace()) $value .= " ";
 
-			// escape parent selector, (yuck)
-			$value = str_replace($this->lessc->parentSelector, "$&$", $value);
-			return true;
+		$hasInterpolation = false;
+
+		if ($this->literal("[", false)) {
+			$attrParts = array("[");
+			// keyword, string, operator
+			while (true) {
+				if ($this->literal("]", false)) {
+					$this->count--;
+					break; // get out early
+				}
+
+				if ($this->match('\s+', $m)) {
+					$attrParts[] = " ";
+					continue;
+				}
+				if ($this->string($str)) {
+					// escape parent selector, (yuck)
+					foreach ($str[2] as &$chunk) {
+						$chunk = str_replace($this->lessc->parentSelector, "$&$", $chunk);
+					}
+
+					$attrParts[] = $str;
+					$hasInterpolation = true;
+					continue;
+				}
+
+				if ($this->keyword($word)) {
+					$attrParts[] = $word;
+					continue;
+				}
+
+				if ($this->interpolation($inter, false)) {
+					$attrParts[] = $inter;
+					$hasInterpolation = true;
+					continue;
+				}
+
+				// operator, handles attr namespace too
+				if ($this->match('[|-~\$\*\^=]+', $m)) {
+					$attrParts[] = $m[0];
+					continue;
+				}
+
+				break;
+			}
+
+			if ($this->literal("]", false)) {
+				$attrParts[] = "]";
+				foreach ($attrParts as $part) {
+					$parts[] = $part;
+				}
+				$hasExpression = $hasExpression || $hasInterpolation;
+				return true;
+			}
+			$this->seek($s);
 		}
 
 		$this->seek($s);
@@ -2991,7 +3039,7 @@ class lessc_parser {
 
 		$hasExpression = false;
 		$parts = array();
-		while ($this->tagBracket($first)) $parts[] = $first;
+		while ($this->tagBracket($parts, $hasExpression));
 
 		$oldWhite = $this->eatWhiteDefault;
 		$this->eatWhiteDefault = false;
@@ -3001,9 +3049,7 @@ class lessc_parser {
 				$parts[] = $m[1];
 				if ($simple) break;
 
-				while ($this->tagBracket($brack)) {
-					$parts[] = $brack;
-				}
+				while ($this->tagBracket($parts, $hasExpression));
 				continue;
 			}
 
