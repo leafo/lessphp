@@ -2833,6 +2833,7 @@ class lessc_parser {
 
 		$values = array();
 		$delim = ",";
+		$method = "expressionList";
 
 		$isVararg = false;
 		while (true) {
@@ -2841,12 +2842,12 @@ class lessc_parser {
 				break;
 			}
 
-			if ($this->expressionList($value)) {
+			if ($this->$method($value)) {
 				if ($value[0] == "variable") {
 					$arg = array("arg", $value[1]);
 					$ss = $this->seek();
 
-					if ($this->assign() && $this->expressionList($rhs)) {
+					if ($this->assign() && $this->$method($rhs)) {
 						$arg[] = $rhs;
 					} else {
 						$this->seek($ss);
@@ -2869,6 +2870,7 @@ class lessc_parser {
 				if ($delim == "," && $this->literal(";")) {
 					// found new delim, convert existing args
 					$delim = ";";
+					$method = "propertyValue";
 
 					// transform arg list
 					if (isset($values[1])) { // 2 items
