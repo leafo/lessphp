@@ -542,9 +542,14 @@ class lessc {
 		}
 	}
 
-	protected function patternMatchAll($blocks, $orderedArgs, $keywordArgs) {
+	protected function patternMatchAll($blocks, $orderedArgs, $keywordArgs, $skip=array()) {
 		$matches = null;
 		foreach ($blocks as $block) {
+			// skip seen blocks that don't have arguments
+			if (isset($skip[$block->id]) && !isset($block->args)) {
+				continue;
+			}
+
 			if ($this->patternMatch($block, $orderedArgs, $keywordArgs)) {
 				$matches[] = $block;
 			}
@@ -564,7 +569,7 @@ class lessc {
 		if (isset($searchIn->children[$name])) {
 			$blocks = $searchIn->children[$name];
 			if (count($path) == 1) {
-				$matches = $this->patternMatchAll($blocks, $orderedArgs, $keywordArgs);
+				$matches = $this->patternMatchAll($blocks, $orderedArgs, $keywordArgs, $seen);
 				if (!empty($matches)) {
 					// This will return all blocks that match in the closest
 					// scope that has any matching block, like lessjs

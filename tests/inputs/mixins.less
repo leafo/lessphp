@@ -183,4 +183,20 @@ body {
 
 
 
+// self referencing skipping
+
+.nav-divider(@color: red){
+    padding: 10px;
+}
+
+.nav {
+  .nav-divider {
+    .nav-divider();
+  }
+}
+
+.nav-divider {
+    .nav-divider();
+}
+
 

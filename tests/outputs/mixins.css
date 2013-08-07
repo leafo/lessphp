@@ -84,3 +84,9 @@ body b {
 .cowboy {
   color: blue;
 }
+.nav .nav-divider {
+  padding: 10px;
+}
+.nav-divider {
+  padding: 10px;
+}
