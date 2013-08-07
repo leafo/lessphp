@@ -283,6 +283,8 @@ class lessc {
 		foreach ($this->sortProps($block->props) as $prop) {
 			$this->compileProp($prop, $block, $out);
 		}
+
+		$out->lines = array_values(array_unique($out->lines));
 	}
 
 	protected function sortProps($props, $split = false) {
