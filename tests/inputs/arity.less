@@ -2,28 +2,28 @@
 // simple arity
 
 .hello(@a) {
-	color: one;
+	hello: one;
 }
 
 .hello(@a, @b) {
-	color: two;
+	hello: two;
 }
 
 .hello(@a, @b, @c) {
-	color: three;
+	hello: three;
 }
 
 
 .world(@a, @b, @c) {
-	color: three;
+	world: three;
 }
 
 .world(@a, @b) {
-	color: two;
+	world: two;
 }
 
 .world(@a) {
-	color: one;
+	world: one;
 }
 
 .one {
@@ -45,20 +45,20 @@
 // arity with default values
 
 .foo(@a, @b: cool) {
-	color: two;
+	foo: two @b;
 }
 
 .foo(@a, @b: cool, @c: yeah) {
-	color: three;
+	foo: three @b @c;
 }
 
 
 .baz(@a, @b, @c: yeah) {
-	color: three;
+	baz: three @c;
 }
 
 .baz(@a, @b: cool) {
-	color: two;
+	baz: two @b;
 }
 
 

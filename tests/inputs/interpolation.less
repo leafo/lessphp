@@ -4,9 +4,9 @@
 @var: "hello";
 
 div {
-	color: ~"@{cool-hello}";
-	color: ~"@{cool-@{var}}";
-	color: ~"@{cool-@{cool-@{var}}}";
+	interp1: ~"@{cool-hello}";
+	interp2: ~"@{cool-@{var}}";
+	interp3: ~"@{cool-@{cool-@{var}}}";
 }
 
 // interpolation in selectors

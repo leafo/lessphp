@@ -2,68 +2,68 @@
   sub: 10 -5;
 }
 .spaces {
-  sub: 5;
-  sub: 5;
-  add: 15;
-  add: 15;
+  sub1: 5;
+  sub2: 5;
+  add1: 15;
+  add2: 15;
   div: 2;
-  mul: 50;
-  mul: 50;
+  mul1: 50;
+  mul2: 50;
 }
 .supress-division {
   border-radius: 10px/10px;
-  border-radius: 10px/10px;
+  border-radius: 10px/12px;
   border-radius: hello(10px/10px) world;
   font: 10px/30 sans-serif;
   font: 10px/20px sans-serif;
-  font: 10px/20px sans-serif;
+  font: 10px/22px sans-serif;
   border-radius: 0 15px 15px 15px/0 50% 50% 50%;
 }
 .parens {
   sub: 5;
   add: 15;
-  div: 2;
-  div: 2;
+  div1: 2;
+  div2: 2;
   mul: 50;
 }
 .keyword-names {
   height: "hello" 25;
 }
 .negation {
-  hello: -1px;
-  hello: -1px;
-  hello: -10;
+  neg1: -1px;
+  neg2: -1px;
+  neg3: -10;
 }
 .test {
-  single: 5;
-  single: 10;
-  single: 10;
+  single1: 5;
+  single2: 10;
+  single3: 10;
   parens: 10 -2;
-  math: 20;
-  math: 20;
-  width: 71;
-  height: 6;
-  padding: 6px 1em 2px 2;
-  padding: 8 4 4 4px;
-  width: 96;
-  height: 113;
-  margin: 12;
+  math1: 20;
+  math2: 20;
+  complex1: 71;
+  complex2: 6;
+  complex3: 6px 1em 2px 2;
+  var1: 8 4 4 4px;
+  var2: 96;
+  var3: 12;
+  complex4: 113;
 }
 .percents {
-  color: 1000%;
-  color: 1000%;
-  color: 100%;
-  color: 1000px;
-  color: 1000%;
-  color: 30%;
-  color: 10%;
-  color: 2%;
+  p1: 1000%;
+  p2: 1000%;
+  p3: 100%;
+  p4: 1000px;
+  p5: 1000%;
+  p6: 30%;
+  p7: 10%;
+  p8: 2%;
 }
 .misc {
   x: 40px;
   y: 40em;
 }
 .cond {
-  y: false;
-  y: true;
+  c1: false;
+  c2: true;
 }
