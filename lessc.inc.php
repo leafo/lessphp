@@ -55,6 +55,8 @@ class lessc {
 
 	protected $numberPrecision = null;
 
+	protected $allParsedFiles = array();
+
 	// set to the parser that generated the current line when compiling
 	// so we know how to create error messages
 	protected $sourceParser = null;
@@ -103,10 +105,15 @@ class lessc {
 		if (substr_compare($url, '.css', -4, 4) === 0) return false;
 
 		$realPath = $this->findImport($url);
+
 		if ($realPath === null) return false;
 
 		if ($this->importDisabled) {
 			return array(false, "/* import disabled */");
+		}
+
+		if (isset($this->allParsedFiles[realpath($realPath)])) {
+			return array(false, null);
 		}
 
 		$this->addParsedFile($realPath);
@@ -747,7 +754,9 @@ class lessc {
 			list(,$importId) = $prop;
 			$import = $this->env->imports[$importId];
 			if ($import[0] === false) {
-				$out->lines[] = $import[1];
+				if (isset($import[1])) {
+					$out->lines[] = $import[1];
+				}
 			} else {
 				list(, $bottom, $parser, $importDir) = $import;
 				$this->compileImportedProps($bottom, $block, $out, $parser, $importDir);
@@ -1736,7 +1745,6 @@ class lessc {
 		$this->importDir = (array)$this->importDir;
 		$this->importDir[] = $pi['dirname'].'/';
 
-		$this->allParsedFiles = array();
 		$this->addParsedFile($fname);
 
 		$out = $this->compile(file_get_contents($fname), $fname);
