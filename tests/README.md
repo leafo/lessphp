@@ -1,4 +1,4 @@
-lessphp uses [phpunit](https://github.com/sebastianbergmann/phpunit/) for it's tests
+lessphp uses [phpunit](https://github.com/sebastianbergmann/phpunit/) for its tests
 
 `InputTest.php` iterates through all the less files in `inputs/`, compiles them,
 then compares the result with the respective file in `outputs/`.
