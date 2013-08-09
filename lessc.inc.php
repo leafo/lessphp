@@ -851,6 +851,51 @@ class lessc {
 		}
 	}
 
+	protected function lib_pow($args) {
+		list($base, $exp) = $this->assertArgs($args, 2, "pow");
+		return pow($this->assertNumber($base), $this->assertNumber($exp));
+	}
+
+	protected function lib_pi() {
+		return pi();
+	}
+
+	protected function lib_mod($args) {
+		list($a, $b) = $this->assertArgs($args, 2, "mod");
+		return $this->assertNumber($a) % $this->assertNumber($b);
+	}
+
+	protected function lib_tan($num) {
+		return tan($this->assertNumber($num));
+	}
+
+	protected function lib_sin($num) {
+		return sin($this->assertNumber($num));
+	}
+
+	protected function lib_cos($num) {
+		return cos($this->assertNumber($num));
+	}
+
+	protected function lib_atan($num) {
+		$num = atan($this->assertNumber($num));
+		return array("number", $num, "rad");
+	}
+
+	protected function lib_asin($num) {
+		$num = asin($this->assertNumber($num));
+		return array("number", $num, "rad");
+	}
+
+	protected function lib_acos($num) {
+		$num = acos($this->assertNumber($num));
+		return array("number", $num, "rad");
+	}
+
+	protected function lib_sqrt($num) {
+		return sqrt($this->assertNumber($num));
+	}
+
 	protected function lib_extract($value) {
 		list($list, $idx) = $this->assertArgs($value, 2, "extract");
 		$idx = $this->assertNumber($idx);

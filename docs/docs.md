@@ -850,6 +850,29 @@ function that let's you unquote any value. It is called `e`.
 * `contrast(color, dark, light)` -- if `color` has a lightness value greater
   than 50% then `dark` is returned, otherwise return `light`.
 
+* `extract(list, index)` -- returns the `index`th item from `list`. The list is
+  `1` indexed, meaning the first item's index is 1, the second is 2, and etc.
+
+* `pow(base, exp)` -- returns `base` raised to the power of `exp`
+
+* `pi()` -- returns pi
+
+* `mod(a,b)` -- returns `a` modulus `b`
+
+* `tan(a)` -- returns tangent of `a` where `a` is in radians
+
+* `cos(a)` -- returns cosine of `a` where `a` is in radians
+
+* `sin(a)` -- returns sine of `a` where `a` is in radians
+
+* `atan(a)` -- returns arc tangent of `a`
+
+* `acos(a)` -- returns arc cosine of `a`
+
+* `asin(a)` -- returns arc sine of `a`
+
+* `sqrt(a)` -- returns square root of `a`
+
 * `rgbahex(color)` -- returns a string containing 4 part hex color.
 
    This is used to convert a CSS color into the hex format that IE's filter
