@@ -1,4 +1,4 @@
-# lessphp v0.3.9
+# lessphp v0.4.0
 ### <http://leafo.net/lessphp>
 
 [![Build Status](https://secure.travis-ci.org/leafo/lessphp.png)](http://travis-ci.org/leafo/lessphp)
