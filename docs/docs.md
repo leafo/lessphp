@@ -61,6 +61,7 @@ Simple but very useful; line comments are started with `//`:
     ```
 
 ### Variables
+
 Variables are identified with a name that starts with `@`. To declare a
 variable, you create an appropriately named CSS property and assign it a value:
 
@@ -344,6 +345,92 @@ you want to include. Optionally you can separate them by `>`.
       .my_scope > .bold;
     }
     ```
+
+
+#### Mixin Arguments
+
+When declaring a mixin you can specify default values for each argument.  Any
+argument left out will be given the default value specified. Here's the
+syntax:
+
+```less
+.mix(@color: red, @height: 20px, @pad: 12px) {
+  border: 1px solid @color;
+  height: @height - @pad;
+  padding: @pad;
+}
+
+.default1 {
+  .mix();
+}
+
+.default2 {
+  .mix(blue);
+}
+
+.default3 {
+  .mix(blue, 40px, 5px);
+}
+```
+
+Additionally, you can also call a mixin using the argument names, this is
+useful if you want to replace a specific argument while having all the others
+take the default regardless of what position the argument appears in. The
+syntax looks something like this:
+
+
+```lessbasic
+div {
+  .my_mixin(@paddding: 4px); // @color and @height get default values
+  .my_mixin(@paddding: 4px, @height: 50px); // you can specify them in any order
+}
+```
+
+You can also combine the ordered arguments with the named ones:
+
+```lessbasic
+div {
+  // @color is blue, @padding is 4px, @height is default
+  .my_mixin(blue, @padding: 4px);
+}
+```
+
+Mixin arguments can be delimited with either a `,` or `;`, but only one can be
+active at once. This means that each argument is separated by either `,` or
+`;`. By default `,` is the delimiter, in all the above examples we used a `,`.
+
+A problem arises though, sometimes CSS value lists are made up with commas. In
+order to be able to pass a comma separated list literal we need to use `;` as
+the delimiter. (You don't need to worry about this if your list is stored in a
+variable)
+
+If a `;` appears anywhere in the argument list, then it will be used as the
+argument delimiter, and all commas we be used as part of the argument values.
+
+Here's a basic example:
+
+```less
+.fancy_mixin(@box_shadow, @color: blue) {
+  border: 1px solid @color;
+  box-shadow: @box_shadow;
+}
+
+
+div {
+  // two arguments passed separated by ;
+  .fancy_mixin(2px 2px, -2px -2px; red);
+}
+
+pre {
+  // one argument passed, ends in ;
+  .fancy_mixin(inset 4px 4px, -2px 2px;);
+}
+
+```
+
+If we only want to pass a single comma separated value we still need to use
+`;`, to do this we stick it on the end as demonstrated above.
+
 
 #### `@arguments` Variable
 
@@ -646,23 +733,16 @@ mixin's argument:
 
     ```less
     .create-selector(@name) {
-      (e(@name)) {
+      @{name} {
         color: red;
       }
     }
 
-    .create-selector("hello");
-    .create-selector("world");
+    .create-selector(hello);
+    .create-selector(world);
     ```
 
-Any selector that is enclosed in `()` will have it's contents evaluated and
-directly written to output. The value is not changed any way before being
-outputted, thats why we use the `e` function. If you're not familiar, the `e`
-function strips quotes off a string value. If we didn't have it, then the
-selector would have quotes around it, and that's not valid CSS!
-
-Any value can be used in a selector expression, but it works best when using
-strings and things like [String Interpolation](#string_interpolation).
+The string interpolation syntax works inside of selectors, letting you insert varaibles.
 
 Here's an interesting example adapted from Twitter Bootstrap. A couple advanced
 things are going on. We are using [Guards](#guards) along with a recursive
@@ -672,7 +752,7 @@ mixin to work like a loop to generate a series of CSS blocks.
     ```less
     // create our recursive mixin:
     .spanX (@index) when (@index > 0) {
-      (~".span@{index}") {
+      .span@{index} {
         width: @index * 100px;
       }
       .spanX(@index - 1);
@@ -691,7 +771,7 @@ the CSS import statement. If the file being imported ends in a `.less`
 extension, or no extension, then it is treated as a LESS import. Otherwise it
 is left alone and outputted directly:
 
-    ```less
+    ```lessbasic
     // my_file.less
     .some-mixin(@height) {
       height: @height;
@@ -708,7 +788,7 @@ is left alone and outputted directly:
 
 All of the following lines are valid ways to import the same file:
 
-    ```less
+    ```lessbasic
     @import "file";
     @import 'file.less';
     @import url("file");
@@ -718,6 +798,9 @@ All of the following lines are valid ways to import the same file:
 
 When importing, the `importDir` is searched for files. This can be configured,
 see [PHP Interface](#php_interface).
+
+A file is only imported once. If you try to include the same file multiple
+times all the import statements after the first produce no output.
 
 ### String Interpolation
 
