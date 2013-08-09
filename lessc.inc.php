@@ -851,6 +851,15 @@ class lessc {
 		}
 	}
 
+	protected function lib_extract($value) {
+		list($list, $idx) = $this->assertArgs($value, 2, "extract");
+		$idx = $this->assertNumber($idx);
+		// 1 indexed
+		if ($list[0] == "list" && isset($list[2][$idx - 1])) {
+			return $list[2][$idx - 1];
+		}
+	}
+
 	protected function lib_isnumber($value) {
 		return $this->toBool($value[0] == "number");
 	}
@@ -1141,6 +1150,25 @@ class lessc {
 	protected function assertNumber($value, $error = "expecting number") {
 		if ($value[0] == "number") return $value[1];
 		$this->throwError($error);
+	}
+
+	protected function assertArgs($value, $expectedArgs, $name="") {
+		if ($expectedArgs == 1) {
+			return $value;
+		} else {
+			if ($value[0] !== "list" || $value[1] != ",") $this->throwError("expecting list");
+			$values = $value[2];
+			$numValues = count($values);
+			if ($expectedArgs != $numValues) {
+				if ($name) {
+					$name = $name . ": ";
+				}
+
+				$this->throwError("${name}expecting $expectedArgs arguments, got $numValues");
+			}
+
+			return $values;
+		}
 	}
 
 	protected function toHSL($color) {

@@ -38,6 +38,10 @@ format {
   per2: false;
   em1: true;
   em2: false;
+  ex1: 2;
+  ex2: 1;
+  ex3: extract(1,1);
+  ex4: 2;
 }
 #unit {
   unit-lit: 10;
