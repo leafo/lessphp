@@ -27,7 +27,7 @@
  *
  * In summary:
  *
- * The `lessc` class creates an intstance of the parser, feeds it LESS code,
+ * The `lessc` class creates an instance of the parser, feeds it LESS code,
  * then transforms the resulting tree to a CSS tree. This class also holds the
  * evaluation context, such as all available mixins and variables at any given
  * time.
