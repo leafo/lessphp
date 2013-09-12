@@ -411,8 +411,24 @@ class lessc {
 	// multiply $selectors against the nearest selectors in env
 	protected function multiplySelectors($selectors) {
 		// find parent selectors
-
-		$parentSelectors = $this->findClosestSelectors();
+                
+                $parentSelectors = null;
+                $isReal = true;
+            
+                foreach($selectors as $sel) {
+                    // if a selector begins with a digit it means it's not a real selector
+                    // it's most likely a part of an @keyframes expression 
+                    // so it must not be prepended with parent selectors
+                    if(preg_match('/^[0-9]+/', $sel)) {
+                        $isReal = false;
+                        break;
+                    }
+                }
+                
+                if($isReal) {
+                    $parentSelectors = $this->findClosestSelectors();
+                }
+                
 		if (is_null($parentSelectors)) {
 			// kill parent reference in top level selector
 			foreach ($selectors as &$s) {
