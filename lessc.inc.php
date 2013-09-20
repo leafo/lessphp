@@ -6,7 +6,7 @@
  *
  * LESS css compiler, adapted from http://lesscss.org
  *
- * Copyright 2012, Leaf Corcoran <leafot@gmail.com>
+ * Copyright 2013, Leaf Corcoran <leafot@gmail.com>
  * Licensed under MIT or GPLv3, see LICENSE
  */
 
