@@ -1009,8 +1009,14 @@ class lessc {
 	}
 
 	protected function lib_round($arg) {
-		$value = $this->assertNumber($arg);
-		return array("number", round($value), $arg[2]);
+		if($arg[0] != "list") {
+			$value = $this->assertNumber($arg);
+			return array("number", round($value), $arg[2]);
+		} else {
+			$value = $this->assertNumber($arg[2][0]);
+			$precision = $this->assertNumber($arg[2][1]);
+			return array("number", round($value, $precision), $arg[2][0][2]);
+		}
 	}
 
 	protected function lib_unit($arg) {
