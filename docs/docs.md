@@ -1271,7 +1271,7 @@ In this example, `@import "colors";` will look for either
     ```
 
 `addImportDir` will append a single path to the import search path instead of
-overwritting the whole thing.
+overwriting the whole thing.
 
     ```php
     $less->addImportDir("public/stylesheets");
