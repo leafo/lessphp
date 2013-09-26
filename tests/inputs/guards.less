@@ -33,7 +33,6 @@
 
 dd {
 	.simple(true);
-	.simple(2344px);
 }
 
 b {
@@ -43,18 +42,12 @@ b {
 
 img {
 	.another(12);
-	.another(2);
-
-	.flipped(12);
 	.flipped(2);
 }
 
 body {
-	.yeah("world");
 	.yeah(232px);
 	.yeah(232);
-
-	.hello(true);
 }
 
 .something(@x) when (@x) and (@y), not (@x = what) {
@@ -67,18 +60,12 @@ div {
 
 }
 
-pre {
-	.something(what);
-}
-
 .coloras(@g) when (iscolor(@g)) {
 	color: true @g;
 }
 
 link {
 	.coloras(red);
-	.coloras(10px);
-	.coloras(ffjref);
 	.coloras(#fff);
 	.coloras(#fffddd);
 	.coloras(rgb(0,0,0));
