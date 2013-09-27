@@ -39,8 +39,9 @@
  */
 class lessc {
 	static public $VERSION = "v0.4.0";
-	static protected $TRUE = array("keyword", "true");
-	static protected $FALSE = array("keyword", "false");
+
+	static public $TRUE = array("keyword", "true");
+	static public $FALSE = array("keyword", "false");
 
 	protected $libFunctions = array();
 	protected $registeredVars = array();
@@ -1030,7 +1031,7 @@ class lessc {
 	 * Helper function to get arguments for color manipulation functions.
 	 * takes a list that contains a color like thing and a percentage
 	 */
-	protected function colorArgs($args) {
+	public function colorArgs($args) {
 		if ($args[0] != 'list' || count($args[2]) < 2) {
 			return array(array('color', 0, 0, 0), 0);
 		}
@@ -1189,18 +1190,18 @@ class lessc {
 		return $lightColor;
 	}
 
-	protected function assertColor($value, $error = "expected color value") {
+	public function assertColor($value, $error = "expected color value") {
 		$color = $this->coerceColor($value);
 		if (is_null($color)) $this->throwError($error);
 		return $color;
 	}
 
-	protected function assertNumber($value, $error = "expecting number") {
+	public function assertNumber($value, $error = "expecting number") {
 		if ($value[0] == "number") return $value[1];
 		$this->throwError($error);
 	}
 
-	protected function assertArgs($value, $expectedArgs, $name="") {
+	public function assertArgs($value, $expectedArgs, $name="") {
 		if ($expectedArgs == 1) {
 			return $value;
 		} else {
@@ -1520,7 +1521,7 @@ class lessc {
 		return $value;
 	}
 
-	protected function toBool($a) {
+	public function toBool($a) {
 		if ($a) return self::$TRUE;
 		else return self::$FALSE;
 	}
@@ -2003,7 +2004,7 @@ class lessc {
 	/**
 	 * Uses the current value of $this->count to show line and line number
 	 */
-	protected function throwError($msg = null) {
+	public function throwError($msg = null) {
 		if ($this->sourceLoc >= 0) {
 			$this->sourceParser->throwError($msg, $this->sourceLoc);
 		}
