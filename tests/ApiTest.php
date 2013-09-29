@@ -25,13 +25,17 @@ Here is a block comment
 
 /*hello*/div /*yeah*/ { //surew
 	border: 1px solid red; // world
-	/* another property */
+	/* comment above the first occurrence of a duplicated rule */
 	color: url('http://mage-page.com');
 	string: "hello /* this is not a comment */";
 	world: "// neither is this";
+	/* comment above the second occurrence of a duplicated rule */
+	color: url('http://mage-page.com');
 	string: 'hello /* this is not a comment */' /*what if this is a comment */;
 	world: '// neither is this' // hell world;
 	;
+	/* duplicate comments are retained */
+	/* duplicate comments are retained */
 	what-ever: 100px;
 	background: url(/*this is not a comment?*/); // uhh what happens here
 }
@@ -48,14 +52,17 @@ Here is a block comment
 /*hello*/
 /*yeah*/
 div /*yeah*/ {
-  /* another property */
   border: 1px solid red;
+  /* comment above the first occurrence of a duplicated rule */
+  /* comment above the second occurrence of a duplicated rule */
   color: url('http://mage-page.com');
   string: "hello /* this is not a comment */";
   world: "// neither is this";
   /*what if this is a comment */
   string: 'hello /* this is not a comment */';
   world: '// neither is this';
+  /* duplicate comments are retained */
+  /* duplicate comments are retained */
   what-ever: 100px;
   /*this is not a comment?*/
   background: url();

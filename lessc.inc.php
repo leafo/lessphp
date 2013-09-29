@@ -283,33 +283,68 @@ class lessc {
 			$this->compileProp($prop, $block, $out);
 		}
 
-		$out->lines = array_values(array_unique($out->lines));
+		$out->lines = array_values($this->deduplicate($out->lines));
+	}
+
+	/**
+	 * Deduplicate lines in a block. Comments are not deduplicated. If a
+	 * duplicate rule is detected, the comments immediately preceding each
+	 * occurence are consolidated.
+	 */
+	protected function deduplicate($lines) {
+		$unique = array();
+		$comments = array();
+
+		foreach($lines as $line) {
+			if (strpos($line, '/*') === 0) {
+				$comments[] = $line;
+				continue;
+			}
+			if (!in_array($line, $unique)) {
+				$unique[] = $line;
+			}
+			array_splice($unique, array_search($line, $unique), 0, $comments);
+			$comments = array();
+		}
+		return array_merge($unique, $comments);
 	}
 
 	protected function sortProps($props, $split = false) {
 		$vars = array();
 		$imports = array();
 		$other = array();
+		$stack = array();
 
 		foreach ($props as $prop) {
 			switch ($prop[0]) {
+			case "comment":
+				$stack[] = $prop;
+				break;
 			case "assign":
+				$stack[] = $prop;
 				if (isset($prop[1][0]) && $prop[1][0] == $this->vPrefix) {
-					$vars[] = $prop;
+					$vars = array_merge($vars, $stack);
 				} else {
-					$other[] = $prop;
+					$other = array_merge($other, $stack);
 				}
+				$stack = array();
 				break;
 			case "import":
 				$id = self::$nextImportId++;
 				$prop[] = $id;
-				$imports[] = $prop;
+				$stack[] = $prop;
+				$imports = array_merge($imports, $stack);
 				$other[] = array("import_mixin", $id);
+				$stack = array();
 				break;
 			default:
-				$other[] = $prop;
+				$stack[] = $prop;
+				$other = array_merge($other, $stack);
+				$stack = array();
+				break;
 			}
 		}
+		$other = array_merge($other, $stack);
 
 		if ($split) {
 			return array(array_merge($vars, $imports), $other);
@@ -2323,6 +2358,10 @@ class lessc_parser {
 		if (empty($this->buffer)) return false;
 		$s = $this->seek();
 
+		if ($this->whitespace()) {
+			return true;
+		}
+
 		// setting a property
 		if ($this->keyword($key) && $this->assign() &&
 			$this->propertyValue($value, $key) && $this->end())
@@ -2403,7 +2442,7 @@ class lessc_parser {
 		}
 
 		// opening a simple block
-		if ($this->tags($tags) && $this->literal('{')) {
+		if ($this->tags($tags) && $this->literal('{', false)) {
 			$tags = $this->fixTags($tags);
 			$this->pushBlock($tags);
 			return true;
@@ -3266,7 +3305,7 @@ class lessc_parser {
 
 	// consume an end of statement delimiter
 	protected function end() {
-		if ($this->literal(';')) {
+		if ($this->literal(';', false)) {
 			return true;
 		} elseif ($this->count == strlen($this->buffer) || $this->buffer[$this->count] == '}') {
 			// if there is end of file or a closing block next then we don't need a ;
