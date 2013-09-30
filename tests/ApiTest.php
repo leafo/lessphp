@@ -103,7 +103,7 @@ div:before {
 				'color' => 'red',
 				'base' => '960px'
 			));
-	
+
 		$this->assertEquals(trim($out), trim("
 .magic {
   color: red;
@@ -128,7 +128,7 @@ div:before {
 		$this->assertEquals(
 			$this->compile("result: add-two(10, 20);"),
 			"result: 30;");
-		
+
 		return $this->less;
 	}
 

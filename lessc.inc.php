@@ -4,7 +4,7 @@
  * lessphp v0.4.0
  * http://leafo.net/lessphp
  *
- * LESS css compiler, adapted from http://lesscss.org
+ * LESS CSS compiler, adapted from http://lesscss.org
  *
  * Copyright 2013, Leaf Corcoran <leafot@gmail.com>
  * Licensed under MIT or GPLv3, see LICENSE
@@ -12,7 +12,7 @@
 
 
 /**
- * The less compiler and parser.
+ * The LESS compiler and parser.
  *
  * Converting LESS to CSS is a three stage process. The incoming file is parsed
  * by `lessc_parser` into a syntax tree, then it is compiled into another tree
@@ -282,8 +282,7 @@ class lessc {
 		foreach ($this->sortProps($block->props) as $prop) {
 			$this->compileProp($prop, $block, $out);
 		}
-
-		$out->lines = array_values($this->deduplicate($out->lines));
+		$out->lines = $this->deduplicate($out->lines);
 	}
 
 	/**
@@ -2305,7 +2304,6 @@ class lessc_parser {
 		$this->whitespace();
 
 		// parse the entire file
-		$lastCount = $this->count;
 		while (false !== $this->parseChunk());
 
 		if ($this->count != strlen($this->buffer))
@@ -2717,7 +2715,6 @@ class lessc_parser {
 
 	// an import statement
 	protected function import(&$out) {
-		$s = $this->seek();
 		if (!$this->literal('@import')) return false;
 
 		// @import "something.css" media;
@@ -3077,7 +3074,6 @@ class lessc_parser {
 	// list of tags of specifying mixin path
 	// optionally separated by > (lazy, accepts extra >)
 	protected function mixinTags(&$tags) {
-		$s = $this->seek();
 		$tags = array();
 		while ($this->tag($tt, true)) {
 			$tags[] = $tt;
@@ -3454,9 +3450,9 @@ class lessc_parser {
 		if ($this->writeComments) {
 			$gotWhite = false;
 			while (preg_match(self::$whitePattern, $this->buffer, $m, null, $this->count)) {
-				if (isset($m[1]) && empty($this->commentsSeen[$this->count])) {
+				if (isset($m[1]) && empty($this->seenComments[$this->count])) {
 					$this->append(array("comment", $m[1]));
-					$this->commentsSeen[$this->count] = true;
+					$this->seenComments[$this->count] = true;
 				}
 				$this->count += strlen($m[0]);
 				$gotWhite = true;

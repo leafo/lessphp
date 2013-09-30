@@ -75,12 +75,12 @@ css is written to standard out:
 
     $ plessc input.less > output.css
 
-Using the -r flag, you can specify LESS code directly as an argument or, if 
+Using the -r flag, you can specify LESS code directly as an argument or, if
 the argument is left off, from standard in:
 
     $ plessc -r "my less code here"
 
-Finally, by using the -w flag you can watch a specified input file and have it 
+Finally, by using the -w flag you can watch a specified input file and have it
 compile as needed to the output file:
 
     $ plessc -w input-file output-file
