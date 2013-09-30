@@ -1,5 +1,5 @@
 
-test: 
+test:
 	phpunit --colors tests
 
 release:
