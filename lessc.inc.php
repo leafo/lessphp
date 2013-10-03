@@ -4,7 +4,7 @@
  * lessphp v0.4.0
  * http://leafo.net/lessphp
  *
- * LESS css compiler, adapted from http://lesscss.org
+ * LESS CSS compiler, adapted from http://lesscss.org
  *
  * Copyright 2013, Leaf Corcoran <leafot@gmail.com>
  * Licensed under MIT or GPLv3, see LICENSE
@@ -12,7 +12,7 @@
 
 
 /**
- * The less compiler and parser.
+ * The LESS compiler and parser.
  *
  * Converting LESS to CSS is a three stage process. The incoming file is parsed
  * by `lessc_parser` into a syntax tree, then it is compiled into another tree
@@ -39,8 +39,9 @@
  */
 class lessc {
 	static public $VERSION = "v0.4.0";
-	static protected $TRUE = array("keyword", "true");
-	static protected $FALSE = array("keyword", "false");
+
+	static public $TRUE = array("keyword", "true");
+	static public $FALSE = array("keyword", "false");
 
 	protected $libFunctions = array();
 	protected $registeredVars = array();
@@ -281,34 +282,68 @@ class lessc {
 		foreach ($this->sortProps($block->props) as $prop) {
 			$this->compileProp($prop, $block, $out);
 		}
+		$out->lines = $this->deduplicate($out->lines);
+	}
 
-		$out->lines = array_values(array_unique($out->lines));
+	/**
+	 * Deduplicate lines in a block. Comments are not deduplicated. If a
+	 * duplicate rule is detected, the comments immediately preceding each
+	 * occurence are consolidated.
+	 */
+	protected function deduplicate($lines) {
+		$unique = array();
+		$comments = array();
+
+		foreach($lines as $line) {
+			if (strpos($line, '/*') === 0) {
+				$comments[] = $line;
+				continue;
+			}
+			if (!in_array($line, $unique)) {
+				$unique[] = $line;
+			}
+			array_splice($unique, array_search($line, $unique), 0, $comments);
+			$comments = array();
+		}
+		return array_merge($unique, $comments);
 	}
 
 	protected function sortProps($props, $split = false) {
 		$vars = array();
 		$imports = array();
 		$other = array();
+		$stack = array();
 
 		foreach ($props as $prop) {
 			switch ($prop[0]) {
+			case "comment":
+				$stack[] = $prop;
+				break;
 			case "assign":
+				$stack[] = $prop;
 				if (isset($prop[1][0]) && $prop[1][0] == $this->vPrefix) {
-					$vars[] = $prop;
+					$vars = array_merge($vars, $stack);
 				} else {
-					$other[] = $prop;
+					$other = array_merge($other, $stack);
 				}
+				$stack = array();
 				break;
 			case "import":
 				$id = self::$nextImportId++;
 				$prop[] = $id;
-				$imports[] = $prop;
+				$stack[] = $prop;
+				$imports = array_merge($imports, $stack);
 				$other[] = array("import_mixin", $id);
+				$stack = array();
 				break;
 			default:
-				$other[] = $prop;
+				$stack[] = $prop;
+				$other = array_merge($other, $stack);
+				$stack = array();
+				break;
 			}
 		}
+		$other = array_merge($other, $stack);
 
 		if ($split) {
 			return array(array_merge($vars, $imports), $other);
@@ -1030,7 +1065,7 @@ class lessc {
 	 * Helper function to get arguments for color manipulation functions.
 	 * takes a list that contains a color like thing and a percentage
 	 */
-	protected function colorArgs($args) {
+	public function colorArgs($args) {
 		if ($args[0] != 'list' || count($args[2]) < 2) {
 			return array(array('color', 0, 0, 0), 0);
 		}
@@ -1189,18 +1224,18 @@ class lessc {
 		return $lightColor;
 	}
 
-	protected function assertColor($value, $error = "expected color value") {
+	public function assertColor($value, $error = "expected color value") {
 		$color = $this->coerceColor($value);
 		if (is_null($color)) $this->throwError($error);
 		return $color;
 	}
 
-	protected function assertNumber($value, $error = "expecting number") {
+	public function assertNumber($value, $error = "expecting number") {
 		if ($value[0] == "number") return $value[1];
 		$this->throwError($error);
 	}
 
-	protected function assertArgs($value, $expectedArgs, $name="") {
+	public function assertArgs($value, $expectedArgs, $name="") {
 		if ($expectedArgs == 1) {
 			return $value;
 		} else {
@@ -1520,7 +1555,7 @@ class lessc {
 		return $value;
 	}
 
-	protected function toBool($a) {
+	public function toBool($a) {
 		if ($a) return self::$TRUE;
 		else return self::$FALSE;
 	}
@@ -2003,7 +2038,7 @@ class lessc {
 	/**
 	 * Uses the current value of $this->count to show line and line number
 	 */
-	protected function throwError($msg = null) {
+	public function throwError($msg = null) {
 		if ($this->sourceLoc >= 0) {
 			$this->sourceParser->throwError($msg, $this->sourceLoc);
 		}
@@ -2269,7 +2304,6 @@ class lessc_parser {
 		$this->whitespace();
 
 		// parse the entire file
-		$lastCount = $this->count;
 		while (false !== $this->parseChunk());
 
 		if ($this->count != strlen($this->buffer))
@@ -2321,6 +2355,10 @@ class lessc_parser {
 	protected function parseChunk() {
 		if (empty($this->buffer)) return false;
 		$s = $this->seek();
+
+		if ($this->whitespace()) {
+			return true;
+		}
 
 		// setting a property
 		if ($this->keyword($key) && $this->assign() &&
@@ -2402,7 +2440,7 @@ class lessc_parser {
 		}
 
 		// opening a simple block
-		if ($this->tags($tags) && $this->literal('{')) {
+		if ($this->tags($tags) && $this->literal('{', false)) {
 			$tags = $this->fixTags($tags);
 			$this->pushBlock($tags);
 			return true;
@@ -2677,7 +2715,6 @@ class lessc_parser {
 
 	// an import statement
 	protected function import(&$out) {
-		$s = $this->seek();
 		if (!$this->literal('@import')) return false;
 
 		// @import "something.css" media;
@@ -3037,7 +3074,6 @@ class lessc_parser {
 	// list of tags of specifying mixin path
 	// optionally separated by > (lazy, accepts extra >)
 	protected function mixinTags(&$tags) {
-		$s = $this->seek();
 		$tags = array();
 		while ($this->tag($tt, true)) {
 			$tags[] = $tt;
@@ -3265,7 +3301,7 @@ class lessc_parser {
 
 	// consume an end of statement delimiter
 	protected function end() {
-		if ($this->literal(';')) {
+		if ($this->literal(';', false)) {
 			return true;
 		} elseif ($this->count == strlen($this->buffer) || $this->buffer[$this->count] == '}') {
 			// if there is end of file or a closing block next then we don't need a ;
@@ -3414,9 +3450,9 @@ class lessc_parser {
 		if ($this->writeComments) {
 			$gotWhite = false;
 			while (preg_match(self::$whitePattern, $this->buffer, $m, null, $this->count)) {
-				if (isset($m[1]) && empty($this->commentsSeen[$this->count])) {
+				if (isset($m[1]) && empty($this->seenComments[$this->count])) {
 					$this->append(array("comment", $m[1]));
-					$this->commentsSeen[$this->count] = true;
+					$this->seenComments[$this->count] = true;
 				}
 				$this->count += strlen($m[0]);
 				$gotWhite = true;
