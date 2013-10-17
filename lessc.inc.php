@@ -1208,7 +1208,7 @@ class lessc {
 	protected function lib_contrast($args) {
 	    $darkColor  = array('color', 0, 0, 0);
 	    $lightColor = array('color', 255, 255, 255);
-	    $threshold  = 0.42;
+	    $threshold  = 0.43;
 	     
 	    if ( $args[0] == 'list' ) {
 	        $inputColor = ( isset($args[2][0]) ) ? $this->assertColor($args[2][0])  : $lightColor;
