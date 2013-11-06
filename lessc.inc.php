@@ -993,24 +993,27 @@ class lessc {
 		$mime = ($value[0] === 'list') ? $value[2][0][2] : null;
 		$url = ($value[0] === 'list') ? $value[2][1][2][0] : $value[2][0];
 
-		if($this->fileExists($url) && ($fsize = filesize($url)) !== false) {
+		$fullpath = $this->findImport($url);
+
+		if($fullpath && ($fsize = filesize($fullpath)) !== false) {
 			// IE8 can't handle data uris larger than 32KB
 			if($fsize/1024 < 32) {
 				if(is_null($mime)) {
 					if(class_exists('finfo')) { // php 5.3+
 						$finfo = new finfo(FILEINFO_MIME, "/usr/share/misc/magic");
-						$mime = explode('; ', $finfo->file($url))[0];
+						$mime = explode('; ', $finfo->file($fullpath));
+						$mime = $mime[0];
 					} elseif(function_exists('mime_content_type')) { // PHP 5.2
-						$mime = mime_content_type($url);
+						$mime = mime_content_type($fullpath);
 					}
 				}
 
 				if(!is_null($mime)) // fallback if the mime type is still unknown
-					$url = sprintf('data:%s;base64,%s', $mime, base64_encode(file_get_contents($url)));
+					$url = sprintf('data:%s;base64,%s', $mime, base64_encode(file_get_contents($fullpath)));
 			}
 		}
 
-		return 'url('.$url.')';
+		return 'url("'.$url.'")';
 	}
 
 	// utility func to unquote a string
@@ -1498,10 +1501,8 @@ class lessc {
 			list(, $name, $args) = $value;
 			if ($name == "%") $name = "_sprintf";
 
-			$name = str_replace('-', '_', $name);
-
 			$f = isset($this->libFunctions[$name]) ?
-				$this->libFunctions[$name] : array($this, 'lib_'.$name);
+				$this->libFunctions[$name] : array($this, 'lib_'.str_replace('-', '_', $name));
 
 			if (is_callable($f)) {
 				if ($args[0] == 'list')
