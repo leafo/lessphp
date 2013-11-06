@@ -983,6 +983,36 @@ class lessc {
 		return $this->lib_rgbahex($color);
 	}
 
+	/**
+	 * Given an url, decide whether to output a regular link or the base64-encoded contents of the file
+	 *
+	 * @param  array  $value either an argument list (two strings) or a single string
+	 * @return string        formatted url(), either as a link or base64-encoded
+	 */
+	protected function lib_data_uri($value) {
+		$mime = ($value[0] === 'list') ? $value[2][0][2] : null;
+		$url = ($value[0] === 'list') ? $value[2][1][2][0] : $value[2][0];
+
+		if($this->fileExists($url) && ($fsize = filesize($url)) !== false) {
+			// IE8 can't handle data uris larger than 32KB
+			if($fsize/1024 < 32) {
+				if(is_null($mime)) {
+					if(class_exists('finfo')) { // php 5.3+
+						$finfo = new finfo(FILEINFO_MIME, "/usr/share/misc/magic");
+						$mime = explode('; ', $finfo->file($url))[0];
+					} elseif(function_exists('mime_content_type')) { // PHP 5.2
+						$mime = mime_content_type($url);
+					}
+				}
+
+				if(!is_null($mime)) // fallback if the mime type is still unknown
+					$url = sprintf('data:%s;base64,%s', $mime, base64_encode(file_get_contents($url)));
+			}
+		}
+
+		return 'url('.$url.')';
+	}
+
 	// utility func to unquote a string
 	protected function lib_e($arg) {
 		switch ($arg[0]) {
@@ -1467,6 +1497,9 @@ class lessc {
 
 			list(, $name, $args) = $value;
 			if ($name == "%") $name = "_sprintf";
+
+			$name = str_replace('-', '_', $name);
+
 			$f = isset($this->libFunctions[$name]) ?
 				$this->libFunctions[$name] : array($this, 'lib_'.$name);
 
