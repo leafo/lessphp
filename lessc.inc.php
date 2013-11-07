@@ -1000,7 +1000,7 @@ class lessc {
 			if($fsize/1024 < 32) {
 				if(is_null($mime)) {
 					if(class_exists('finfo')) { // php 5.3+
-						$finfo = new finfo(FILEINFO_MIME, "/usr/share/misc/magic");
+						$finfo = new finfo(FILEINFO_MIME);
 						$mime = explode('; ', $finfo->file($fullpath));
 						$mime = $mime[0];
 					} elseif(function_exists('mime_content_type')) { // PHP 5.2
