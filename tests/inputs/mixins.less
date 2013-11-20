@@ -61,11 +61,6 @@ body {
 }
 
 
-.butter {
-	.this .one .isnt .found;
-}
-
-
 // arguments
 
 .spam(@something: 100, @dad: land) {
@@ -154,6 +149,49 @@ body {
 .search-test {
 	#search-all > .red();
 	#search-all > .green();
+}
+
+
+// mixin self without infinite loop
+.cowboy() {
+	color: blue;
+}
+
+.cowboy {
+	.cowboy;
+}
+
+
+// semicolon
+
+.semi1(@color: red, blue, green;) {
+	color: @color;
+}
+
+.semi2(@color: red, blue, green; dad) {
+	color: @color;
+}
+
+.semi3(hello; world; piss) {
+	hello: world;
+}
+
+
+
+// self referencing skipping
+
+.nav-divider(@color: red){
+    padding: 10px;
+}
+
+.nav {
+  .nav-divider {
+    .nav-divider();
+  }
+}
+
+.nav-divider {
+    .nav-divider();
 }
 
 

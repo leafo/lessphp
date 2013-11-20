@@ -1,25 +1,25 @@
 .one {
-  color: one;
-  color: one;
+  hello: one;
+  world: one;
 }
 .two {
-  color: two;
-  color: two;
+  hello: two;
+  world: two;
 }
 .three {
-  color: three;
-  color: three;
+  hello: three;
+  world: three;
 }
 .multi-foo {
-  color: two;
-  color: three;
-  color: two;
-  color: three;
-  color: three;
+  foo: two cool;
+  foo: three cool yeah;
+  foo: two 1;
+  foo: three 1 yeah;
+  foo: three 1 1;
 }
 .multi-baz {
-  color: two;
-  color: three;
-  color: two;
-  color: three;
+  baz: two cool;
+  baz: three yeah;
+  baz: two 1;
+  baz: three 1;
 }

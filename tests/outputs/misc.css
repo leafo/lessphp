@@ -20,9 +20,9 @@ color: "aaa, bbb";
   background: url(/*no comment here*/);
 }
 .urls {
-  background: url("http://google.com");
-  background: url(http://google.com);
-  background: url("http://google.com");
+  background1: url("http://google.com");
+  background2: url(http://google.com);
+  background3: url("http://google.com");
 }
 .cool {
   color: "aaa, bbb";
@@ -60,4 +60,9 @@ hello {
   hello: 'blah blag @{ blah blah';
   join: "3434hello";
   join: 3434hello;
+}
+.duplicates {
+  hello: world;
+  hello: "world";
+  hello: "what";
 }

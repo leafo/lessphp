@@ -81,3 +81,12 @@ body b {
   color: #f00 !important;
   color: #0f0 !important;
 }
+.cowboy {
+  color: blue;
+}
+.nav .nav-divider {
+  padding: 10px;
+}
+.nav-divider {
+  padding: 10px;
+}

@@ -1,16 +1,16 @@
 body {
   color: "hello world";
-  height: 5.1666666666667;
-  height: 5px;
-  height: 6px;
-  width: 0.66666666666667;
-  width: 1;
-  width: 0;
-  width: 1;
-  width: 3px;
-  color: #ff112233;
-  color: #992c3742;
-  color: #992c3742;
+  num-basic: 5.1666666666667;
+  num-floor: 5px;
+  num-ceil: 6px;
+  num2: 0.66666666666667;
+  num2-round: 1;
+  num2-floor: 0;
+  num2-ceil: 1;
+  round-lit: 3px;
+  rgba1: #ff112233;
+  rgba2: #992c3742;
+  argb: #992c3742;
 }
 format {
   format: "rgb(32, 128, 64)";
@@ -20,28 +20,42 @@ format {
   eformat: rgb(32, 128, 64);
 }
 #functions {
-  str: true;
-  str: false;
-  num: true;
-  num: true;
-  num: true;
-  num: false;
-  col: true;
-  col: false;
-  col: true;
-  col: true;
-  key: true;
-  key: false;
-  px: true;
-  px: false;
-  per: true;
-  per: false;
-  em: true;
-  em: false;
+  str1: true;
+  str2: false;
+  num1: true;
+  num2: true;
+  num3: true;
+  num4: false;
+  col1: true;
+  col2: false;
+  col3: true;
+  col4: true;
+  key1: true;
+  key2: false;
+  px1: true;
+  px2: false;
+  per1: true;
+  per2: false;
+  em1: true;
+  em2: false;
+  ex1: 2;
+  ex2: 1;
+  ex3: extract(1,1);
+  ex4: 2;
+  pow: 16;
+  pi: 3.1415926535898;
+  mod: 4;
+  tan: 1.5574077246549;
+  cos: 0.54030230586814;
+  sin: 0.8414709848079;
+  atan: 0.78539816339745rad;
+  acos: 0rad;
+  asin: 1.5707963267949rad;
+  sqrt: 2.8284271247462;
 }
 #unit {
-  height: 10;
-  height: 10s;
-  height: 10em;
-  height: 7.407%;
+  unit-lit: 10;
+  unit-arg: 10s;
+  unit-arg2: 10em;
+  unit-math: 7.407%;
 }

@@ -36,9 +36,9 @@ Here is a block comment
 
 .urls {
 	@var: "http://google.com";
-	background: url(@var);
-	background: url(@{var});
-	background: url("@{var}");
+	background1: url(@var);
+	background2: url(@{var});
+	background3: url("@{var}");
 }
 
 .mix(@arg) { color: @arg; }
@@ -48,8 +48,6 @@ Here is a block comment
 .cool {.mix("@{aaa}, @{bbb}")}
 .cool();
 
-.cool("{hello");
-.cool('{hello');
 
 
 // merging of mixins
@@ -91,3 +89,12 @@ hello {
 	join: 3434 + hello;
 }
 
+
+.duplicates {
+	hello: world;
+	hello: "world";
+	hello: world;
+	hello: "what";
+	hello: world;
+	hello: "world";
+}

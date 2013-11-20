@@ -8,20 +8,21 @@ body {
 	color: @something;
 
 	@num: 7 / 6;
-	height: @num + 4;
-	height: floor(@num) + 4px;
-	height: ceil(@num) + 4px;
+	num-basic: @num + 4;
+	num-floor: floor(@num) + 4px;
+	num-ceil: ceil(@num) + 4px;
 
 	@num2: 2 / 3;
-	width: @num2;
-	width: round(@num2);
-	width: floor(@num2);
-	width: ceil(@num2);
-	width: round(10px / 3);
+	num2: @num2;
+	num2-round: round(@num2);
+	num2-floor: floor(@num2);
+	num2-ceil: ceil(@num2);
 
-	color: rgbahex(@color);
-	color: rgbahex(@color2);
-	color: argb(@color2);
+	round-lit: round(10px / 3);
+
+	rgba1: rgbahex(@color);
+	rgba2: rgbahex(@color2);
+	argb: argb(@color2);
 }
 
 
@@ -36,38 +37,60 @@ format {
 
 
 #functions {
-	str: isstring("hello");
-	str: isstring(one, two);
+	str1: isstring("hello");
+	str2: isstring(one, two);
 
-	num: isnumber(2323px);
-	num: isnumber(2323);
-	num: isnumber(4/5);
-	num: isnumber("hello");
+	num1: isnumber(2323px);
+	num2: isnumber(2323);
+	num3: isnumber(4/5);
+	num4: isnumber("hello");
 
-	col: iscolor(red);
-	col: iscolor(hello);
-	col: iscolor(rgba(0,0,0,0.3));
-	col: iscolor(#fff);
+	col1: iscolor(red);
+	col2: iscolor(hello);
+	col3: iscolor(rgba(0,0,0,0.3));
+	col4: iscolor(#fff);
 
-	key: iskeyword(hello);
-	key: iskeyword(3D);
+	key1: iskeyword(hello);
+	key2: iskeyword(3D);
 
-	px: ispixel(10px);
-	px: ispixel(10);
+	px1: ispixel(10px);
+	px2: ispixel(10);
 
-	per: ispercentage(10%);
-	per: ispercentage(10);
+	per1: ispercentage(10%);
+	per2: ispercentage(10);
 
-	em: isem(10em);
-	em: isem(10);
+	em1: isem(10em);
+	em2: isem(10);
+
+	ex1: extract(1 2 3 4, 2);
+	ex2: extract(1 2, 1);
+	ex3: extract(1, 1);
+
+	@list: 1,2,3,4;
+
+	ex4: extract(@list, 2);
+
+	pow: pow(2,4);
+	pi: pi();
+	mod: mod(14,10);
+
+	tan: tan(1);
+	cos: cos(1);
+	sin: sin(1);
+
+	atan: atan(1);
+	acos: acos(1);
+	asin: asin(1);
+
+	sqrt: sqrt(8);
 }
 
 
 #unit {
 	@unit: "em";
-	height: unit(10px);
-	height: unit(10px, "s");
-	height: unit(10px, @unit);
-	height: unit(0.07407s) * 100%;
+	unit-lit: unit(10px);
+	unit-arg: unit(10px, "s");
+	unit-arg2: unit(10px, @unit);
+	unit-math: unit(0.07407s) * 100%;
 }
 

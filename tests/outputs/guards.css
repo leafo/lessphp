@@ -1,22 +1,22 @@
 dd {
-  color: yellow;
+  simple: yellow;
 }
 b {
-  color: red;
-  color: blue;
-  color: blue;
+  something: red;
+  something-complex: blue cool;
+  something-complex: blue birthday;
 }
 img {
-  color: green;
-  color: teal;
+  another: green;
+  flipped: teal;
 }
 body {
-  color: purple;
-  color: silver;
-  color: purple;
+  yeah-number: purple 232px;
+  yeah-pixel: silver;
+  yeah-number: purple 232;
 }
 div {
-  color: blue;
+  something-complex: blue true;
 }
 link {
   color: true red;

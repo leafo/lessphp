@@ -1,7 +1,7 @@
 div {
-  color: yes;
-  color: yes;
-  color: okay;
+  interp1: yes;
+  interp2: yes;
+  interp3: okay;
 }
 10"yeah" {
   color: blue;
@@ -14,4 +14,15 @@ hello world 10 {
 }
 #"yeah" {
   color: "hello 10";
+}
+[prop],
+[prop="value3"],
+[prop*="val3"],
+[|prop~="val3"],
+[*|prop$="val3"],
+[ns|prop^="val3"],
+[3^="val3"],
+[3=3],
+[3] {
+  attributes: yes;
 }

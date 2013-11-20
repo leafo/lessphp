@@ -1,15 +1,13 @@
 body {
-  border: this is simple;
-  border: this;
-  border: this is simple;
-  border: 1232;
-  border: world;
-  border: onemore;
-  border: ;
-  line-height: eating rice;
-  line-height: string cheese;
-  line-height: a b c string me d e f;
-  line-height: string world;
+  e1: this is simple;
+  e2: this is simple;
+  e3: 1232;
+  e4: world;
+  e5: onemore;
+  t1: eating rice;
+  t2: string cheese;
+  t3: a b c string me d e f;
+  t4: string world;
 }
 .class {
   filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src='image.png');

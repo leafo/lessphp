@@ -7,42 +7,42 @@ body {
 	color: hsl(34, 50%, 40%);
 	color: hsla(34, 50%, 40%, 0.3);
 
-	lighten: lighten(#efefef, 10%);
-	lighten: lighten(rgb(23, 53, 231), 22%);
-	lighten: lighten(rgba(212, 103, 88, 0.5), 10%);
+	lighten1: lighten(#efefef, 10%);
+	lighten2: lighten(rgb(23, 53, 231), 22%);
+	lighten3: lighten(rgba(212, 103, 88, 0.5), 10%);
 
-	darken: darken(#efefef, 10%);
-	darken: darken(rgb(23, 53, 231), 22%);
-	darken: darken(rgba(23, 53, 231, 0.5), 10%);
+	darken1: darken(#efefef, 10%);
+	darken2: darken(rgb(23, 53, 231), 22%);
+	darken3: darken(rgba(23, 53, 231, 0.5), 10%);
 
-	saturate: saturate(#efefef, 10%);
-	saturate: saturate(rgb(23, 53, 231), 22%);
-	saturate: saturate(rgba(23, 53, 231, 0.5), 10%);
+	saturate1: saturate(#efefef, 10%);
+	saturate2: saturate(rgb(23, 53, 231), 22%);
+	saturate3: saturate(rgba(23, 53, 231, 0.5), 10%);
 
-	desaturate: desaturate(#efefef, 10%);
-	desaturate: desaturate(rgb(23, 53, 231), 22%);
-	desaturate: desaturate(rgba(23, 53, 231, 0.5), 10%);
+	desaturate1: desaturate(#efefef, 10%);
+	desaturate2: desaturate(rgb(23, 53, 231), 22%);
+	desaturate3: desaturate(rgba(23, 53, 231, 0.5), 10%);
 
-	spin: spin(#efefef, 12);
-	spin: spin(rgb(23, 53, 231), 15);
-	spin: spin(rgba(23, 53, 231, 0.5), 19);
+	spin1: spin(#efefef, 12);
+	spin2: spin(rgb(23, 53, 231), 15);
+	spin3: spin(rgba(23, 53, 231, 0.5), 19);
 
-	spin: spin(#efefef, -12);
-	spin: spin(rgb(23, 53, 231), -15);
-	spin: spin(rgba(23, 53, 231, 0.5), -19);
+	spin2: spin(#efefef, -12);
+	spin3: spin(rgb(23, 53, 231), -15);
+	spin4: spin(rgba(23, 53, 231, 0.5), -19);
 
-	one: fadein(#abcdef, 10%);
-	one: fadeout(#abcdef, -10%);
+	one1: fadein(#abcdef, 10%);
+	one2: fadeout(#abcdef, -10%);
 
-	two: fadeout(#029f23, 10%);
-	two: fadein(#029f23, -10%);
+	two1: fadeout(#029f23, 10%);
+	two2: fadein(#029f23, -10%);
 
 
-	three: fadein(rgba(1,2,3, 0.5), 10%);
-	three: fadeout(rgba(1,2,3, 0.5), -10%);
+	three1: fadein(rgba(1,2,3, 0.5), 10%);
+	three2: fadeout(rgba(1,2,3, 0.5), -10%);
 
-	four: fadeout(rgba(1,2,3, 0), 10%);
-	four: fadein(rgba(1,2,3, 0), -10%);
+	four1: fadeout(rgba(1,2,3, 0), 10%);
+	four2: fadein(rgba(1,2,3, 0), -10%);
 
 	hue: hue(rgb(34,20,40));
 	sat: saturation(rgb(34,20,40));
@@ -52,46 +52,47 @@ body {
 	@new: hsl(hue(@old), 45%, 90%);
 	what: @new;
 
-	zero: saturate(#123456, -100%);
-	zero: saturate(#123456, 100%);
-	zero: saturate(#000000, 100%);
-	zero: saturate(#ffffff, 100%);
+	zero1: saturate(#123456, -100%);
+	zero2: saturate(#123456, 100%);
+	zero3: saturate(#000000, 100%);
+	zero4: saturate(#ffffff, 100%);
 
-	zero: lighten(#123456, -100%);
-	zero: lighten(#123456, 100%);
-	zero: lighten(#000000, 100%);
-	zero: lighten(#ffffff, 100%);
+	zero5: lighten(#123456, -100%);
+	zero6: lighten(#123456, 100%);
+	zero7: lighten(#000000, 100%);
+	zero8: lighten(#ffffff, 100%);
 
-	zero: spin(#123456, -100);
-	zero: spin(#123456, 100);
-	zero: spin(#000000, 100);
-	zero: spin(#ffffff, 100);
+	zero9: spin(#123456, -100);
+	zeroa: spin(#123456, 100);
+	zerob: spin(#000000, 100);
+	zeroc: spin(#ffffff, 100);
 }
 
 
 alpha {
 	// g: alpha(red);
-	g: alpha(rgba(0,0,0,0));
-	g: alpha(rgb(155,55,0));
+	g1: alpha(rgba(0,0,0,0));
+	g2: alpha(rgb(155,55,0));
 }
 
 fade {
-	f: fade(red, 50%);
-	f: fade(#fff, 20%);
-	f: fade(rgba(34,23,64,0.4), 50%);
+	f1: fade(red, 50%);
+	f2: fade(#fff, 20%);
+	f3: fade(rgba(34,23,64,0.4), 50%);
 }
 
 @a: rgb(255,255,255);
 @b: rgb(0,0,0);
 
 .mix {
-	color: mix(@a, @b, 50%);
-	color: mix(rgba(5,3,1,0.3), rgba(6,3,2, 0.8), 50%);
+	color1: mix(@a, @b, 50%);
+	color2: mix(@a, @b);
+	color3: mix(rgba(5,3,1,0.3), rgba(6,3,2, 0.8), 50%);
 }
 
 .contrast {
-	color: contrast(#000, red, blue);
-	color: contrast(#fff, red, blue);
+	color1: contrast(#000, red, blue);
+	color2: contrast(#fff, red, blue);
 }
 
 .percent {
@@ -101,9 +102,9 @@ fade {
 // color keywords
 
 .colorz {
-	color: whitesmoke - 10;
-	color: spin(red, 34);
-	color: spin(blah);
+	color1: whitesmoke - 10;
+	color2: spin(red, 34);
+	color3: spin(blah);
 }
 
 
@@ -133,15 +134,15 @@ dd {
 // math
 
 .ops {
-	c: red * 0.3;
-	c: green / 2;
-	c: purple % 7;
-	c: 4 * salmon;
-	c: 1 + salmon;
+	c1: red * 0.3;
+	c2: green / 2;
+	c3: purple % 7;
+	c4: 4 * salmon;
+	c5: 1 + salmon;
 
-	c: 132 / red;
-	c: 132 - red;
-	c: 132- red;
+	c6: 132 / red;
+	c7: 132 - red;
+	c8: 132- red;
 }
 
 .transparent {

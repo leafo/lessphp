@@ -4,9 +4,9 @@
 @var: "hello";
 
 div {
-	color: ~"@{cool-hello}";
-	color: ~"@{cool-@{var}}";
-	color: ~"@{cool-@{cool-@{var}}}";
+	interp1: ~"@{cool-hello}";
+	interp2: ~"@{cool-@{var}}";
+	interp3: ~"@{cool-@{cool-@{var}}}";
 }
 
 // interpolation in selectors
@@ -30,4 +30,18 @@ hello world @{hello} {
 	color: "hello @{hello}";
 }
 
+
+@num: 3;
+
+[prop],
+[prop="value@{num}"],
+[prop*="val@{num}"],
+[|prop~="val@{num}"],
+[*|prop$="val@{num}"],
+[ns|prop^="val@{num}"],
+[@{num}^="val@{num}"],
+[@{num}=@{num}],
+[@{num}] {
+  attributes: yes;
+}
 
