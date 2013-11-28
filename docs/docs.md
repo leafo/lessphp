@@ -1003,6 +1003,8 @@ Methods:
 
 * [`addImportDir($dir)`](#import_directory) -- Append directory to search path for imports
 
+* [`setLoader($callback)`](#loader) -- Register a callback use to fetch imported files
+
 
 ### Compiling
 
@@ -1276,6 +1278,28 @@ overwriting the whole thing.
     ```php
     $less->addImportDir("public/stylesheets");
     ```
+
+### Loader
+
+It is possible to register a callback that will be called to fetch imported files (using `@import`).
+This can be useful when LESS files are not in a directory on the filesystem.
+
+The callback takes one parameter, which is the name of the file (as specified in the `@import` directive).
+
+It will return either `false` or a string of LESS code to be parsed.
+If it returns `false`, the `@import` directive will stay.
+
+    ```php
+    $less->loader(function($name) {
+      // Use $name to do whatever you want to fetch your LESS code
+
+      // return $content; <- will use the $content you just fetched
+      // return false; <- will let the `@import` directive untouched
+      // return ''; <- will import nothing and remove the `@import` directive
+    });
+    ```
+
+If no callback is registered, the `@import` directives will be resolved using the classic behaviour (see **Import Directory**).
 
 ### Custom Functions
 

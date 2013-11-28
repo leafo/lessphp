@@ -54,6 +54,8 @@ class lessc {
 	public $importDisabled = false;
 	public $importDir = '';
 
+	public $loader = null;
+
 	protected $numberPrecision = null;
 
 	protected $allParsedFiles = array();
@@ -90,6 +92,10 @@ class lessc {
 		return preg_quote($what, '/');
 	}
 
+	public function setLoader($callback) {
+		$this->loader = $callback;
+	}
+
 	protected function tryImport($importPath, $parentBlock, $out) {
 		if ($importPath[0] == "function" && $importPath[1] == "url") {
 			$importPath = $this->flattenList($importPath[2]);
@@ -100,13 +106,21 @@ class lessc {
 
 		$url = $this->compileValue($this->lib_e($str));
 
-		// don't import if it ends in css
-		if (substr_compare($url, '.css', -4, 4) === 0) return false;
+		if (is_callable($this->loader)) {
+			$realPath = $url;
+			$content = call_user_func($this->loader, $realPath);
+			if ($content === false) return false;
+		}
+		else {
+			// don't import if it ends in css
+			if (substr_compare($url, '.css', -4, 4) === 0) return false;
 
-		$realPath = $this->findImport($url);
-
-		if ($realPath === null) return false;
-
+			$realPath = $this->findImport($url);
+			if ($realPath === null) return false;
+			$content = file_get_contents($realPath);
+			$this->addParsedFile($realPath);
+		}
+		
 		if ($this->importDisabled) {
 			return array(false, "/* import disabled */");
 		}
@@ -115,9 +129,8 @@ class lessc {
 			return array(false, null);
 		}
 
-		$this->addParsedFile($realPath);
 		$parser = $this->makeParser($realPath);
-		$root = $parser->parse(file_get_contents($realPath));
+		$root = $parser->parse($content);
 
 		// set the parents of all the block props
 		foreach ($root->props as $prop) {
