@@ -15,6 +15,7 @@ Options include:
     -f=format   Set the output format, includes "default", "compressed"
     -c          Keep /* */ comments in output
     -r          Read from STDIN instead of input-file
+    -q          Quick compile mode (enable caching). Unavailable for -T or -X
     -w          Watch input-file, and compile to output-file if it is changed
     -T          Dump formatted parse tree
     -X          Dump raw parse tree
@@ -22,8 +23,8 @@ Options include:
 
 EOT;
 
-$opts = getopt('hvrwncXTf:', array('help'));
-while (count($argv) > 0 && preg_match('/^-([-hvrwncXT]$|[f]=)/', $argv[0])) {
+$opts = getopt('hvrqwncXTf:', array('help'));
+while (count($argv) > 0 && preg_match('/^-([-hvrqwncXT]$|[f]=)/', $argv[0])) {
 	array_shift($argv);
 }
 
@@ -232,6 +233,25 @@ try {
 			$out = print_r($tree, 1);
 		else
 			$out = dumpValue($tree)."\n";
+	} elseif (has("q")) {
+
+		$fcache = $fname . ".lessphp";
+		$cache = null;
+
+		if (file_exists($fcache)) {
+			$cache = @unserialize(file_get_contents($fcache));
+		}
+		if (!is_array($cache)) {
+			$cache = $fname;
+		}
+
+		$cache_new = $less->cachedCompile($cache);
+		$out = $cache_new["compiled"];
+
+		if (!is_array($cache) || ($cache_new["updated"] > $cache["updated"])) {
+			file_put_contents($fcache, serialize($cache_new));
+		}
+
 	} else {
 		$out = $less->parse();
 	}
