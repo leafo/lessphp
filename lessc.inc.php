@@ -38,7 +38,7 @@
  * handling things like indentation.
  */
 class lessc {
-	static public $VERSION = "v0.4.0";
+	static public $VERSION = "v0.4.1a";
 
 	static public $TRUE = array("keyword", "true");
 	static public $FALSE = array("keyword", "false");
@@ -97,13 +97,36 @@ class lessc {
 
 		$str = $this->coerceString($importPath);
 		if ($str === null) return false;
-
-		$url = $this->compileValue($this->lib_e($str));
-
-		// don't import if it ends in css
-		if (substr_compare($url, '.css', -4, 4) === 0) return false;
-
-		$realPath = $this->findImport($url);
+    if ($str[0] !== 'list') {
+      $url = $this->compileValue($this->lib_e($str));
+      // don't import if it ends in css
+      if (substr_compare($url, '.css', -4, 4) === 0) return false;
+      $realPath = $this->findImport($url);
+    } else {
+      $import = new stdClass;
+      $import->media = array();
+      foreach ($str[2] as $i=>$op) {
+        if($op[0] == 'keyword') {
+          switch ($op[1]) {
+            case 'less':
+            case 'css':
+              $import->type = $op[1];
+              break;
+            default:
+              $import->media[] = $op[1];
+          }
+        } else {
+          $import->url = $op[2][0];
+          $realPath = $this->findImport($import->url);
+        }
+      }
+      $import->media = implode(' ', $import->media);
+      if ((isset($import->type) && $import->type == 'css')
+        || (!isset($import->type) && substr_compare($import->url, '.css', -4, 4) === 0)
+      ) {
+        return false;
+      }
+    }
 
 		if ($realPath === null) return false;
 
@@ -1558,13 +1581,33 @@ class lessc {
 
 	// make something string like into a string
 	protected function coerceString($value) {
-		switch ($value[0]) {
-		case "string":
-			return $value;
-		case "keyword":
-			return array("string", "", array($value[1]));
-		}
-		return null;
+    if ($value[0] == "list") {
+      if ($value[2][0][0] == "keyword") {
+        // Special parse type
+        foreach ($value[2] as $op) {
+          if ($op[0] == "string") {
+              return array("list", " ", $value[2]);
+          }
+        }
+      } else {
+        $media = end($value[2]);
+        if ($media[0] == "keyword") {
+          // Media type
+          foreach ($value[2] as $op) {
+            if ($op[0] == "string") {
+              return array("list", " ", $value[2]);
+            }
+          }
+        }
+      }    
+    }    
+    switch ($value[0]) {
+    case "string":
+      return $value;
+    case "keyword":
+      return array("string", "", array($value[1]));
+    }
+    return null;
 	}
 
 	// turn list of length 1 into value type
@@ -2390,7 +2433,6 @@ class lessc_parser {
 			$this->seek($s);
 		}
 
-
 		// look for special css blocks
 		if ($this->literal('@', false)) {
 			$this->count--;
@@ -2520,6 +2562,15 @@ class lessc_parser {
 
 		// spare ;
 		if ($this->literal(';')) return true;
+    
+    // import media close up
+    if ($this->literal("(")) {
+      $this->count--;
+      $this->openString(';', $value);
+      $lastImport =& $this->env->props[count($this->env->props)-1];
+      $lastImport[1][2][] = array('keyword', $value[2][0]);
+      return true;
+    }
 
 		return false; // got nothing, throw error
 	}
@@ -2737,9 +2788,10 @@ class lessc_parser {
 	protected function import(&$out) {
 		if (!$this->literal('@import')) return false;
 
+		// @import "something.css";
 		// @import "something.css" media;
-		// @import url("something.css") media;
-		// @import url(something.css) media;
+		// @import (less) "something.css";
+		// @import url(something.css);
 
 		if ($this->propertyValue($value)) {
 			$out = array("import", $value);
