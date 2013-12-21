@@ -1242,12 +1242,18 @@ class lessc {
 	    $darkColor  = array('color', 0, 0, 0);
 	    $lightColor = array('color', 255, 255, 255);
 	    $threshold  = 0.43;
-	     
 	    if ( $args[0] == 'list' ) {
 	        $inputColor = ( isset($args[2][0]) ) ? $this->assertColor($args[2][0])  : $lightColor;
 	        $darkColor  = ( isset($args[2][1]) ) ? $this->assertColor($args[2][1])  : $darkColor;
 	        $lightColor = ( isset($args[2][2]) ) ? $this->assertColor($args[2][2])  : $lightColor;
-	        $threshold  = ( isset($args[2][3]) ) ? $this->assertNumber($args[2][3]) : $threshold;
+
+	        if( isset($args[2][3]) ) {
+	        	if( isset($args[2][3][2]) && $args[2][3][2] == '%' ) {
+	        		$args[2][3][1] /= 100; 
+	        		unset($args[2][3][2]); 
+	        	}
+		        $threshold = $this->assertNumber($args[2][3]);
+	        }
 	    }
 	    else {
 	        $inputColor  = $this->assertColor($args);
