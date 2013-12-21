@@ -98,6 +98,9 @@ fade {
 .contrast {
 	color1: contrast(#000, red, blue);
 	color2: contrast(#fff, red, blue);
+	color3: contrast(#333, #000, #fff); // Default threshold
+	color4: contrast(#333, #000, #fff, 0.1); // Threshold weighted towards dark colour
+	color5: contrast(#333, #000, #fff, 10%); // Threshold weighted as percentage
 }
 
 .luma {
