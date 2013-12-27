@@ -206,7 +206,7 @@ class lessc {
 			$this->compileNestedBlock($block, array($name));
 			break;
 		default:
-			$this->throwError("unknown block type: $block->type\n");
+			$block->parser->throwError("unknown block type: $block->type\n", $block->count);
 		}
 	}
 
@@ -717,7 +717,7 @@ class lessc {
 			$mixins = $this->findBlocks($block, $path, $orderedArgs, $keywordArgs);
 
 			if ($mixins === null) {
-				$this->throwError("{$prop[1][0]} is undefined");
+				$block->parser->throwError("{$prop[1][0]} is undefined", $block->count);
 			}
 
 			foreach ($mixins as $mixin) {
@@ -803,7 +803,7 @@ class lessc {
 
 			break;
 		default:
-			$this->throwError("unknown op: {$prop[0]}\n");
+			$block->parser->throwError("unknown op: {$prop[0]}\n", $block->count);
 		}
 	}
 
@@ -1242,7 +1242,7 @@ class lessc {
 	    $darkColor  = array('color', 0, 0, 0);
 	    $lightColor = array('color', 255, 255, 255);
 	    $threshold  = 0.43;
-	     
+
 	    if ( $args[0] == 'list' ) {
 	        $inputColor = ( isset($args[2][0]) ) ? $this->assertColor($args[2][0])  : $lightColor;
 	        $darkColor  = ( isset($args[2][1]) ) ? $this->assertColor($args[2][1])  : $darkColor;
@@ -2364,7 +2364,7 @@ class lessc_parser {
 			$this->throwError();
 
 		// TODO report where the block was opened
-		if ( !property_exists($this->env, 'parent') || !is_null($this->env->parent) ) 
+		if ( !property_exists($this->env, 'parent') || !is_null($this->env->parent) )
 			throw new exception('parse error: unclosed block');
 
 		return $this->env;
@@ -3568,6 +3568,14 @@ class lessc_parser {
 
 		$b->props = array();
 		$b->children = array();
+
+		// add a reference to the parser so
+		// we can access the parser to throw errors
+		// or retrieve the sourceName of this block.
+		$b->parser = $this;
+
+		// so we know the position of this block
+		$b->count = $this->count;
 
 		$this->env = $b;
 		return $b;
