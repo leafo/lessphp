@@ -270,7 +270,7 @@ Any block can be mixed in just by naming it:
 
     h1 {
       font-size: 200px;
-      .mixin;
+      .mymixin;
     }
     ```
 
