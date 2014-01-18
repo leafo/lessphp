@@ -15,13 +15,13 @@
 
 .comment {
 	width: #defaults[@width];
-	color: .article['color']; 
+	color: .article['color'];
 	padding: #defaults > .something[@space];
 }
 
 .wow {
 	height: .comment['width'];
-	background-color: .comment['color']; 
+	background-color: .comment['color'];
 	color: #defaults > .something > @hello['color'];
 
 	padding: #defaults > non-existant['padding'];

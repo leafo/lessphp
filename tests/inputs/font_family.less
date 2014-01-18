@@ -2,7 +2,7 @@
 @font-directory: 'fonts/';
 @some-family: Gentium;
 
-@font-face: maroon; // won't collide with @font-face { } 
+@font-face: maroon; // won't collide with @font-face { }
 
 @font-face {
 	font-family: Graublau Sans Web;
@@ -13,14 +13,14 @@
   font-family: @some-family;
   src: url('@{font-directory}Gentium.ttf');
 }
- 
+
 @font-face {
   font-family: @some-family;
   src: url("@{font-directory}GentiumItalic.ttf");
   font-style: italic;
 }
 
-h2 { 
+h2 {
 	font-family: @some-family;
 	crazy: @font-face;
 }

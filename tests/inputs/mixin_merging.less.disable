@@ -60,7 +60,7 @@
 
 @broken-nesting {
 	div, span {
-		strong, b { 
+		strong, b {
 			color: red;
 		}
 	}
@@ -69,7 +69,7 @@
 
 #test7 {
 	div {
-		strong { 
+		strong {
 			margin: 1px;
 		}
 	}
