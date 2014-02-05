@@ -94,3 +94,9 @@ output run this:
 
 For more help, run `plessc --help`
 
+### This fork ([nodge/lessphp][5])
+
+The only change in this fork is the ability to change relative paths according to path to root .less file. (Fixes [#119][6]).
+
+ [5]: https://github.com/Nodge/lessphp/
+ [6]: https://github.com/leafo/lessphp/issues/119
