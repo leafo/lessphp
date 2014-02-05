@@ -346,9 +346,9 @@ class lessc {
 		$other = array_merge($other, $stack);
 
 		if ($split) {
-			return array(array_merge($vars, $imports), $other);
+            		return array(array_merge($imports,$vars), $other);
 		} else {
-			return array_merge($vars, $imports, $other);
+            		return array_merge($imports, $vars, $other);
 		}
 	}
 
