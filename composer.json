@@ -14,7 +14,10 @@
             "homepage": "http://leafo.net"
         }
     ],
-    "bin": ["plessc"],
+    "bin": [
+        "plessc",
+        "lessify"
+    ],
     "autoload": {
         "classmap": ["lessc.inc.php"]
     },
