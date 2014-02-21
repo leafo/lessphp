@@ -22,4 +22,8 @@
             "dev-master": "0.4.x-dev"
         }
     }
+    "bin": [
+		"plessc",
+		"lessify"
+	]
 }
