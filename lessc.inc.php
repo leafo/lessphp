@@ -819,7 +819,7 @@ class lessc {
 	 * The input is expected to be reduced. This function will not work on
 	 * things like expressions and variables.
 	 */
-	protected function compileValue($value) {
+	public function compileValue($value) {
 		switch ($value[0]) {
 		case 'list':
 			// [1] - delimiter
