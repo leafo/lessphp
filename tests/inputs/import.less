@@ -54,3 +54,12 @@ pre {
 
 @import "file3";
 
+
+// test overwriting imported variables
+
+@someValue: line-through;
+
+.overwritten {
+	text-decoration: @someValue;
+}
+

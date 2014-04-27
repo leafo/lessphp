@@ -49,3 +49,6 @@ pre {
 h2 {
   background: url("../images/logo.png") no-repeat;
 }
+.overwritten {
+  text-decoration: line-through;
+}
