@@ -1239,7 +1239,7 @@ One for PHP and one for LESS.
 
     ```php
     $less->setVariables(array(
-      "url" => "'http://example.com.com/'"
+      "url" => "'http://example.com'"
     ));
 
     echo $less->compile("body { background: url("@{url}/bg.png"); }");
