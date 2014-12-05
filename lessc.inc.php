@@ -1930,6 +1930,43 @@ class lessc {
 		return $out;
 	}
 
+	/**
+	 * Based on explicit input/output files does a full change check on cache before compiling.
+	 *
+	 * @param string $in
+	 * @param string $out
+	 * @param boolean $force
+	 * @return string Compiled CSS results
+	 * @throws Exception
+	 */
+	public function checkedCachedCompile($in, $out, $force = false) {
+		if (!is_file($in) || !is_readable($in)) {
+			throw new Exception('Invalid or unreadable input file specified.');
+		}
+		if (is_dir($out) || !is_writable(file_exists($out) ? $out : dirname($out))) {
+			throw new Exception('Invalid or unwritable output file specified.');
+		}
+
+		$outMeta = $out . '.meta';
+		$metadata = null;
+		if (!$force && is_file($outMeta)) {
+			$metadata = unserialize(file_get_contents($outMeta));
+		}
+
+		$output = $this->cachedCompile($metadata ? $metadata : $in);
+
+		if (!$metadata || $metadata['updated'] != $output['updated']) {
+			$css = $output['compiled'];
+			unset($output['compiled']);
+			file_put_contents($out, $css);
+			file_put_contents($outMeta, serialize($output));
+		} else {
+			$css = file_get_contents($out);
+		}
+
+		return $css;
+	}
+
 	// compile only if changed input has changed or output doesn't exist
 	public function checkedCompile($in, $out) {
 		if (!is_file($out) || filemtime($in) > filemtime($out)) {
