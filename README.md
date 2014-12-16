@@ -10,7 +10,11 @@ Here's a quick tutorial:
 
 ### How to use in your PHP project
 
-The only file required is `lessc.inc.php`, so copy that to your include directory.
+Require via [Composer](http://getcomposer.org):
+
+```bash
+$ composer require leafo/lessphp
+```
 
 The typical flow of **lessphp** is to create a new instance of `lessc`,
 configure it how you like, then tell it to compile something using one built in
@@ -19,9 +23,6 @@ compile methods.
 The `compile` method compiles a string of LESS code to CSS.
 
 ```php
-<?php
-require "lessc.inc.php";
-
 $less = new lessc;
 echo $less->compile(".block { padding: 3 + 4px }");
 ```
@@ -30,7 +31,6 @@ The `compileFile` method reads and compiles a file. It will either return the
 result or write it to the path specified by an optional second argument.
 
 ```php
-<?php
 echo $less->compileFile("input.less");
 ```
 
@@ -38,14 +38,12 @@ The `compileChecked` method is like `compileFile`, but it only compiles if the o
 file doesn't exist or it's older than the input file:
 
 ```php
-<?php
 $less->checkedCompile("input.less", "output.css");
 ```
 
 If there any problem compiling your code, an exception is thrown with a helpful message:
 
 ```php
-<?php
 try {
   $less->compile("invalid LESS } {");
 } catch (exception $e) {
