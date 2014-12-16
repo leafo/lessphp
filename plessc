@@ -3,6 +3,8 @@
 // Command line utility to compile LESS to STDOUT
 // Leaf Corcoran <leafot@gmail.com>, 2013
 
+require_once __DIR__ . '/vendor/autoload.php';
+
 $exe = array_shift($argv); // remove filename
 
 $HELP = <<<EOT
@@ -40,9 +42,6 @@ if (has("h", "help")) {
 }
 
 error_reporting(E_ALL);
-$path  = realpath(dirname(__FILE__)).'/';
-
-require $path."lessc.inc.php";
 
 $VERSION = lessc::$VERSION;
 
