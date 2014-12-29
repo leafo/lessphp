@@ -48,7 +48,7 @@ If there any problem compiling your code, an exception is thrown with a helpful 
 <?php
 try {
   $less->compile("invalid LESS } {");
-} catch (exception $e) {
+} catch (Exception $e) {
   echo "fatal error: " . $e->getMessage();
 }
 ```
