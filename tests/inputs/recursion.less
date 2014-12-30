@@ -1,0 +1,23 @@
+.set(@width) {
+    .spanX(@index)when (@index > 0) {
+        (~".span@{index}") {
+            width: @width;
+        }
+        .spanX(@index - 1);
+    }
+
+    .spanX(0) {
+    }
+
+    .row {
+        .spanX (3);
+    }
+}
+
+.set1 {
+    .set(10px);
+}
+
+.set2 {
+    .set(33px);
+}

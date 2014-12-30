@@ -34,8 +34,9 @@ class SortingFormatter extends lessc_formatter_lessjs {
 	}
 
 	function sortBlock($block) {
-		usort($block->children, function($a, $b) {
-			$sort = strcmp($this->sortKey($a), $this->sortKey($b));
+		$that = $this;
+		usort($block->children, function($a, $b) use ($that) {
+			$sort = strcmp($that->sortKey($a), $that->sortKey($b));
 			if ($sort == 0) {
 				// TODO
 			}
