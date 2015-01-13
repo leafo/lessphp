@@ -1836,7 +1836,7 @@ class lessc {
 		$current = $this->env;
 
 		// track scope to evaluate
-		$scope_secondary = [];
+		$scope_secondary = array();
 
 		$isArguments = $name == $this->vPrefix . 'arguments';
 		while ($current) {
