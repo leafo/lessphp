@@ -44,7 +44,17 @@ format {
   ex4: 2;
   pow: 16;
   pi: 3.1415926535898;
-  mod: 4;
+  mod1: 4;
+  mod2: 4px;
+  abs1: 5px;
+  abs2: 5%;
+  abs3: 10;
+  min1: 2px;
+  min2: 1;
+  max1: 20%;
+  max2: 10;
+  max-convert: 1cm;
+  min-convert: 1px;
   tan: 1.5574077246549;
   cos: 0.54030230586814;
   sin: 0.8414709848079;
@@ -52,6 +62,24 @@ format {
   acos: 0rad;
   asin: 1.5707963267949rad;
   sqrt: 2.8284271247462;
+}
+#convert {
+  px2cm: 0.02645833cm;
+  px2mm: 0.26458333mm;
+  px2in: 0.01041667in;
+  px2pt: 0.75pt;
+  px2pc: 0.0625pc;
+  cm2px: 37.79527559px;
+  in2px: 96px;
+  cm2in: 0.39370079in;
+  s2ms: 1000ms;
+  ms2s: 0.001s;
+  deg2rad: 0.01745329rad;
+  rad2deg: 57.29577951deg;
+  deg2turn: 0.00277778turn;
+  turn2deg: 360deg;
+  deg2grad: 1.11111111grad;
+  grad2deg: 0.9deg;
 }
 #unit {
   unit-lit: 10;

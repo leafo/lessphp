@@ -44,7 +44,7 @@ class InputTest extends PHPUnit_Framework_TestCase {
 
 		$input = file_get_contents($inFname);
 		$output = file_get_contents($outFname);
-
+				
 		$this->assertEquals($output, $this->less->parse($input));
 	}
 
