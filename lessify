@@ -19,5 +19,3 @@ try  {
 } catch (exception $e) {
 	exit("Fatal error: ".$e->getMessage()."\n");
 }
-
-
