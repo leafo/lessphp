@@ -1888,6 +1888,7 @@ class lessc {
 
 		$this->env = null;
 		$this->scope = null;
+		$this->allParsedFiles = array();
 
 		$this->formatter = $this->newFormatter();
 
