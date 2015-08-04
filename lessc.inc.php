@@ -1016,6 +1016,11 @@ class lessc {
 		return 'url("'.$url.'")';
 	}
 
+        protected function lib_length($args)
+        {
+            return count($args[2]);
+        }
+        
 	// utility func to unquote a string
 	protected function lib_e($arg) {
 		switch ($arg[0]) {
