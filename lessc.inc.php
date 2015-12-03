@@ -723,7 +723,7 @@ class lessc {
 
 			if(strpos($prop[1][0], "$") === 0) {
 				//Use Ruleset Logic - Only last element
-				$mixins = [array_pop($mixins)];
+				$mixins = array(array_pop($mixins));
 			}
 
 			foreach ($mixins as $mixin) {
