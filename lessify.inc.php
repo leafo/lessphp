@@ -118,7 +118,7 @@ class tagparse extends easyparse {
 		return ob_get_clean();
 	}
 
-	function string(&$out) {
+	function stringValue(&$out) {
 		$s = $this->seek();
 
 		if ($this->literal('"')) {
@@ -231,7 +231,7 @@ class tagparse extends easyparse {
 	}
 
 	function value(&$out) {
-		if ($this->string($str)) {
+		if ($this->stringValue($str)) {
 			$out = $this->compileString($str);
 			return true;
 		} elseif ($this->ident($id)) {
