@@ -805,6 +805,7 @@ class lessc {
 		default:
 			$this->throwError("unknown op: {$prop[0]}\n");
 		}
+		$out->lines = array_reverse(array_unique(array_reverse($out->lines)));
 	}
 
 
