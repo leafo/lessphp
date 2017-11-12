@@ -1199,6 +1199,50 @@ class lessc {
 		return array("number", $num*100, "%");
 	}
 
+	/**
+	 * Mix color with white in variable proportion.
+	 *
+	 * It is the same as calling `mix(#ffffff, @color, @weight)`.
+	 *
+	 *     tint(@color, [@weight: 50%]);
+	 *
+	 * http://lesscss.org/functions/#color-operations-tint
+	 *
+	 * @return array Color
+	 */
+	protected function lib_tint($args) {
+		$white = ['color', 255, 255, 255];
+		if ($args[0] == 'color') {
+			return $this->lib_mix([ 'list', ',', [$white, $args] ]);
+		} elseif ($args[0] == "list" && count($args[2]) == 2) {
+			return $this->lib_mix([ $args[0], $args[1], [$white, $args[2][0], $args[2][1]] ]);
+		} else {
+			$this->throwError("tint expects (color, weight)");
+		}
+	}
+
+	/**
+	 * Mix color with black in variable proportion.
+	 *
+	 * It is the same as calling `mix(#000000, @color, @weight)`
+	 *
+	 *     shade(@color, [@weight: 50%]);
+	 *
+	 * http://lesscss.org/functions/#color-operations-shade
+	 *
+	 * @return array Color
+	 */
+	protected function lib_shade($args) {
+		$black = ['color', 0, 0, 0];
+		if ($args[0] == 'color') {
+			return $this->lib_mix([ 'list', ',', [$black, $args] ]);
+		} elseif ($args[0] == "list" && count($args[2]) == 2) {
+			return $this->lib_mix([ $args[0], $args[1], [$black, $args[2][0], $args[2][1]] ]);
+		} else {
+			$this->throwError("shade expects (color, weight)");
+		}
+	}
+
 	// mixes two colors by weight
 	// mix(@color1, @color2, [@weight: 50%]);
 	// http://sass-lang.com/docs/yardoc/Sass/Script/Functions.html#mix-instance_method
