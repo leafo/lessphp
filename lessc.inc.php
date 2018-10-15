@@ -1883,6 +1883,14 @@ class lessc {
 		$locale = setlocale(LC_NUMERIC, 0);
 		setlocale(LC_NUMERIC, "C");
 
+        $internal_encoding = NULL;
+        // only if mbstring installed
+        if (function_exists('mb_orig_strlen')) {
+            $internal_encoding = ini_get('mbstring.internal_encoding');
+            if(!is_null($internal_encoding)){
+                ini_set('mbstring.internal_encoding', NULL);
+            }
+        }
 		$this->parser = $this->makeParser($name);
 		$root = $this->parser->parse($string);
 
@@ -1902,6 +1910,9 @@ class lessc {
 		$this->formatter->block($this->scope);
 		$out = ob_get_clean();
 		setlocale(LC_NUMERIC, $locale);
+        if(!is_null($internal_encoding)){
+            ini_set('mbstring.internal_encoding', $internal_encoding);
+        }
 		return $out;
 	}
 
@@ -2341,6 +2352,7 @@ class lessc_parser {
 	}
 
 	public function parse($buffer) {
+
 		$this->count = 0;
 		$this->line = 1;
 
@@ -2359,6 +2371,7 @@ class lessc_parser {
 
 		// parse the entire file
 		while (false !== $this->parseChunk());
+
 
 		if ($this->count != strlen($this->buffer))
 			$this->throwError();
