@@ -46,6 +46,9 @@ body div.sad {
 pre {
   color: hello-from-file-3;
 }
+blockquote {
+  color: hello-from-imports-file; 
+}
 h2 {
   background: url("../images/logo.png") no-repeat;
 }
