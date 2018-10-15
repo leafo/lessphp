@@ -43,6 +43,7 @@ class lessc {
 	static public $TRUE = array("keyword", "true");
 	static public $FALSE = array("keyword", "false");
 
+	protected $allParsedFiles = array();
 	protected $libFunctions = array();
 	protected $registeredVars = array();
 	protected $preserveComments = false;
@@ -109,6 +110,11 @@ class lessc {
 
 		if ($this->importDisabled) {
 			return array(false, "/* import disabled */");
+		}
+		
+		// import once
+		if(array_key_exists(realpath($realPath), $this->allParsedFiles())) {
+			return array(false, '');
 		}
 
 		if (isset($this->allParsedFiles[realpath($realPath)])) {
