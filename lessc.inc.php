@@ -139,8 +139,7 @@ class lessc {
 			}
 		}
 
-		$pi = pathinfo($realPath);
-		$dir = $pi["dirname"];
+		$dir = pathinfo($realPath, PATHINFO_DIRNAME);
 
 		list($top, $bottom) = $this->sortProps($root->props, true);
 		$this->compileImportedProps($top, $parentBlock, $out, $parser, $dir);
