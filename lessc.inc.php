@@ -2088,6 +2088,15 @@ class lessc {
 	public function addParsedFile($file) {
 		$this->allParsedFiles[realpath($file)] = filemtime($file);
 	}
+	
+	/**
+	 * Reset allParsedFiles property
+	 * @return lessc
+	 */
+	public function resetAllParsedFiles(){
+		$this->allParsedFiles = array();
+		return $this;
+	}
 
 	/**
 	 * Uses the current value of $this->count to show line and line number
