@@ -1023,7 +1023,7 @@ result or write it to the path specified by an optional second argument.
     echo $less->compileFile("input.less");
     ```
 
-The `compileChecked` method is like `compileFile`, but it only compiles if the output
+The `checkedCompile` method is like `compileFile`, but it only compiles if the output
 file doesn't exist or it's older than the input file:
 
     ```php
@@ -1239,7 +1239,7 @@ One for PHP and one for LESS.
 
     ```php
     $less->setVariables(array(
-      "url" => "'http://example.com.com/'"
+      "url" => "'http://example.com'"
     ));
 
     echo $less->compile("body { background: url("@{url}/bg.png"); }");
