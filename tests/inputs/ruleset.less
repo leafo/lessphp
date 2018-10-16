@@ -1,0 +1,11 @@
+@detached-ruleset: { background: red; border: none; };
+@detached-ruleset: { background: blue; };
+
+body {
+  .top {
+    @detached-ruleset();
+  }
+}
+.top {
+  @detached-ruleset();
+}
