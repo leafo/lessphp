@@ -16,7 +16,9 @@
     ],
     "bin": ["plessc"],
     "autoload": {
-        "classmap": ["lessc.inc.php"]
+        "classmap": [
+            "src/"
+        ]
     },
     "extra": {
         "branch-alias": {

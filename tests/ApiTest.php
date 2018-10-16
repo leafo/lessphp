@@ -1,7 +1,5 @@
 <?php
 
-require_once __DIR__ . "/../lessc.inc.php";
-
 class ApiTest extends PHPUnit_Framework_TestCase {
 	public function setUp() {
 		$this->less = new lessc();

@@ -1,5 +1,4 @@
 <?php
-require_once __DIR__ . "/../lessc.inc.php";
 
 class ErrorHandlingTest extends PHPUnit_Framework_TestCase {
 	public function setUp() {
