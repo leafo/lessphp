@@ -78,4 +78,44 @@ class ErrorHandlingTest extends PHPUnit\Framework\TestCase {
 			'.selector { .colors-only("string value"); }'
 		);
 	}
+	
+	/**
+	 * @expectedException		Exception
+	 * @expectedExceptionMessage	expecting at least 1 arguments, got 0
+	 */
+	public function testMinNoArguments() {
+		$this->compile(
+				'.selector{ min: min(); }'
+		);
+	}
+	
+	/**
+	 * @expectedException		Exception
+	 * @expectedExceptionMessage	expecting at least 1 arguments, got 0
+	 */
+	public function testMaxNoArguments() {
+		$this->compile(
+				'.selector{ max: max(); }'
+		);
+	}
+	
+	/**
+	 * @expectedException		Exception
+	 * @expectedExceptionMessage	Cannot convert % to px
+	 */
+	public function testMaxIncompatibleTypes() {
+		$this->compile(
+				'.selector{ max: max( 10px, 5% ); }'
+		);
+	}
+	
+	/**
+	 * @expectedException		Exception
+	 * @expectedExceptionMessage	Cannot convert px to s
+	 */
+	public function testConvertIncompatibleTypes() {
+		$this->compile(
+				'.selector{ convert: convert( 10px, s ); }'
+		);
+	}
 }

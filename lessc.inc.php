@@ -51,6 +51,12 @@ class lessc {
 	public $mPrefix = '$'; // prefix of abstract blocks
 	public $parentSelector = '&';
 
+	static public $lengths = array( "px", "m", "cm", "mm", "in", "pt", "pc" );
+	static public $times = array( "s", "ms" );
+	static public $angles = array( "rad", "deg", "grad", "turn" );
+	
+	static public $lengths_to_base = array( 1, 3779.52755906, 37.79527559, 3.77952756, 96, 1.33333333, 16  );
+	
 	public $importDisabled = false;
 	public $importDir = '';
 
@@ -885,7 +891,7 @@ class lessc {
 
 	protected function lib_pow($args) {
 		list($base, $exp) = $this->assertArgs($args, 2, "pow");
-		return pow($this->assertNumber($base), $this->assertNumber($exp));
+		return array( "number", pow($this->assertNumber($base), $this->assertNumber($exp)), $args[2][0][2] );
 	}
 
 	protected function lib_pi() {
@@ -894,9 +900,67 @@ class lessc {
 
 	protected function lib_mod($args) {
 		list($a, $b) = $this->assertArgs($args, 2, "mod");
-		return $this->assertNumber($a) % $this->assertNumber($b);
+		return array( "number", $this->assertNumber($a) % $this->assertNumber($b), $args[2][0][2] );
 	}
 
+	protected function lib_convert($args) {
+		list($value, $to) = $this->assertArgs($args, 2, "convert");
+		
+		// If it's a keyword, grab the string version instead
+		if( is_array( $to ) && $to[0] == "keyword" )
+			$to = $to[1];
+		
+		return $this->convert( $value, $to );
+	}
+	
+	protected function lib_abs($num) {
+		return array( "number", abs($this->assertNumber($num)), $num[2] );
+	}
+	
+	protected function lib_min($args) {
+		$values = $this->assertMinArgs($args, 1, "min");
+		
+		$first_format = $values[0][2];
+		
+		$min_index = 0;
+		$min_value = $values[0][1];
+		
+		for( $a = 0; $a < sizeof( $values ); $a++ )
+		{
+			$converted = $this->convert( $values[$a], $first_format );
+			
+			if( $converted[1] < $min_value )
+			{
+				$min_index = $a;
+				$min_value = $values[$a][1];
+			}
+		}
+		
+		return $values[ $min_index ];
+	}
+	
+	protected function lib_max($args) {
+		$values = $this->assertMinArgs($args, 1, "max");
+		
+		$first_format = $values[0][2];
+		
+		$max_index = 0;
+		$max_value = $values[0][1];
+		
+		for( $a = 0; $a < sizeof( $values ); $a++ )
+		{
+			$converted = $this->convert( $values[$a], $first_format );
+			
+			if( $converted[1] > $max_value )
+			{
+				$max_index = $a;
+				$max_value = $values[$a][1];
+			}
+		}
+		
+		return $values[ $max_index ];
+	}
+	
 	protected function lib_tan($num) {
 		return tan($this->assertNumber($num));
 	}
@@ -1363,6 +1427,21 @@ class lessc {
 			return $values;
 		}
 	}
+	
+	public function assertMinArgs($value, $expectedMinArgs, $name="") {
+		if ($value[0] !== "list" || $value[1] != ",") $this->throwError("expecting list");
+		$values = $value[2];
+		$numValues = count($values);
+		if ($expectedMinArgs > $numValues) {
+			if ($name) {
+				$name = $name . ": ";
+			}
+	
+			$this->throwError("${name}expecting at least $expectedMinArgs arguments, got $numValues");
+		}
+	
+		return $values;
+	}
 
 	protected function toHSL($color) {
 		if ($color[0] == 'hsl') return $color;
@@ -1731,7 +1810,79 @@ class lessc {
 			return $strRight;
 		}
 	}
+	
+	protected function convert( $number, $to )
+	{
+		$value = $this->assertNumber( $number );
+		$from = $number[2];
+		
+		// easy out
+		if( $from == $to )
+			return $number;
 
+		// check if the from value is a length
+		if( ( $from_index = array_search( $from, self::$lengths ) ) !== false ) {
+			// make sure to value is too
+			if( in_array( $to, self::$lengths ) ) {
+				// do the actual conversion
+				$to_index = array_search( $to, self::$lengths );
+				$px = $value * self::$lengths_to_base[ $from_index ];
+				$result = $px * ( 1 / self::$lengths_to_base[ $to_index ] );
+				
+				$result = round( $result, 8 );
+				return array( "number", $result, $to );
+			}
+		}
+		
+		// do the same check for times
+		if( in_array( $from, self::$times ) ) {
+			if( in_array( $to, self::$times ) ) {
+				// currently only ms and s are valid
+				if( $to == "ms" )
+					$result = $value * 1000;
+				else
+					$result = $value / 1000;
+					
+				$result = round( $result, 8 );
+				return array( "number", $result, $to );
+			}
+		}
+		
+		// lastly check for an angle
+		if( in_array( $from, self::$angles ) ) {
+			// convert whatever angle it is into degrees
+			if( $from == "rad" )
+				$deg = rad2deg( $value );
+			
+			else if( $from == "turn" )
+				$deg = $value * 360;
+			
+			else if( $from == "grad" )
+				$deg = $value / (400 / 360);
+			
+			else
+				$deg = $value;
+
+			// Then convert it from degrees into desired unit
+			if( $to == "deg" )
+				$result = $deg;
+
+			if( $to == "rad" )
+				$result = deg2rad( $deg );
+			
+			if( $to == "turn" )
+				$result = $value / 360;
+			
+			if( $to == "grad" )
+				$result = $value * (400 / 360);
+			
+			$result = round( $result, 8 );
+			return array( "number", $result, $to );
+		}
+		
+		// we don't know how to convert these
+		$this->throwError( "Cannot convert {$from} to {$to}" );
+	}
 
 	// make sure a color's components don't go out of bounds
 	protected function fixColor($c) {

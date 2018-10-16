@@ -72,8 +72,22 @@ format {
 
 	pow: pow(2,4);
 	pi: pi();
-	mod: mod(14,10);
-
+	mod1: mod(14,10);
+	mod2: mod(14px,10);
+	
+	abs1: abs(-5px);
+	abs2: abs(5%);
+	abs3: abs(-10);
+	
+	min1: min(2px,5px,10px);
+	min2: min(5,1,8);
+	
+	max1: max(2%,20%,5%);
+	max2: max(5,4,10);
+	
+	max-convert: max(1px,1cm);
+	min-convert: min(1px,1cm);
+	
 	tan: tan(1);
 	cos: cos(1);
 	sin: sin(1);
@@ -85,6 +99,27 @@ format {
 	sqrt: sqrt(8);
 }
 
+#convert {
+	px2cm: convert(1px,cm);
+	px2mm: convert(1px,mm);
+	px2in: convert(1px,in);
+	px2pt: convert(1px,pt);
+	px2pc: convert(1px,pc);
+	
+	cm2px: convert(1cm,px);
+	in2px: convert(1in,px);
+	cm2in: convert(1cm,in);
+	
+	s2ms: convert(1s,ms);
+	ms2s: convert(1ms,s);
+	
+	deg2rad: convert(1deg,rad);
+	rad2deg: convert(1rad,deg);
+	deg2turn: convert(1deg,turn);
+	turn2deg: convert(1turn,deg);
+	deg2grad: convert(1deg,grad);
+	grad2deg: convert(1grad,deg);
+}
 
 #unit {
 	@unit: "em";
