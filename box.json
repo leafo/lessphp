@@ -1,0 +1,6 @@
+{
+    "files": ["lessc.inc.php", "lessify", "lessify.inc.php"],
+    "main": "plessc",
+    "output": "less.phar",
+    "stub": true
+}

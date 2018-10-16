@@ -40,9 +40,8 @@ if (has("h", "help")) {
 }
 
 error_reporting(E_ALL);
-$path  = realpath(dirname(__FILE__)).'/';
 
-require $path."lessc.inc.php";
+require "lessc.inc.php";
 
 $VERSION = lessc::$VERSION;
 
