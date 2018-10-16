@@ -4,8 +4,6 @@
 		<exclude name="Generic.ControlStructures.InlineControlStructure.NotAllowed" />
 		<exclude name="Generic.Files.LineLength.TooLong" />
 		<exclude name="Generic.Functions.FunctionCallArgumentSpacing.NoSpaceAfterComma" />
-		<exclude name="Generic.WhiteSpace.DisallowTabIndent.NonIndentTabsUsed" />
-		<exclude name="Generic.WhiteSpace.DisallowTabIndent.TabsUsed" />
 		<exclude name="Generic.WhiteSpace.ScopeIndent.Incorrect" />
 		<exclude name="Generic.WhiteSpace.ScopeIndent.IncorrectExact" />
 		<exclude name="PSR1.Classes.ClassDeclaration.MissingNamespace" />
