@@ -49,8 +49,10 @@ class InputTest extends PHPUnit\Framework\TestCase {
     }
 
     public function fileNameProvider() {
-        return array_map(function($a) { return array($a); },
-            self::findInputNames());
+        return array_map(
+            function($a) { return array($a); },
+            self::findInputNames()
+        );
     }
 
     // only run when env is set
@@ -59,7 +61,7 @@ class InputTest extends PHPUnit\Framework\TestCase {
         file_put_contents(self::outputNameFor($inFname), $css);
     }
 
-    static public function findInputNames($pattern="*.less") {
+    public static function findInputNames($pattern="*.less") {
         $files = array();
         foreach (self::$testDirs as $inputDir => $outputDir) {
             $files = array_merge($files, glob(__DIR__ . "/" . $inputDir . "/" . $pattern));
@@ -68,7 +70,7 @@ class InputTest extends PHPUnit\Framework\TestCase {
         return array_filter($files, "is_file");
     }
 
-    static public function outputNameFor($input) {
+    public static function outputNameFor($input) {
         $front = _quote(__DIR__ . "/");
         $out = preg_replace("/^$front/", "", $input);
 
@@ -86,4 +88,3 @@ class InputTest extends PHPUnit\Framework\TestCase {
         return __DIR__ . "/" . $out;
     }
 }
-

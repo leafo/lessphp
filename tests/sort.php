@@ -1,7 +1,7 @@
 <?php
 error_reporting(E_ALL);
 
-require realpath(dirname(__FILE__)).'/../lessc.inc.php';
+require realpath(dirname(__FILE__)) . '/../lessc.inc.php';
 
 // sorts the selectors in stylesheet in order to normalize it for comparison
 
@@ -15,7 +15,7 @@ class lesscNormalized extends lessc {
     public $numberPrecision = 3;
 
     public function compileValue($value) {
-        if ($value[0] == "raw_color") {
+        if ($value[0] === "raw_color") {
             $value = $this->coerceColor($value);
         }
 
@@ -24,7 +24,7 @@ class lesscNormalized extends lessc {
 }
 
 class SortingFormatter extends lessc_formatter_lessjs {
-    function sortKey($block) {
+    public function sortKey($block) {
         if (!isset($block->sortKey)) {
             sort($block->selectors, SORT_STRING);
             $block->sortKey = implode(",", $block->selectors);
@@ -33,7 +33,7 @@ class SortingFormatter extends lessc_formatter_lessjs {
         return $block->sortKey;
     }
 
-    function sortBlock($block) {
+    public function sortBlock($block) {
         usort($block->children, function($a, $b) {
             $sort = strcmp($this->sortKey($a), $this->sortKey($b));
             if ($sort == 0) {
@@ -44,7 +44,7 @@ class SortingFormatter extends lessc_formatter_lessjs {
 
     }
 
-    function block($block) {
+    public function block($block) {
         $this->sortBlock($block);
         return parent::block($block);
     }
@@ -54,4 +54,3 @@ class SortingFormatter extends lessc_formatter_lessjs {
 $less = new lesscNormalized();
 $less->setFormatter(new SortingFormatter);
 echo $less->parse(file_get_contents($fname));
-
