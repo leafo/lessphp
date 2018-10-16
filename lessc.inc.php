@@ -52,7 +52,7 @@ class lessc {
 	public $parentSelector = '&';
 
 	public $importDisabled = false;
-	public $importDir = '';
+	public $importDir = array();
 
 	protected $numberPrecision = null;
 
