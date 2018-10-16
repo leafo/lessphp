@@ -22,7 +22,7 @@
         "classmap": ["lessc.inc.php"]
     },
     "require-dev": {
-        "phpunit/phpunit": "^4.8.36",
+        "phpunit/phpunit": "^5.7.27",
         "squizlabs/php_codesniffer": "3.3.2"
     },
     "scripts": {
