@@ -53,6 +53,7 @@ class lessc {
 
 	public $importDisabled = false;
 	public $importDir = '';
+	public $importCss = false;
 
 	protected $numberPrecision = null;
 
@@ -101,7 +102,7 @@ class lessc {
 		$url = $this->compileValue($this->lib_e($str));
 
 		// don't import if it ends in css
-		if (substr_compare($url, '.css', -4, 4) === 0) return false;
+		if (!$this->importCss && substr_compare($url, '.css', -4, 4) === 0) return false;
 
 		$realPath = $this->findImport($url);
 
