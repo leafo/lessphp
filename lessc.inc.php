@@ -1005,11 +1005,29 @@ class lessc {
 						$mime = $mime[0];
 					} elseif(function_exists('mime_content_type')) { // PHP 5.2
 						$mime = mime_content_type($fullpath);
+					} else {
+						$types = array(
+							'gif' => 'image/gif',
+							'jpg' => 'image/jpeg',
+							'jpeg'=> 'image/jpeg',
+							'png' => 'image/png',
+							'ttf' => 'application/x-font-ttf',
+							'otf' => 'application/x-font-otf',
+							'eot' => 'application/vnd.ms-fontobject',
+							'woff' => 'application/x-font-woff',
+							'svg' => 'image/svg+xml',
+						);
+						$ext = strtolower(pathinfo($fullpath, PATHINFO_EXTENSION));
+						if (isset($types[$ext])) {
+							$mime = $types[$ext];
+						}
 					}
 				}
 
-				if(!is_null($mime)) // fallback if the mime type is still unknown
+				if(!is_null($mime)) { // fallback if the mime type is still unknown
 					$url = sprintf('data:%s;base64,%s', $mime, base64_encode(file_get_contents($fullpath)));
+					$this->addParsedFile($fullpath);
+				}
 			}
 		}
 
