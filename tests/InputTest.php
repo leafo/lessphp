@@ -12,7 +12,7 @@ function _quote($str) {
 	return preg_quote($str, "/");
 }
 
-class InputTest extends PHPUnit_Framework_TestCase {
+class InputTest extends PHPUnit\Framework\TestCase {
 	protected static $importDirs = array("inputs/test-imports");
 
 	protected static $testDirs = array(

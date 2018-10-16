@@ -2,7 +2,7 @@
 
 require_once __DIR__ . "/../lessc.inc.php";
 
-class ApiTest extends PHPUnit_Framework_TestCase {
+class ApiTest extends PHPUnit\Framework\TestCase {
 	public function setUp() {
 		$this->less = new lessc();
 		$this->less->importDir = array(__DIR__ . "/inputs/test-imports");
