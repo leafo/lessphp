@@ -1016,6 +1016,12 @@ class lessc {
 		return 'url("'.$url.'")';
 	}
 
+        protected function lib_length($args)
+        {
+            $this->assertArgs($args);
+            return count($args[2]);
+        }
+        
 	// utility func to unquote a string
 	protected function lib_e($arg) {
 		switch ($arg[0]) {
@@ -1288,14 +1294,14 @@ class lessc {
 		$this->throwError($error);
 	}
 
-	public function assertArgs($value, $expectedArgs, $name="") {
+	public function assertArgs($value, $expectedArgs = null, $name="") {
 		if ($expectedArgs == 1) {
 			return $value;
 		} else {
 			if ($value[0] !== "list" || $value[1] != ",") $this->throwError("expecting list");
 			$values = $value[2];
 			$numValues = count($values);
-			if ($expectedArgs != $numValues) {
+			if ($expectedArgs && $expectedArgs != $numValues) {
 				if ($name) {
 					$name = $name . ": ";
 				}
