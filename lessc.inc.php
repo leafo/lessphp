@@ -1940,6 +1940,9 @@ class lessc {
     protected function get($name) {
         $current = $this->env;
 
+        // track scope to evaluate
+        $scope_secondary = array();
+
         $isArguments = $name == $this->vPrefix . 'arguments';
         while ($current) {
             if ($isArguments && isset($current->arguments)) {
@@ -1950,9 +1953,34 @@ class lessc {
                 return $current->store[$name];
             }
 
-            $current = isset($current->storeParent) ?
-                $current->storeParent :
-                $current->parent;
+            // has secondary scope?
+            if (isset($current->storeParent)) {
+                $scope_secondary[] = $current->storeParent;
+            }
+
+            $current = $current->parent;
+        }
+
+        // check secondary scopes
+        while ($scope_secondary) {
+            // pop scope off
+            $current = array_shift($scope_secondary);
+            while ($current) {
+                if ($isArguments && isset($current->arguments)) {
+                    return array('list', ' ', $current->arguments);
+                }
+
+                if (isset($current->store[$name])) {
+                    return $current->store[$name];
+                }
+
+                // has secondary scope?
+                if (isset($current->storeParent)) {
+                    $scope_secondary[] = $current->storeParent;
+                }
+
+                $current = $current->parent;
+            }
         }
 
         $this->throwError("variable $name is undefined");
