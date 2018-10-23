@@ -1,5 +1,4 @@
 <?php
-
 /**
  * lessphp v0.5.0
  * http://leafo.net/lessphp
@@ -9,7 +8,6 @@
  * Copyright 2013, Leaf Corcoran <leafot@gmail.com>
  * Licensed under MIT or GPLv3, see LICENSE
  */
-
 
 /**
  * The LESS compiler and parser.
@@ -1988,6 +1986,7 @@ class lessc {
     }
 
     public function compile($string, $name = null) {
+        $string = preg_replace('/\[([\w-]+)\]/', '___$1___', $string); // Protect CSS named grids
         $locale = setlocale(LC_NUMERIC, 0);
         setlocale(LC_NUMERIC, "C");
 
@@ -2010,6 +2009,7 @@ class lessc {
         $this->formatter->block($this->scope);
         $out = ob_get_clean();
         setlocale(LC_NUMERIC, $locale);
+        $out = preg_replace('/___([\w-]+)___/', '[$1]', $out); // Remove CSS named grid protections
         return $out;
     }
 
@@ -2449,6 +2449,8 @@ class lessc_parser {
     }
 
     public function parse($buffer) {
+        // lessc->compile() will handle unprotecting CSS named grids.
+        $buffer = preg_replace('/\[([\w-]+)\]/', '___$1___', $buffer); // Protect CSS named grids
         $this->count = 0;
         $this->line = 1;
 
