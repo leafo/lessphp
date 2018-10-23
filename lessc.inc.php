@@ -1988,6 +1988,8 @@ class lessc {
     }
 
     public function compile($string, $name = null) {
+        $string = preg_replace('/\[([\w-]+)\]/', '___$1___', $string); // Protect CSS named grids
+        
         $locale = setlocale(LC_NUMERIC, 0);
         setlocale(LC_NUMERIC, "C");
 
@@ -2010,6 +2012,7 @@ class lessc {
         $this->formatter->block($this->scope);
         $out = ob_get_clean();
         setlocale(LC_NUMERIC, $locale);
+        $out = preg_replace('/___([\w-]+)___/', '[$1]', $out); // Remove CSS named grid protections
         return $out;
     }
 
