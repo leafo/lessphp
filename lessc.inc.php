@@ -2452,6 +2452,7 @@ class lessc_parser {
     }
 
     public function parse($buffer) {
+        $buffer = preg_replace('/\[([\w-]+)\]/', '___$1___', $buffer); // Protect CSS named grids
         $this->count = 0;
         $this->line = 1;
 
