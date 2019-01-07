@@ -1,0 +1,15 @@
+// This test for mixin recursion (loops).
+
+.bg(@filename)
+{
+  background-image: url('@{filename}');
+}
+
+.generate_nav(@n; @i: 1) when (@i =< @n) {
+  #but@{i} {
+    .bg('@{i}.png');
+  }
+  .generate_nav(@n; (@i+1));
+}
+
+.generate_nav(5);
