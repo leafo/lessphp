@@ -1,0 +1,148 @@
+#!/usr/bin/php -q
+<?php
+// Command Line utility to compile less
+
+error_reporting(E_ALL);
+$cmd = array_shift($argv);
+
+if (php_sapi_name() != "cli")
+{ 
+   echo $cmd . " must be run from the command line.";
+   exit(1);
+}
+
+$path  = realpath(dirname(__FILE__)).'/';
+
+require $path."lessc.inc.php";
+
+if ($argc != 3)
+{
+   echo 'Usage: ' . $cmd . ' input output' . "\n" .
+      '   input  - file or directory for input of less files' . "\n" .
+      '   output - file or directory for output of css files' . "\n" .
+      'NOTE: CSS Files are replaced in the output directory without warning!'
+      ."\n";
+   exit(2);
+}
+
+$input = array_shift($argv);
+$output = array_shift($argv);
+
+if (is_dir($input) && !is_dir($output))
+{
+   echo 'Error: Input is a directory whereas Output is a single file.' . "\n";
+   exit(3);
+}
+elseif (!is_dir($input) && !is_file($input))
+{
+   echo 'Error: Input file or directory cannot be found.' . "\n";
+   exit(4);
+}
+
+/** Compile the file from $src to $dest.
+ *  Compile the file based on its file extension:
+ *      .less  - Compile it to the dest renaming .less -> .css
+ *      .css   - Copy it where a .less file of the same name does not exist.
+ *      others - Skip the file.
+ *
+ *  \param src \string Source file.
+ *  \param dest \string Destination file (before any renaming).
+ */
+function compile($src, $dest)
+{
+   try
+   {
+      if (substr_compare($src, '.less', -5, 5, true) === 0)
+      {
+	 // Must be a file change from less to css.
+	 $dest = preg_replace('/\.less$/i', '.css', $dest);
+	 echo "Compiling " . $src . " to " . $dest . "\n";
+      
+	 lessc::ccompile($src, $dest);
+      }
+      else if (substr_compare($src, '.css', -4, 4, true) === 0)
+      {
+	 // Straight CSS should just be copied.
+	 if ($dest === $src)
+	 {
+	    echo 'Skipping: ' . $src . "\n";
+	 }
+	 else
+	 {
+	    // Check for a less file of the same name that we should prefer.
+	    $lessEquivalent = preg_replace("/\.css$/", ".less", $src);
+	    
+	    if (is_file($lessEquivalent))
+	    {
+	       echo 'Ignoring CSS file: ' . $src . ', LESS file: ' .
+		  $lessEquivalent . ' overrides it.' . "\n";
+	    }
+	    elseif (!copy($src, $dest))
+	    {
+	       echo 'Error copying CSS from: ' . $src . ' to: ' . $dest . "\n";
+	    }
+	    else
+	    {
+	       echo 'Copied CSS from: ' . $src . ' to: ' . $dest . "\n";
+	    }
+	 }
+      }
+      else
+      {
+	 echo 'Skipping: ' . $src . "\n";
+      }
+   }
+   catch (Exception $e)
+   {
+      echo 'Compilation Error' . "\n" .
+	 '   src:  ' . $src . "\n" .
+	 '   dest: ' . $dest . "\n" .
+	 '   msg:  ' . $e->getMessage() . "\n";
+   }
+}
+
+// Octal numbers are preceded by 0.
+$mode = 0750;
+
+// Allow single file compilation.
+if (!is_dir($input))
+{
+   compile($input, $output);
+}
+else
+{
+   // Recurse through the directory and its subdirectories, copying the
+   // directory structure and compiling everything else.
+   if (!is_dir($output) && !mkdir($output, $mode, true))
+   {
+      echo 'Unable to make destination directory: ' . var_export($output, true);
+      exit(5);
+   }
+
+   // Recursively process the directory.
+   $rDir = new RecursiveDirectoryIterator(
+      $input, FilesystemIterator::SKIP_DOTS);
+   $rIt = new RecursiveIteratorIterator(
+      $rDir, RecursiveIteratorIterator::SELF_FIRST);
+
+   foreach ($rIt as $file)
+   {
+      $src = $file->getPathname();
+      $dest = $output . $rIt->getInnerIterator()->getSubPathname();
+      
+      if (is_dir($src))
+      {
+	 if (!is_dir($dest) && !mkdir($dest, $mode))
+	 {
+	    echo 'Error creating subdirectory for: ' . $src . ' at: ' . $dest;
+	    exit(6);
+	 }
+      }
+      else
+      {
+	 compile($src, $dest);
+      }
+   }
+}
+
+?>
