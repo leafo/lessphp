@@ -420,26 +420,26 @@ class lessc {
         $count = 0;
         $worker = function( $matches ) use($replace) {
             $parents = explode(' ', $replace);
-            if(isset($matches[1]) && sizeof($parents) >= $matches[1]){
-                if(isset($matches[2]) && $matches[2]==':')
+            if(isset($matches[1]) && $matches[1] != '' && isset($matches[2]) && sizeof($parents) >= $matches[2]){
+                if(isset($matches[3]) && $matches[3]==':')
                 {
                     $limit = null;
-                    $offset = (int)$matches[1];
+                    $offset = (int)$matches[2];
                     if($offset > 0 ) $offset -= 1;
-                    if((int)$matches[3] != 0) $limit = (int)$matches[3];
+                    if((int)$matches[4] != 0) $limit = (int)$matches[4];
                     $parents = array_slice($parents, $offset, $limit );
 
-                    if($matches[4] != '') {
-                        $parents = explode(" ", implode(" ", $parents).$matches[4]);
+                    if($matches[5] != '') {
+                        $parents = explode(" ", implode(" ", $parents).$matches[5]);
                     }
                 } else {
-                    if($matches[1] === '0'){
+                    if($matches[2] === '0'){
                         $parents = [];
                         $offset = 0;
                     } else if((int)$matches[1] > 0) {
-                        $offset = sizeof($parents) - (int)$matches[1] - 1;
+                        $offset = sizeof($parents) - (int)$matches[2] - 1;
                     } else {
-                        $offset = abs((int)$matches[1]) - 1;
+                        $offset = abs((int)$matches[2]) - 1;
                     }
 
                     $parents[$offset] = (isset($parents[$offset]) ? $parents[$offset] : '') . preg_replace("@{$this->parentSelector}(?:\(.*?\))?@", '', $matches[0]);
@@ -457,7 +457,8 @@ class lessc {
         };
 
         foreach ($parts as &$part) foreach ($parts as &$part) {
-            $part = preg_replace_callback("@{$this->parentSelector}(?:\(\s*(-?\d*)?(?:\s*(:)\s*(-?\d*))?\s*\))?([^$&]*)@", $worker, $part, -1,$c);
+
+            $part = preg_replace_callback("@{$this->parentSelector}(\(\s*(-?\d*)?(?:\s*(:)\s*(-?\d*))?\s*\))?([^$&]*)@", $worker, $part, -1,$c);
             $count += $c;
         }
         $tag = implode($this->parentSelector, $parts);
