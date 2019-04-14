@@ -1,18 +1,18 @@
 #header .navigation .border .color {
-    color: black;
+  color: black;
 }
 #header.green .navigation .border .color {
-    color: green;
+  color: green;
 }
 #header .navigation .border.red .color {
-    color: red;
+  color: red;
 }
 #header .navigation.red {
-    color: red;
+  color: red;
 }
 #header .navigation .gray  .border .color {
-    color: gray;
+  color: gray;
 }
 #header .navigation .gray .border .color span {
-    display: none;
+  display: none;
 }
