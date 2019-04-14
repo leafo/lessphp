@@ -1,0 +1,30 @@
+#header {
+
+  .navigation {
+    .border {
+      .color {
+        color: black;
+
+        &(-1).green {
+          color: green;
+        }
+
+        &(1).red {
+          color: red;
+        }
+
+        &(:2).red {
+          color: red;
+        }
+
+        &(:2) .gray &(3:) {
+          color: gray;
+
+          & span {
+            display:none;
+          }
+        }
+      }
+    }
+  }
+}

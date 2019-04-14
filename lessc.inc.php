@@ -418,8 +418,46 @@ class lessc {
     protected function expandParentSelectors(&$tag, $replace) {
         $parts = explode("$&$", $tag);
         $count = 0;
-        foreach ($parts as &$part) {
-            $part = str_replace($this->parentSelector, $replace, $part, $c);
+        $worker = function( $matches ) use($replace) {
+            $parents = explode(' ', $replace);
+            if(isset($matches[1]) && sizeof($parents) >= $matches[1]){
+                if(isset($matches[2]) && $matches[2]==':')
+                {
+                    $limit = null;
+                    $offset = (int)$matches[1];
+                    if($offset > 0 ) $offset -= 1;
+                    if((int)$matches[3] != 0) $limit = (int)$matches[3];
+                    $parents = array_slice($parents, $offset, $limit );
+
+                    if($matches[4] != '') {
+                        $parents = explode(" ", implode(" ", $parents).$matches[4]);
+                    }
+                } else {
+                    if($matches[1] === '0'){
+                        $parents = [];
+                        $offset = 0;
+                    } else if((int)$matches[1] > 0) {
+                        $offset = sizeof($parents) - (int)$matches[1] - 1;
+                    } else {
+                        $offset = abs((int)$matches[1]) - 1;
+                    }
+
+                    $parents[$offset] = (isset($parents[$offset]) ? $parents[$offset] : '') . preg_replace("@{$this->parentSelector}(?:\(.*?\))?@", '', $matches[0]);
+                }
+            } else {
+                $offset = sizeof($parents)-1;
+                $parents[$offset] .= preg_replace("@{$this->parentSelector}@", '', $matches[0]).' ';
+            }
+            foreach($parents as &$tt) {
+                $tt = " $tt ";
+            }
+            $replace = implode(' ' , $parents);
+            $replace = preg_replace("@\s+@", " ", $replace);
+            return $replace;
+        };
+
+        foreach ($parts as &$part) foreach ($parts as &$part) {
+            $part = preg_replace_callback("@{$this->parentSelector}(?:\(\s*(-?\d*)?(?:\s*(:)\s*(-?\d*))?\s*\))?([^$&]*)@", $worker, $part, -1,$c);
             $count += $c;
         }
         $tag = implode($this->parentSelector, $parts);
@@ -2586,6 +2624,8 @@ class lessc_parser {
             $this->append($importValue, $s);
             return true;
         }
+
+        $this->literal('&');
 
         // opening parametric mixin
         if ($this->tag($tag, true) && $this->argumentDef($args, $isVararg) &&
