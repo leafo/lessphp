@@ -56,7 +56,7 @@ class easyparse {
 
         // shortcut on single letter
         if (!$eatWhitespace and strlen($what) === 1) {
-            if ($this->buffer{$this->count} == $what) {
+            if ($this->buffer[$this->count] == $what) {
                 $this->count++;
                 return true;
             }

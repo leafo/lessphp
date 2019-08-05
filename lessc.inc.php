@@ -746,7 +746,7 @@ class lessc {
                     if ($suffix !== null &&
                         $subProp[0] == "assign" &&
                         is_string($subProp[1]) &&
-                        $subProp[1]{0} != $this->vPrefix
+                        $subProp[1][0] != $this->vPrefix
                     ) {
                         $subProp[2] = array(
                             'list', ' ',
@@ -1963,7 +1963,7 @@ class lessc {
         $this->pushEnv();
         $parser = new lessc_parser($this, __METHOD__);
         foreach ($args as $name => $strValue) {
-            if ($name{0} !== '@') {
+            if ($name[0] !== '@') {
                 $name = '@' . $name;
             }
             $parser->count = 0;
@@ -2624,7 +2624,7 @@ class lessc_parser {
                 $hidden = true;
                 if (!isset($block->args)) {
                     foreach ($block->tags as $tag) {
-                        if (!is_string($tag) || $tag{0} != $this->lessc->mPrefix) {
+                        if (!is_string($tag) || $tag[0] != $this->lessc->mPrefix) {
                             $hidden = false;
                             break;
                         }
@@ -2678,7 +2678,7 @@ class lessc_parser {
     protected function fixTags($tags) {
         // move @ tags out of variable namespace
         foreach ($tags as &$tag) {
-            if ($tag{0} == $this->lessc->vPrefix)
+            if ($tag[0] == $this->lessc->vPrefix)
                 $tag[0] = $this->lessc->mPrefix;
         }
         return $tags;
