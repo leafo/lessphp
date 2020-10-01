@@ -2147,6 +2147,7 @@ class lessc {
 
     public function setFormatter($name) {
         $this->formatterName = $name;
+        return $this;
     }
 
     protected function newFormatter() {
