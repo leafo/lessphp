@@ -26,6 +26,10 @@ body {
   one2: #abcdef;
   two1: rgba(2,159,35,0.9);
   two2: rgba(2,159,35,0.9);
+  tint1: #f0f0f0;
+  tint2: #ececec;
+  shade1: #707070;
+  shade2: #868686;
   three1: rgba(1,2,3,0.6);
   three2: rgba(1,2,3,0.6);
   four1: rgba(1,2,3,0);
@@ -64,6 +68,9 @@ fade {
 .contrast {
   color1: #ff0000;
   color2: #0000ff;
+}
+.luma {
+  color: 44.11161568%;
 }
 .percent {
   per: 50%;
