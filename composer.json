@@ -1,5 +1,5 @@
 {
-    "name": "zaunidee/lessphp",
+    "name": "leafo/lessphp",
     "type": "library",
     "description": "lessphp is a compiler for LESS written in PHP.",
     "homepage": "http://leafo.net/lessphp/",
